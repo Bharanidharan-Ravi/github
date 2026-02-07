@@ -1,0 +1,33 @@
+{
+  "name": "@formstack/react-input-engine",
+  "version": "0.1.0",
+  "description": "Config-driven React form engine with reusable input components",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "style": "dist/styles.css",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@babel/preset-react": "^7.23.3",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "rollup": "^4.12.0",
+    "rollup-plugin-postcss": "^4.0.2"
+  },
+  "license": "MIT"
+}

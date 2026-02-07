@@ -1,0 +1,85 @@
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  @keyframes scaleOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.95); }
+  }
+  
+  .custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;              
+    height: 100vh;             
+    /* background-color: rgba(0, 0, 0, 0.5);  */
+    background-color: rgb(0 0 0 / 8%);
+    backdrop-filter: blur(2px); 
+    -webkit-backdrop-filter: blur(6px); 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1201;
+  }
+  
+  .custom-modal-content {
+    background-color: #fff;
+    padding: 2rem 1rem;
+    border-radius: 8px;
+    position: relative;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Opening anim */
+  .modal-open.custom-modal-overlay {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  .modal-open.custom-modal-content {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  /* closing anim */
+  .modal-close.custom-modal-overlay {
+    animation: fadeOut 0.3s ease-in forwards;
+  }
+  
+  .modal-close.custom-modal-content {
+    animation: scaleOut 0.3s ease-in forwards;
+  }
+  
+  .custom-modal-close {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    background: transparent;
+    color: grey;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    justify-content: end;
+    gap: 15px;
+  }
+
+  .modal-buttons button {
+    border-radius: 10px;
+  }

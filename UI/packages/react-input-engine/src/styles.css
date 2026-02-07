@@ -1,0 +1,38 @@
+.fe-search-select {
+  position: relative;
+}
+
+.fe-search-select input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #d0d0d0;
+}
+
+.fe-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  z-index: 20;
+}
+
+.fe-option {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.fe-option:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+.fe-option.muted {
+  color: #999;
+  cursor: default;
+}

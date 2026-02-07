@@ -1,0 +1,37 @@
+.header {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #fde7b0a8;
+  }
+  
+  .header-logo {
+    height: 60px; 
+    padding: 8px;
+  }
+
+  .avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: #ffb300;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .dropdown-menu-custom {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 999;
+    min-width: 150px;
+    display: block;
+    background-color: white;
+  }
+
+  .logout-btn{
+    width: 100%;
+    background-color: red;
+    color: white;
+    padding: 5px;
+  }
+  

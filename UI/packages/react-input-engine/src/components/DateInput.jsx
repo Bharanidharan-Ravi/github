@@ -1,0 +1,14 @@
+const DateInput = ({ field, value, error, onChange }) => {
+  return (
+    <div className="fe-field">
+      <input
+        type="date"
+        value={value || ""}
+        onChange={(e) => onChange(field.key, e.target.value)}
+      />
+      {error && <small className="fe-error">{error}</small>}
+    </div>
+  );
+};
+
+export default DateInput;

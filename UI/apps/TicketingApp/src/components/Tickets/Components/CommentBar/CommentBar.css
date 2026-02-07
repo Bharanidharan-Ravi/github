@@ -1,0 +1,205 @@
+.commentbar-container {
+    border: 1px solid #d1d5db;
+    padding: 10px 12px;
+    border-radius: 8px;
+    position: relative;
+    background: #ffffff;
+    transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  }
+  
+  .commentbar-container.animated:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    transform: translateY(-1px);
+  }
+  
+  .commentbar-container.dragging {
+    border-color: #60a5fa;
+    background: #eff6ff;
+  }
+  
+  /* Toolbar */
+  
+  .commentbar-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  
+  .cb-btn {
+    border: none;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s ease, transform 0.05s ease;
+  }
+  
+  .cb-btn:hover {
+    background: #e5e7eb;
+  }
+  
+  .cb-btn:active {
+    transform: scale(0.96);
+  }
+  
+  .cb-history {
+    font-size: 14px;
+  }
+  
+  .cb-divider {
+    width: 1px;
+    height: 18px;
+    background: #e5e7eb;
+  }
+  
+  /* Menus */
+  
+  .cb-menu {
+    position: absolute;
+    top: 36px;
+    left: 8px;
+    z-index: 20;
+    min-width: 160px;
+    max-width: 260px;
+    max-height: 220px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    animation: cb-fade-in 0.15s ease-out;
+  }
+  
+  .cb-menu-history {
+    right: 8px;
+    left: auto;
+  }
+  
+  .cb-menu-item {
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  
+  .cb-menu-item:last-child {
+    border-bottom: none;
+  }
+  
+  .cb-menu-item:hover {
+    background: #f9fafb;
+  }
+  
+  .cb-menu-snippet {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
+  
+  .cb-menu-line {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Attachments */
+  
+  .commentbar-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  
+  .commentbar-thumb {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    animation: cb-thumb-in 0.18s ease-out;
+  }
+  
+  .commentbar-thumb img {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .commentbar-delete {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.65);
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Text area */
+  
+  .commentbar-textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 14px;
+    resize: none;
+    min-height: 90px;
+    outline: none;
+    transition: border 0.15s ease, box-shadow 0.15s ease;
+  }
+  
+  .commentbar-textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px #bfdbfe;
+  }
+  
+  /* Drag overlay */
+  
+  .commentbar-drag-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #6b7280;
+    font-size: 14px;
+    pointer-events: none;
+  }
+  
+  /* Animations */
+  
+  @keyframes cb-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes cb-thumb-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes blink {
+    50% {opacity: 0;}
+  }

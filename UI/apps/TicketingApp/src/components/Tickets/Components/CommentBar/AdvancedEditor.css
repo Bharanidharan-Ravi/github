@@ -1,0 +1,184 @@
+/* Main Container */
+.editor-wrapper {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    max-width: 900px;
+    margin: 20px auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Toolbar */
+  .main-toolbar {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .toolbar-btn {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    color: #4b5563;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+  }
+  
+  .toolbar-btn:hover { background-color: #e5e7eb; color: #111; }
+  .toolbar-btn.is-active { background-color: #dbeafe; color: #1d4ed8; }
+  
+  .divider { width: 1px; height: 20px; background-color: #d1d5db; margin: 0 4px; }
+  
+  /* Editor Content */
+  .editor-content-container {
+    position: relative;
+    min-height: 200px;
+    padding: 20px 20px 20px 50px;
+    cursor: text;
+  }
+  
+  .ProseMirror { outline: none; font-size: 16px; line-height: 1.6; color: #374151; }
+  .ProseMirror p.is-editor-empty:first-child::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+  
+  /* Headings & Tables */
+  .ProseMirror h1 { font-size: 1.8em; font-weight: 700; margin-top: 0.8em; }
+  .ProseMirror h2 { font-size: 1.4em; font-weight: 600; margin-top: 0.8em; }
+  .ProseMirror h3 { font-size: 1.2em; font-weight: 600; margin-top: 0.6em; }
+  .ProseMirror table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  .ProseMirror td, .ProseMirror th { border: 1px solid #d1d5db; padding: 8px; vertical-align: top; }
+  .ProseMirror th { background-color: #f3f4f6; font-weight: 600; text-align: left; }
+  /* Apply to both Editor and Preview */
+  .ProseMirror p, 
+  .preview-mode-container p {
+    margin-top: 0.2em;    /* Reduce top gap (was likely 1em) */
+    margin-bottom: 0.2em; /* Reduce bottom gap */
+    line-height: 1.5;     /* Keep text readable */
+    min-height: 1.5em;    /* CRITICAL: This forces empty lines (multiple enters) to show up */
+  }
+  
+  /* Optional: If you want lists to be tighter too */
+  .ProseMirror ul, .ProseMirror ol,
+  .preview-mode-container ul, .preview-mode-container ol {
+    margin: 0.2em 0;
+    padding-left: 1.5em;
+  }
+  
+  .ProseMirror li,
+  .preview-mode-container li {
+    margin-bottom: 0;
+  }
+  
+  /* Ensure the file chips don't stretch the line height too oddly */
+  .file-attachment-chip {
+    display: inline-flex !important; /* <--- THIS IS THE KEY FIX */
+    align-items: center;
+    gap: 6px;
+    background-color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    text-decoration: none;
+    color: #333;
+    user-select: none;
+    margin: 2px 4px 2px 0; /* Right margin separates them */
+    vertical-align: middle;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  
+  .file-attachment-chip:hover {
+    background-color: #e8f0fe; /* Light blue on hover */
+    color: #1a73e8;
+  }
+  
+  .file-attachment-chip.selected {
+    background-color: #cce8ff;
+    border-color: #99d1ff;
+  }
+  
+  .file-icon { display: flex; align-items: center; color: #5f6368; font-size: 16px; }
+  .file-name { font-size: 14px; font-weight: 500; }
+  
+  /* IMAGE CHIP (Editor Mode) */
+  .attachment-pill {
+    display: inline-flex !important; /* <--- THIS IS THE KEY FIX */
+    align-items: center;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #374151;
+    font-size: 0.9em;
+    gap: 6px;
+    cursor: pointer;
+    margin: 2px 4px 2px 0;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  
+  /* 3. Force Tiptap Wrappers to be Inline */
+  /* Tiptap sometimes wraps NodeViews in a div. This forces that div to sit inline. */
+  .react-renderer {
+    display: inline !important;
+  }
+  
+  .node-view-wrapper {
+    display: inline !important;
+  }
+  .attachment-pill.selected { outline: 2px solid #2563eb; }
+  .doc-icon { font-size: 1.1em; }
+  
+  /* ---------------------------------------------------- */
+  
+  /* Preview Mode */
+  .preview-mode-container {
+    padding: 20px 20px 20px 50px;
+    min-height: 200px;
+    background: #fff;
+  }
+  /* Ensure standard link styling in preview/output */
+  a.file-attachment-link {
+    color: #2563eb;
+    text-decoration: underline;
+    margin: 0 4px;
+  }
+  /* In preview mode, images show full size */
+  .preview-mode-container img { max-width: 100%; border-radius: 6px; margin-top: 10px; }
+  
+  
+  /* Mentions */
+  .mention-user { color: #2563eb; background-color: #eff6ff; border-radius: 4px; padding: 1px 4px; cursor: pointer; }
+  .mention-label { font-weight: 600; font-size: 0.85em; margin: 0 2px; padding: 2px 6px; border-radius: 4px; color: white; display: inline-block; }
+  
+  /* Floating Menu */
+  .floating-plus-wrapper { position: absolute; left: 12px; z-index: 20; display: flex; }
+  .plus-btn { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #d1d5db; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .plus-dropdown { position: absolute; top: 32px; left: 0; background: white; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 6px; width: 140px; z-index: 30; display: flex; flex-direction: column; }
+  .plus-dropdown button { background: white; border: none; padding: 10px 12px; text-align: left; cursor: pointer; display: flex; gap: 8px; }
+  .plus-dropdown button:hover { background-color: #f3f4f6; }
+  
+  /* Popups */
+  .table-selector-popup { position: absolute; top: 100%; left: 0; background: white; border: 1px solid #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; padding: 10px; z-index: 100; margin-top: 8px; }
+  .table-grid { display: flex; flex-direction: column; gap: 2px; }
+  .table-grid-row { display: flex; gap: 2px; }
+  .table-grid-cell { width: 18px; height: 18px; border: 1px solid #e5e7eb; background: #f9fafb; cursor: pointer; }
+  .table-grid-cell.active { background: #3b82f6; border-color: #2563eb; }
+  .table-grid-label { text-align: center; margin-bottom: 6px; font-size: 12px; color: #6b7280; }
+  
+  .suggestion-list { background: white; border: 1px solid #e5e7eb; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 6px; min-width: 180px; z-index: 9999; }
+  .suggestion-list button { width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; }
+  .suggestion-list button:hover { background-color: #f3f4f6; }
+  .suggestion-list button.is-selected { background-color: #eff6ff; color: #2563eb; }

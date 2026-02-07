@@ -1,0 +1,176 @@
+.tickets-container {
+  width: 100%;
+  margin: 1rem auto;
+  padding: 0 2rem;
+}
+
+.ticket-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ticket {
+  background: #ffffff;
+  border-radius: 12px;
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); */
+  border: 1px solid #ddd;
+  padding: 1rem 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.ticket:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.053);
+}
+
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 0.6rem;
+}
+
+.ticket-status {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.ticket-status.open {
+  background: linear-gradient(135deg, #28a745, #85e085);
+}
+
+.ticket-status.closed {
+  background: linear-gradient(135deg, #d73a49, #ff6b6b);
+}
+
+.ticket-details {
+  font-size: 0.85rem;
+  color: #6b7280;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.ticket-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.ticket-label {
+  max-height: 25px;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #fff;
+  text-transform: capitalize;
+  transition: transform 0.2s;
+  background-color: var(--label-color);
+}
+
+.ticket-label:hover {
+  transform: scale(1.1);
+}
+
+/* Label colors temproary */
+
+/* .ticket-label.bug {
+  background: red;
+}
+
+.ticket-label.urgent {
+  background: orange;
+}
+
+.ticket-label.enhancement {
+  background:greenyellow;
+  color: #000;
+}
+
+.ticket-label.documentation {
+  background: blue;
+} */
+
+
+
+.tickets-search {
+  display: flex;
+  justify-content:end;
+  align-items: center;
+  width: 100%;
+}
+
+/* --- HTML RENDERER STYLES --- */
+
+/* 1. Standard Images (General Safety) */
+.html-renderer img {
+  max-width: 100%; /* Never overflow the container width */
+  height: auto;    /* Maintain aspect ratio */
+  border-radius: 6px;
+  display: block;
+  margin: 10px 0;
+}
+
+/* --- SPECIFIC LOGIC FOR "ATTACHMENT CARDS" FROM EDITOR --- */
+/* The editor saves images inside a .attachment-card div. 
+   We need to hide the "Icon" and show the "Image" fully. */
+
+/* Step A: Remove the "Card" background/border for images */
+.html-renderer .attachment-card[data-type="image"] {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: block; /* Ensure it takes full width */
+}
+
+/* Step B: Hide the "Icon + Filename" text */
+.html-renderer .attachment-card[data-type="image"] .attachment-content {
+  display: none;
+}
+
+/* Step C: Show and Size the actual Image */
+.html-renderer .attachment-card[data-type="image"] img.attachment-image-source {
+  display: block;       /* Force it to show (it was hidden in Edit mode) */
+  max-width: 100%;      /* Responsive width */
+  max-height: 500px;    /* LIMIT HEIGHT: Change this value to control max size */
+  width: auto;          /* Allow width to shrink if height is hit */
+  object-fit: contain;  /* Ensure image doesn't stretch weirdly */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* --- OPTIONAL: FILE ATTACHMENTS (Non-Images) --- */
+/* Keep these looking like clickable cards */
+.html-renderer .attachment-card[data-type="file"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 500;
+  margin: 4px 0;
+  transition: background 0.2s;
+}
+
+.html-renderer .attachment-card[data-type="file"]:hover {
+  background-color: #e5e7eb;
+}

@@ -1,0 +1,169 @@
+.form-builder {
+  /* max-width: 800px; */
+  /* margin: 0 auto; */
+  /* padding: 20px; */
+  font-family: 'Roboto', sans-serif;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  margin-top: 25px;
+  gap: 12px;
+}
+
+.comment-title {
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  color: #666666 !important;
+  margin-bottom: 5px !important;
+}
+
+.comment-paper {
+  padding: 20px;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 6px;
+  background-color: #fff;
+  border-radius: 8px;
+}
+
+.tabs-toolbar-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.comment-tabs {
+  flex-grow: 1;
+}
+
+.comment-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  min-height: 140px;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  /* border-color: #1976d2; */
+  /* border-color: #ffb300; */
+  /* box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.3); */
+}
+
+.bottom-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.attachment-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attachment-text {
+  font-size: 12px;
+  color: #666;
+}
+
+.comment-button {
+  background-color: #ffb300;
+  color: white;
+  font-weight: bold;
+  padding: 10px 16px;
+  text-transform: none;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.comment-button:hover {
+  background-color: #1565c0;
+}
+
+.file-attachment-button {
+  color: #1976d2;
+}
+
+.file-attachment-button:hover {
+  transform: scale(1.1);
+}
+
+.preview-box {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.preview-placeholder {
+  text-align: center;
+  color: #bbb;
+}
+
+.attachments-info {
+  font-size: 12px;
+  color: #777;
+}
+
+.MuiPaper-elevation{
+  box-shadow: none !important;
+  border: 1px solid #ddd;
+  border-radius: 8px !important;
+}
+
+.comment-preview {
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  min-height: 150px;
+}
+
+.comment-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.preview-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preview-image {
+  height: 150px;
+  /* max-width: 40px; */
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.preview-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f0f0;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.MuiButtonBase-root.MuiTab-root{
+  min-width: 24px; 
+}

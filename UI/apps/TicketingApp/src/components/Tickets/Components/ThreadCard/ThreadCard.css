@@ -1,0 +1,67 @@
+.ticket-thread-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #ffffff;
+    padding: 12px 14px;
+}
+
+.ticket-thread-header {
+    margin-bottom: 8px;
+}
+
+.ticket-thread-user {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ticket-thread-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.ticket-thread-user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ticket-thread-username {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ticket-thread-meta {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.ticket-thread-body {
+    margin-top: 4px;
+}
+
+.ticket-thread-text {
+    font-size: 14px;
+    margin: 0 0 8px;
+    white-space: pre-wrap;
+}
+
+.ticket-thread-attachments {
+    margin-top: 4px;
+}
+/* .ticket-thread-status {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+} */
+

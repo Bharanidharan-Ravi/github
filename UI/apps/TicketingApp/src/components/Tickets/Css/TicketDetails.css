@@ -1,0 +1,103 @@
+/* 
+.ticketdetail-detail {
+    height: 21vh;
+    border-bottom: 1px solid black;
+    overflow: auto;
+}
+
+.ticketdetail-desc {
+    height: 65%;
+    overflow: auto;
+}
+
+.ticketDetails {
+
+} */
+
+.ticketdetail-main {
+    padding: 16px 0;
+    color: #111827;
+}
+
+.ticketdetail-header {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px 20px;
+    background: #f9fafb;
+    margin-bottom: 16px;
+}
+
+.ticketdetail-header-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ticketdetail-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.ticket-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ticket-label {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--label-color);
+    color: #111827;
+}
+
+.ticketdetail-detail-desc {
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.repo-body {
+    margin-top: 8px;
+}
+  
+.ticket-thread-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ticket-comment-box {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.ticket-comment-button {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #facc15;
+    color: #111827;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ticket-comment-button:hover:not(:disabled) {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.ticket-comment-button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+

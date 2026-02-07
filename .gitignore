@@ -40,6 +40,7 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
+backup/
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
@@ -137,7 +138,8 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
+/UI/pnpm-workspace.zip
+/UI/pnpm-lock.yaml
 /API/API/.vs
 /API/API/WGAPP/.config
 /API/API/WGAPP/10/31
@@ -192,7 +194,7 @@ vite.config.ts.timestamp-*
 /API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.dll
 /API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.genruntimeconfig.cache
 /API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.pdb
-*.json
+# *.json
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/ref/WGAPP.ModelLayer.dll
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/refint/WGAPP.ModelLayer.dll
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.csproj.FileListAbsolute.txt

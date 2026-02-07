@@ -1,0 +1,103 @@
+.minimal-form {
+    max-width: 1020px;
+    /* margin: auto; */
+    margin-top: 20px;
+    background: #fff;
+    padding: 2rem 2.5rem;
+    border-radius: 8px;
+    box-shadow: none;
+    border: 1px solid #e6e6e6;
+  }
+  
+  .minimal-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+    user-select: none;
+  }
+  
+  .minimal-input {
+    width: 100%;
+    padding: 6.5px 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    /* background-color: #fafafa; */
+    background-color: white;
+    color: black;
+    transition: border-color 0.3s ease;
+    outline-offset: 0;
+  }
+  
+  .minimal-input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+  }
+  
+  .minimal-input:focus {
+    border-color: #3a86ff;
+    background-color: #fff;
+    box-shadow: none;
+    outline: none;
+  }
+  
+  .minimal-button {
+    background-color: #198754;
+    border: none;
+    color: white;
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 8px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .minimal-button:hover,
+  .minimal-button:focus {
+    background-color: #198754d7;
+    color: white;
+    outline: none;
+  }
+  
+
+  .Add-Achievements{
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: #3a86ff;
+  }
+
+  .form-error-text{
+    color: #dc3545; 
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  
+  .required-asterisk {
+    color:#dc3545;
+    margin-left: 2px;
+    font-weight: bold;
+  }
+
+  .textarea-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    resize: vertical;
+    background-color: white;
+    color: black;
+    box-sizing: border-box;
+  }
+  
+  .textarea-input:focus {
+    border-color: #3a86ff;
+    background-color: #fff;
+    box-shadow: none;
+    outline: none;
+  }
