@@ -16,7 +16,7 @@ namespace APIGateWay.Business_Layer.Helper
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "GETALLPROJECTDATA",
+                StoredProcedure = "GetAllProjData",
                 EntityType = typeof(GetProject),
                 SourceName = "ProjectService",
 

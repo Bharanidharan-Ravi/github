@@ -25,13 +25,14 @@ export default function CentralRouter() {
     // const userData = decryptUserInfo(result)[0];
     const role = result?.Role;
     const token = result?.JwtToken;
+    const loginUser = result?.Username;
     setRole(role);
     setToken(token);
     // start();
     sessionStorage.setItem("role", role);
     const routes = roleRoutes[role] || [];
     if (routes.length > 0) {
-      const firstRoute = routes[0]?.path; 
+      const firstRoute = routes[0]?.path.replace(':username',loginUser); 
       navigate(firstRoute, {replace: true}); 
     } else {
       navigate("/unauthorized", {replace: true}); // If no routes are available, redirect to unauthorized

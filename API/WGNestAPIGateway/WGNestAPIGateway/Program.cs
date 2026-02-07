@@ -17,6 +17,8 @@ using APIGateway.Middleware;
 using APIGateway.Auth;
 using APIGateway.Proxy;
 using Yarp.ReverseProxy.Transforms;
+using APIGateWay.Business_Layer.Interface;
+using APIGateWay.Business_Layer.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,12 +41,13 @@ builder.Services.AddDbContext<APIGatewayDBContext>(Options =>
 
 builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<IRepoRepository, RepoRepository>();
-
+builder.Services.AddScoped<ISyncRepositoryV2, SyncRepositoryV2>();
 
 
 builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IRepoService, RepoService>();
 builder.Services.AddScoped<ILoginContextService, LoginContextService>();
+builder.Services.AddScoped<ISyncExecutionService, SyncExecutionService>();
 
 
 builder.Services.AddDistributedMemoryCache();
@@ -73,6 +76,7 @@ builder.Services.AddReverseProxy()
         });
     })
     .LoadFromMemory(ProxyConfigBuilder.Build().Routes, ProxyConfigBuilder.Build().Clusters);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>

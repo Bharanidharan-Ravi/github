@@ -36,6 +36,8 @@
     "prosemirror-view": "^1.34.3",
     
     "shared-signalr": "workspace:*",
-    "shared-store": "workspace:*"
+    "shared-store": "workspace:*",
+    "zustand-data-orchestrator": "workspace:*",
+    "shared-Sidebar": "workspace:*"
   }
 }

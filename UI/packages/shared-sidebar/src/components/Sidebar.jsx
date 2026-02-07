@@ -9,10 +9,10 @@ const getIcon = (name) => {
 
 const Sidebar = ({ items = [], isOpen, onClose }) => {
   const [expanded, setExpanded] = useState({});
+console.log("item :", items);
 
-  const toggle = (key) => {
-    setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggle = (key) =>
+    setExpanded((p) => ({ ...p, [key]: !p[key] }));
 
   return (
     <>
@@ -25,33 +25,40 @@ const Sidebar = ({ items = [], isOpen, onClose }) => {
 
       <aside
         className={`bg-dark text-white p-3
-          ${isOpen ? "fixed-top h-100" : "d-none d-md-block"}`}
+        ${isOpen ? "fixed-top h-100" : "d-none d-md-block"}`}
         style={{ width: 260 }}
       >
         <ul className="nav flex-column">
-          {items.map(item => (
+          {items.map((item) => (
             <li key={item.key} className="nav-item mb-1">
 
-              {/* DROPDOWN */}
               {item.children ? (
                 <>
                   <div
                     className="nav-link d-flex justify-content-between"
-                    onClick={() => toggle(item.key)}
                     style={{ cursor: "pointer" }}
+                    onClick={() => toggle(item.key)}
                   >
                     <span>{getIcon(item.icon)} {item.label}</span>
                     <Icons.ChevronDown
                       size={16}
-                      style={{ transform: expanded[item.key] ? "rotate(180deg)" : "" }}
+                      style={{
+                        transform: expanded[item.key]
+                          ? "rotate(180deg)"
+                          : "rotate(0deg)",
+                      }}
                     />
                   </div>
 
                   {expanded[item.key] && (
                     <ul className="nav flex-column ms-3">
-                      {item.children.map(child => (
+                      {item.children.map((child) => (
                         <li key={child.key}>
-                          <NavLink to={child.path} className="nav-link small">
+                          <NavLink
+                            to={child.path}
+                            className="nav-link small"
+                            onClick={onClose}
+                          >
                             {child.label}
                           </NavLink>
                         </li>

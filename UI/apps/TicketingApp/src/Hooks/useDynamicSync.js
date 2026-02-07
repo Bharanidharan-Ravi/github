@@ -1,130 +1,113 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { useEvent } from "shared-signalr";
-import { useCustomStore, MODULE_DEFINITIONS } from "shared-store";
+import { MODULE_DEFINITIONS, useCustomStore } from "shared-store";
+import { matchPattern } from "../Shared/Utilities/Utilities";
 
 export function useDynamicSync() {
-    const location = useLocation();
-    const pathSegments = location.pathname.toLowerCase().split("/");
-    
-    // 1. Identify Active Module
-    const activeKey = Object.keys(MODULE_DEFINITIONS).find(key => pathSegments.includes(key));
-    const config = activeKey ? MODULE_DEFINITIONS[activeKey].data : null;
+  const location = useLocation();
+  const pathname = location.pathname;
+  const store = useCustomStore.getState();
+  const lastFetchRef = useRef("");
+  const user = useCustomStore.getState();
+  
+  const segments = useMemo(
+    () => pathname.split("/").filter(Boolean),
+    [pathname],
+  );
 
-    // 2. AUTO-SYNC LOGIC (Now with Dependencies!)
-    useEffect(() => {
-        if (config) {
-            console.log(`🚀 Route [${activeKey}]: Syncing Main Data...`);
-            
-            // A. Fetch the Main Module (e.g., Tickets)
-            const mainFetcher = useCustomStore.getState()[config.fetcherName];
-            if (mainFetcher) mainFetcher();
+  /* ---------------- GLOBAL PARAMS ---------------- */
+  const globalParams = useMemo(() => {
+    const repoIndex = segments.indexOf("r");
+    if (repoIndex !== -1 && segments[repoIndex + 1]) {
+      return { Repo_Id: segments[repoIndex + 1] };
+    }
+    return {};
+  }, [segments]);
 
-            // B. Fetch Dependencies (e.g., Repos, Projects)
-            if (config.dependencies && Array.isArray(config.dependencies)) {
-                config.dependencies.forEach(depKey => {
-                    const depDef = MODULE_DEFINITIONS[depKey];
-                    if (depDef && depDef.data.fetcherName) {
-                        console.log(`🔗 [${activeKey}] Loading Dependency: ${depKey}`);
-                        
-                        const depFetcher = useCustomStore.getState()[depDef.data.fetcherName];
-                        if (depFetcher) depFetcher();
-                    }
-                });
-            }
-        }
-    }, [activeKey]);
+  /* ---------------- MODULE + ROUTE ---------------- */
+  const resolved = useMemo(() => {
+    const repoIndex = segments.indexOf("r");
+    const isRepoScoped = repoIndex !== -1 && segments[repoIndex + 1];
 
-    // 3. SignalR Handlers
-    const handleCreate = (data) => config && useCustomStore.getState()[`add${config.name}`](data);
-    const handleUpdate = (data) => config && useCustomStore.getState()[`update${config.name}`](data);
-    const handleDelete = (id) => config && useCustomStore.getState()[`delete${config.name}`](id);
+    let moduleSegment;
 
-    // 4. Listeners
-    const prefix = config ? config.eventPrefix : "___Ignore";
-    useEvent(`${prefix}Created`, handleCreate);
-    useEvent(`${prefix}Updated`, handleUpdate);
-    useEvent(`${prefix}Deleted`, handleDelete);
+    if (isRepoScoped) {
+      // /user/r/:repoId/:module
+      moduleSegment = segments[repoIndex + 2];
+    } else {
+      // /user/dashboard OR /dashboard
+      moduleSegment =
+        segments[0] === user.UserName || segments[0] === "admin"
+          ? segments[1]
+          : segments[0];
+    }
+
+    const moduleKey = Object.keys(MODULE_DEFINITIONS).find(
+      (key) => key === moduleSegment,
+    );
+
+    console.log("resolver:", {
+      segments,
+      isRepoScoped,
+      moduleSegment,
+      moduleKey,
+      MODULE_DEFINITIONS
+    });
+
+    if (!moduleKey) return {};
+
+    const moduleDef = MODULE_DEFINITIONS[moduleKey];
+
+    let relativeSegments;
+
+    if (isRepoScoped) {
+      relativeSegments = segments.slice(repoIndex + 3);
+    } else {
+      const moduleIndex = segments.indexOf(moduleSegment);
+      relativeSegments = segments.slice(moduleIndex + 1);
+    }
+
+    let activeRoute;
+    let routeParams = {};
+
+    for (const route of moduleDef.ui.routes) {
+      // root route
+      if (route.path === "" && relativeSegments.length === 0) {
+        activeRoute = route;
+        break;
+      }
+
+      const params = matchPattern(route.path, relativeSegments);
+      if (params) {
+        activeRoute = route;
+        routeParams = params;
+        break;
+      }
+    }
+
+    return { moduleDef, activeRoute, routeParams };
+  }, [segments]);
+
+  /* ---------------- FETCH ---------------- */
+  useEffect(() => {
+    if (!resolved.activeRoute?.fetcherName) return;
+
+    const params = {
+      ...globalParams,
+      ...resolved.routeParams,
+    };
+
+    const paramsKey = JSON.stringify(params);
+    const fetchKey = `${resolved.activeRoute.fetcherName}:${paramsKey}`;
+
+    if (lastFetchRef.current === fetchKey) return;
+    lastFetchRef.current = fetchKey;
+
+    const fetcher = store[resolved.activeRoute.fetcherName];
+    if (typeof fetcher === "function") {
+      fetcher(params);
+    }
+  }, [resolved, globalParams, store]);
+
+  return resolved;
 }
-
-
-// useEffect(() => {
-//     if (config) {
-//         console.log(`🚀 Route [${activeKey}]: Syncing Data...`);
-
-//         // 1. Create a UNIQUE set of fetchers to run
-//         const fetchersToRun = new Set();
-
-//         // Add Main Module (e.g., Tickets)
-//         if (config.fetcherName) fetchersToRun.add(config.fetcherName);
-
-//         // Add Dependencies (e.g., Repos, Projects)
-//         if (config.dependencies) {
-//             config.dependencies.forEach(depKey => {
-//                 const depDef = MODULE_DEFINITIONS[depKey];
-//                 if (depDef && depDef.data.fetcherName) {
-//                     fetchersToRun.add(depDef.data.fetcherName);
-//                 }
-//             });
-//         }
-
-//         // 2. Execute them (The Store's "isInitialized" check handles the rest)
-//         fetchersToRun.forEach(fnName => {
-//             const fetcher = useCustomStore.getState()[fnName];
-//             if (fetcher) {
-//                 // This call is safe because createGenericSlice checks isInitialized!
-//                 fetcher(); 
-//             }
-//         });
-//     }
-// }, [activeKey]);
-
-
-/////-------------------------------------------------------------------------
-// OLD CODE FOR REFERENCE
-//--------------------------------------------------------------
-
-// // apps/TicketingApp/src/hooks/useDynamicSync.js
-// import { useEffect } from "react"; // Added useEffect
-// import { useLocation } from "react-router-dom";
-// import { useEvent } from "shared-signalr";
-// import { SYNC_CONFIG } from "../Configs/moduleSyncConfig.js";
-// import { useCustomStore } from "shared-store";
-
-
-// export function useDynamicSync() {
-//     const location = useLocation();
-//     const pathSegments = location.pathname.toLowerCase().split("/");
-    
-//     // 1. Determine Active Module
-//     const activeKey = Object.keys(SYNC_CONFIG).find(key => pathSegments.includes(key));
-//     const config = activeKey ? SYNC_CONFIG[activeKey] : null;
-
-//     // ---------------------------------------------------------
-//     // 🚀 NEW: AUTOMATIC FETCHING (Route-Driven Sync)
-//     // ---------------------------------------------------------
-//     useEffect(() => {
-//         if (config && config.fetcher) {
-//             console.log(`🔄 Route Changed to [${activeKey}]: Triggering Background Sync...`);
-//             const fetcher = config.fetcher;
-//             console.log(`Fetcher: ${fetcher}`);
-            
-//             // Call the store action dynamically
-//             // e.g., store.getState().ensureTicketsLoaded()
-//             useCustomStore.getState()[fetcher]();
-//         }
-//     }, [activeKey]); // Only runs when switching modules (e.g., Repo -> Tickets)
-
-//     // ---------------------------------------------------------
-//     // SignalR Handlers (Existing Logic)
-//     // ---------------------------------------------------------
-//    const handleCreate = (data) => config && config.store.getState()[config.actions.add](data);
-//     // const handleUpdate = (data) => config && config.store.getState()[config.actions.update](data);
-//     // const handleDelete = (id) => config && config.store.getState()[config.actions.delete](id);
-
-//     const prefix = config ? config.eventPrefix : "___Ignore";
-
-//     useEvent(`${prefix}Created`, handleCreate);
-//     // useEvent(`${prefix}Updated`, handleUpdate);
-//     // useEvent(`${prefix}Deleted`, handleDelete);
-// }

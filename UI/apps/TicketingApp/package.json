@@ -47,6 +47,7 @@
     "shared-store": "workspace:*",
     "@marvick/smart-table": "workspace:*",
     "@formstack/react-input-engine": "workspace:*",
+    "zustand-data-orchestrator": "workspace:*",
     "tippy.js": "^6.3.7"
   }
 }

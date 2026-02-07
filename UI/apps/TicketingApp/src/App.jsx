@@ -16,6 +16,11 @@ import { useCustomStore } from "shared-store";
 import ProjectRouter from "./Router/ProjectRouter.jsx";
 import { AppDataSync } from "./Shared/AppDataSync/AppDataSync.jsx";
 import CRMmainPage from "./components/CRM/crmMainPage.jsx";
+import SmartRouteWrapper from "./Router/SmartRouteWrapper.jsx";
+import { TicketModule } from "./Configs/Ticket.config.js";
+import { createRuntime } from "app-runtime/createRuntime";
+import { initRuntimeStore } from "app-runtime/useRuntimeStore";
+import { AppRuntime } from "app-runtime/AppRuntime";
 
 function App() {
   const isStandalone = !window.__MICRO_FRONTEND__;
@@ -31,14 +36,20 @@ function App() {
   const basePath = window.location.pathname.split("/")[1];
   const RouterWrapper = ({ children }) =>
     isStandalone ? <BrowserRouter>{children}</BrowserRouter> : <>{children}</>;
+  const runtime = createRuntime({
+    modules: [TicketModule],
+    baseURL: "http://localhost:3000/api",
+  });
 
+  initRuntimeStore(runtime.store);
   return (
     <RouterWrapper>
-
       {/* 🔹 Navbar is aware of basePath (role prefix) */}
       {/* <Navbar basePath={basePath} role={2} /> */}
-      <AppDataSync />
-      <Routes>
+      {/* <AppDataSync />
+      <SmartRouteWrapper /> */}
+      <AppRuntime modules={runtime.modules} />
+      {/* <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/CRM" element={<CRMmainPage />} />
         <Route
@@ -52,7 +63,7 @@ function App() {
         <Route path={`/tickets/*`} element={<TicketsRoutes role={role} />} />
         <Route path={`/repository/*`} element={<RepoRouter role={role} />} />
         <Route path={`/projects/*`} element={<ProjectRouter role={role} />} />
-      </Routes>
+      </Routes> */}
     </RouterWrapper>
   );
 }

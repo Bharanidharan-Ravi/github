@@ -1,0 +1,11 @@
+{
+  "name": "app-runtime",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "files": ["dist"],
+  "peerDependencies": {
+    "react": "^18",
+    "react-router-dom": "^6"
+  }
+}

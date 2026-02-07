@@ -31,7 +31,6 @@
     "@emotion/styled": "^11.14.1",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
-    "@marvick/smart-table": "file:apps\\DynamicTable\\marvick-smart-table-1.0.1.tgz",
     "@microsoft/signalr": "^9.0.6",
     "@mui/icons-material": "^7.3.5",
     "@mui/material": "^7.3.5",
@@ -66,8 +65,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.5",
     "react-toastify": "^11.0.5",
-    "zustand": "^5.0.8",
-    "zustand-data-orchestrator": "link:D:/Project/Libraries/zustand-data-orchestrator"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

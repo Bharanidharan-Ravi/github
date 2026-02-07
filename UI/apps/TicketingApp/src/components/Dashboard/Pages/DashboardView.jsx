@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useTicketsContext } from "../Context/TicketsContext";
 
-const CreateTicket = ({ isModal }) => {
+const DashboardView = ({ isModal }) => {
     const navigate = useNavigate();
     const {  } = useTicketsContext();
   
@@ -29,4 +29,4 @@ const CreateTicket = ({ isModal }) => {
     );
   };
   
-  export default CreateTicket;
+  export default DashboardView;
