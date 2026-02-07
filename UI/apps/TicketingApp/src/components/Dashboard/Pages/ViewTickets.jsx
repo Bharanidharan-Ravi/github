@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useDashboardContext } from "../Context/DashboardContext.jsx";
-// import { useAppStore } from "../../../store/appStore.js";
+import { useAppStore } from "../../../store/appStore.js";
 // import { SmartTable } from '@marvick/smart-table';
 import { SmartTable } from "shared-table";
-// import { hello } from "zustand-data-orchestrator"
 
 const columns = [
   {

@@ -23,9 +23,9 @@ function App() {
   const role = useCustomStore((state) => state.role);
   const setActiveModule = useCustomStore((state) => state.setActiveModule);
 
-  useEffect(() => {
-    setActiveModule("tickets");
-  }, []);
+  // useEffect(() => {
+  //   setActiveModule("tickets");
+  // }, []);
 
   // When embedded in shell, basePath = admin | employee | client
   const basePath = window.location.pathname.split("/")[1];

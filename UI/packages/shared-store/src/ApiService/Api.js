@@ -1,8 +1,8 @@
 import axios from "axios";
 import { useCustomStore } from "../store"
 
-const API_URL = "https://crm.canarahydraulics.com:8088/api";
-// const API_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_URL = "https://crm.canarahydraulics.com:8088/api";
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const environment = import.meta.env.VITE_ENVIRONMENT;
 console.log("api :", API_URL, environment);
 
@@ -22,10 +22,10 @@ api.interceptors.request.use(
 
         const parsedUserData = userData ? JSON.parse(userData) : null;
 
-        // if (parsedUserData) {
-        //     config.headers['wg_token'] = parsedUserData;
-        // }
-        config.headers['wg_token'] = "KAD0tUYqL0yTlueNFBR8S/eh1xfFM3TmffjOpHpHYAN92PLRw76ghTcWRNGPGeBduYBaBKk5LZkrYr44OI+lIPvOQ1dM1YOHVgFLKruH/blIDZOfqLlNy2RVrePmVnmOPsZpADNPviDnlJVrSEilFHMB25P5CU5yBuuoZGIPe4ZU9+lfkeoFdYCBGneAPyo3ocvmBjbW2pj+xrc1qNrTX6f/DADqBLx7pWhrvGk3mA37DnFnSt08M28SLCn/aaSFu95uKEj4Uo+oyBHbmnMm9YhJGW3Lkf1Ls8dthqqfbgxHiJureM4jXXnQ4O1+XfI7CQfS/QR9vRjcPQ0gzXoZe6cl1KGG3/YPTmFPpOOzJdT6uhfuByw1pPihjjFAY0iA0cjXaEb+RzznSDz4p9E49pByVq2dKqpbtAnaNMSYceR2s2fKlocPi6C04oeHGndRYzOegCcVH3uCtE/au7tLoMHAa7TkO5lVXha6zjqM4k1F19ESALKeoxdKG0/tgas4sTkYH5z3vh0vMoqGeJAkBdRjB3owULazYCNU3pBe7tcv3BLMKz6vGwTV537K5+y6dq8Pq2G69/TbMJTqCh9QEkKlRMkHs7gI17IUTeOy5lHv0C6XkNhhLb/rmdMrH3LM"
+        if (parsedUserData) {
+            config.headers['wg_token'] = parsedUserData;
+        }
+        // config.headers['wg_token'] = "x8m0nLLDf7Yc7AK7k/RocuFxxeNs5zN9KYZFwfoBZGr2N76UxEkMbjTc8JgI+ACdbCRBtWfUMOfG599LFMJZmbVyv1zS8NOXqM2PM69aOCOJ6/9DAAHtZvGBZqJaH+nLjkkvZnG9Gsf+oYpubRAZWtjsoPuaH94jkHj2f503eHJxnTWWJ4Lf6cCMct3/+8fIjsNbGb/yGIgaBbmSCXdUgKcRBIG0zOcFVs3HvxIjQS4gvAob1A/5/y7w0KPY7Y7ivVS/VGRv+lNafeQsDrnhBy620xICH2RwT6EfJmkpJ8UaigTmbOeU4uJ5F1iK0BRhRcxtYRcl33u1vlHPhtsw/4JvrluKxn0WHtI7/CmhGrrZTZJ1eYpISjUrs3K6GNJRxK/M/TddFFa4fCyzBQNqivs2a1dfIAHvW7rVpECOKfUijQ4qr74AAO1QIax8rzxm7mR2BPCUOFbcSxbxF7p0RztqvetN4px2p2ANjFnEoxIRpx78apCh4ZFqylbFV67gE+DEu73pqVz6E9BiHi/q3B6JjepJpble4NI+Tgte/lZCILgssO1M17wp6fxz8lXJgL9C1++yojQ8xgRMXZ1njIIbrP8R8r0yHJTi9ciZ7Tav9ohtAt9tLl2plFmEDD07"
         return config;
     },
     (error) => {
@@ -48,7 +48,7 @@ api.interceptors.response.use(
         const data = respData.Data ?? respData.data ?? null; // fallback to either Data or data
 
         const method = response?.config?.method?.toUpperCase();
-        // console.log("response data :", response);
+        console.log("response data :", response);
 
         if (code >= 200 && code < 300) {
             if (message && (method === 'POST' || method === 'PUT' || method === 'DELETE') && message !== 'NO') {

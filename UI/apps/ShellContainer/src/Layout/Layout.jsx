@@ -5,12 +5,16 @@ import { Outlet } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import './Layout.css';
 import Navbar from '../SharedFile/Navbar/navbar';
+import { Sidebar } from 'shared-Sidebar'
+import { useSidebarItems } from '../hooks/useSidebarItems';
 
 const Layout = ({ role }) => {
     const location = useLocation()
     const hideLayout = location.pathname === '/auth'
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const sidebarItems = useSidebarItems();
 
     useEffect(() => {
         const handleResize = () => {
@@ -34,6 +38,11 @@ const Layout = ({ role }) => {
         <div className="layout-container">
             {!hideLayout && <Header toggleMobileMenu={toggleMobileMenu} />}
             {/* Conditionally render content based on role */}
+            <Sidebar
+                items={sidebarItems}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
             <main className="main-content">
                 {/* <Navbar role={role} /> */}
                 <Outlet />

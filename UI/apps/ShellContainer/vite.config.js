@@ -70,7 +70,18 @@ export default defineConfig({
       // 1. Existing local aliases
       "shared-store": path.resolve(__dirname, "../../packages/shared-store"),
       "shared-signalr": path.resolve(__dirname, "../../packages/shared-signalr"),
-
+         "shared-table": path.resolve(
+              __dirname,
+              "../../packages/DynamicTable/src"
+            ),
+            "shared-form": path.resolve(
+              __dirname,
+              "../../packages/react-input-engine/src"
+            ),
+ "shared-Sidebar": path.resolve(
+              __dirname,
+              "../../packages/shared-sidebar/src"
+            ),
       // 2. Tiptap Aliases (Existing)
       "@tiptap/core/package.json": resolvePackageJson("@tiptap/core"),
       "@tiptap/react/package.json": resolvePackageJson("@tiptap/react"),

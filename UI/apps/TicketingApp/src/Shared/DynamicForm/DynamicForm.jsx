@@ -6,7 +6,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CommentBar from "../../components/Tickets/Components/CommentBar/AdvancedEditor";
 import AdvancedEditor from "../../components/Tickets/Components/CommentBar/AdvancedEditor";
-import TicketManager from "../TicketManager/TicketManager";
 
 const DynamicForm = ({
   labels,
@@ -33,19 +32,6 @@ const DynamicForm = ({
     onClose();
   };
 
-  useEffect(() => {
-    const func = async (...arg) => {
-      const res = a + b;
-      console.log(res);
-    };
-    func(a, b);
-    
-    function funcs() {
-      const res = a + b;
-      console.log(res);
-    }
-    funcs(a, b);
-  }, []);
   return (
     <form className="container minimal-form p-4" onSubmit={handleSubmit}>
       <div className="row g-3">
@@ -240,20 +226,6 @@ const DynamicForm = ({
                   initialContent={formData.description || ""}
                 />
               </div>
-            );
-          } else if (field.type === "ticket-manager") {
-            inputElement = (
-              <TicketManager
-                value={fieldValue || []}
-                onChange={(updatedTickets) =>
-                  onChange(HandlefieldValue, updatedTickets)
-                }
-                disabled={isDisabled}
-                employeeOptions={field.employeeOptions}
-                departmentOptions={field.departmentOptions}
-                // 🟢 Pass the config object!
-                ticketConfig={field.ticketConfig}
-              />
             );
           }
           // Regular input field

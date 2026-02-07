@@ -26,7 +26,6 @@ const SelectInput = ({ field, value, error, onChange }) => {
 
 
     const options = field.options || [];
-console.log("field :", field);
 
     const filtered = useMemo(() => {
         if (!search) return options;
@@ -37,7 +36,6 @@ console.log("field :", field);
 
     const selectedLabel =
         options.find((o) => o.value === value)?.label || "";
-console.log("selectedLabel :", selectedLabel, options, value);
 
     return (
         <div className="fe-field fe-search-select">
