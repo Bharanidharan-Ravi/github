@@ -185,3 +185,17 @@ vite.config.ts.timestamp-*
 /API/API/WGAPP.ModelLayer/obj/project.assets.json
 /API/API/WGAPP.ModelLayer/obj/project.nuget.cache
 /API/API/WGAPP.ModelLayer/obj/WGAPP.ModelLayer.csproj.nuget.dgspec.json
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/ref/WGAPP.DomainLayer.dll
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/refint/WGAPP.DomainLayer.dll
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.csproj.CoreCompileInputs.cache
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.csproj.FileListAbsolute.txt
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.dll
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.genruntimeconfig.cache
+/API/API/WGAPP.DomainLayer/obj/Debug/net7.0/WGAPP.DomainLayer.pdb
+*.json
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/ref/WGAPP.ModelLayer.dll
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/refint/WGAPP.ModelLayer.dll
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.csproj.FileListAbsolute.txt
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.dll
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.genruntimeconfig.cache
+/API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.pdb
