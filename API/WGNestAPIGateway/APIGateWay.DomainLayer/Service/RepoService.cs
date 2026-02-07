@@ -1,7 +1,6 @@
 ﻿using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
-using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModelLayer.ErrorException;
 using Azure.Core;
@@ -140,30 +139,5 @@ namespace APIGateWay.DomainLayer.Service
 
             return result; 
         }
-        //public async Task<DashboardViewModel> GetProjCreationData(SyncRequest request)
-        //{
-        //    // 1. Define the 3 separate API routes on the Child/Backend
-        //    // Notice we only provide the RELATIVE path. The HttpClient adds "https://localhost:5070/" automatically.
-        //    string projectUrl = $"api/projects/sync?since={request.ProjectLastSync:O}";
-        //    string repoUrl = $"api/repos/sync?since={request.RepoLastSync:O}";
-        //    string empUrl = $"api/employees/sync?since={request.EmpLastSync:O}";
-
-        //    // 2. Fire off the 3 requests in PARALLEL (The Split)
-        //    // We do NOT await them yet.
-        //    var projectTask = _http.GetFromJsonAsync<SyncResponse<List<ProjectDto>>>(projectUrl);
-        //    var repoTask = _http.GetFromJsonAsync<SyncResponse<List<RepoDto>>>(repoUrl);
-        //    var empTask = _http.GetFromJsonAsync<SyncResponse<List<EmpDto>>>(empUrl);
-
-        //    // 3. Wait for all 3 to return
-        //    await Task.WhenAll(projectTask, repoTask, empTask);
-
-        //    // 4. Combine the results
-        //    return new DashboardViewModel
-        //    {
-        //        Projects = projectTask.Result,
-        //        Repos = repoTask.Result,
-        //        Employees = empTask.Result
-        //    };
-        //}
     }
 }
