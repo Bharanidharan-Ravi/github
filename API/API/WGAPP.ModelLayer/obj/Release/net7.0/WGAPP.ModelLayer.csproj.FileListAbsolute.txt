@@ -1,0 +1,14 @@
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\bin\Release\net7.0\WGAPP.ModelLayer.deps.json
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\bin\Release\net7.0\WGAPP.ModelLayer.runtimeconfig.json
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\bin\Release\net7.0\WGAPP.ModelLayer.dll
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\bin\Release\net7.0\WGAPP.ModelLayer.pdb
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.csproj.AssemblyReference.cache
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.AssemblyInfoInputs.cache
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.AssemblyInfo.cs
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.csproj.CoreCompileInputs.cache
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.dll
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\refint\WGAPP.ModelLayer.dll
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.pdb
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\WGAPP.ModelLayer.genruntimeconfig.cache
+D:\WGNest09122025\API\API\WGAPP.ModelLayer\obj\Release\net7.0\ref\WGAPP.ModelLayer.dll

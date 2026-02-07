@@ -1,0 +1,70 @@
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.deps.json
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.runtimeconfig.json
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.AssemblyReference.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfoInputs.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfo.cs
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.CoreCompileInputs.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\refint\DealerPortal.ModelLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.genruntimeconfig.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.ModelLayer\obj\Debug\net7.0\ref\DealerPortal.ModelLayer.dll
+D:\DealerPortal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.deps.json
+D:\DealerPortal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.runtimeconfig.json
+D:\DealerPortal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\DealerPortal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.AssemblyReference.cache
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfoInputs.cache
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfo.cs
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.CoreCompileInputs.cache
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\refint\DealerPortal.ModelLayer.dll
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.genruntimeconfig.cache
+D:\DealerPortal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\ref\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.deps.json
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.runtimeconfig.json
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\refint\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\ref\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.deps.json
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\refint\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.ModelLayer\obj\Debug\net7.0\ref\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.deps.json
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\refint\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\DealerPortal.ModelLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.ModelLayer\obj\Debug\net7.0\ref\DealerPortal.ModelLayer.dll

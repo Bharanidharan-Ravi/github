@@ -1,0 +1,57 @@
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.ResolveComReference.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.deps.json
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.Do.3690B0CD.Up2Date
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\refint\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\WGAPP.DomainLayer\obj\Debug\net7.0\ref\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.ResolveComReference.cache
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.deps.json
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.Do.3690B0CD.Up2Date
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\refint\WGAPP.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\WGNest\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\ref\WGAPP.DomainLayer.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.deps.json
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.runtimeconfig.json
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.DomainLayer.pdb
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\bin\Debug\net7.0\WGAPP.ModelLayer.pdb
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.AssemblyReference.cache
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.ResolveComReference.cache
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfoInputs.cache
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.AssemblyInfo.cs
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.csproj.CoreCompileInputs.cache
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.Do.3690B0CD.Up2Date
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\refint\WGAPP.DomainLayer.dll
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.pdb
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\WGAPP.DomainLayer.genruntimeconfig.cache
+D:\WGNest09122025\API\API\WGAPP.DomainLayer\obj\Debug\net7.0\ref\WGAPP.DomainLayer.dll

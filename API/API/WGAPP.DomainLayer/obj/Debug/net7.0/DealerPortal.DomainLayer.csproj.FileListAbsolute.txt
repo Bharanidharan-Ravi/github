@@ -1,0 +1,95 @@
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.deps.json
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.runtimeconfig.json
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.pdb
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.AssemblyReference.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.ResolveComReference.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfoInputs.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfo.cs
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.CoreCompileInputs.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPo.D9EF2511.Up2Date
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\refint\DealerPortal.DomainLayer.dll
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.pdb
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.genruntimeconfig.cache
+D:\bharani\T\DealerPortalSolution\DealerPortal.DomainLayer\obj\Debug\net7.0\ref\DealerPortal.DomainLayer.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.deps.json
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.runtimeconfig.json
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.pdb
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.AssemblyReference.cache
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.ResolveComReference.cache
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfoInputs.cache
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfo.cs
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.CoreCompileInputs.cache
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPo.D9EF2511.Up2Date
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\refint\DealerPortal.DomainLayer.dll
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.pdb
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.genruntimeconfig.cache
+D:\DealerPortal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\ref\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.deps.json
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.runtimeconfig.json
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.ResolveComReference.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPo.D9EF2511.Up2Date
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\refint\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\ref\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.deps.json
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.ResolveComReference.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPo.D9EF2511.Up2Date
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\refint\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\Supreme Dealer Portal\API\DealerPortal.DomainLayer\obj\Debug\net7.0\ref\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.AssemblyReference.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\Interop.SAPbobsCOM.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.ResolveComReference.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.GeneratedMSBuildEditorConfig.editorconfig
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfoInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.AssemblyInfo.cs
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.csproj.CoreCompileInputs.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\refint\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.deps.json
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.runtimeconfig.json
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.DomainLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.dll
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\bin\Debug\net7.0\DealerPortal.ModelLayer.pdb
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPo.D9EF2511.Up2Date
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\DealerPortal.DomainLayer.genruntimeconfig.cache
+G:\WG-W1 DATA\LiveWork\WG App\API\DealerPortal.DomainLayer\obj\Debug\net7.0\ref\DealerPortal.DomainLayer.dll

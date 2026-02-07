@@ -137,3 +137,35 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+/API/API/.vs
+/API/API/WGAPP/.config
+/API/API/WGAPP/10/31
+/API/API/WGAPP/11
+/API/API/WGAPP/12
+/API/API/WGAPP/6
+/API/API/WGAPP/7
+/API/API/WGAPP/8/19
+/API/API/WGAPP/bin
+/API/API/WGAPP/Extensions
+/API/API/WGAPP/obj
+/API/API/WGAPP/Properties
+/API/API/WGAPP/appsettings.Development.json
+/API/API/WGAPP/WGAPP.csproj
+/API/API/WGAPP/WGAPP.csproj.user
+/API/API/WGAPP.BusinessLayer/bin
+/API/API/WGAPP.BusinessLayer/obj
+*.csproj
+/API/API/WGAPP.DomainLayer/bin
+/API/API/WGAPP.ModelLayer/bin
+/API/WGNestAPIGateway/.vs
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Debug/net8.0
+/API/WGNestAPIGateway/APIGateWay.Business Layer/obj
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Debug/net8.0
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/obj
+/API/WGNestAPIGateway/APIGateWay.ModalLayer/bin/Debug/net8.0
+/API/WGNestAPIGateway/APIGateWay.ModalLayer/obj
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Debug/net8.0
+/API/WGNestAPIGateway/WGNestAPIGateway/obj
+*.user
+*.http
