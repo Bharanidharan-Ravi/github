@@ -16,6 +16,7 @@ function safeRm(p) {
     console.error('Failed to remove', p, e.message);
   }
 }
+console.log();
 
 function walk(dir) {
   let entries;
