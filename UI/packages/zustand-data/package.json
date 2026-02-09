@@ -1,7 +1,7 @@
 {
-  "name": "shared-Sidebar",
+  "name": "zustand-data",
   "version": "0.1.0",
-  "description": "Config-driven React sidebar component with dynamic menu items and responsive design",
+  "description": "Config-driven state management solution for React applications using Zustand.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "style": "dist/styles.css",

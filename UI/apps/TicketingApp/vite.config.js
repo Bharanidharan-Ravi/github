@@ -14,6 +14,8 @@ export default defineConfig({
       },
       exposes: {
         "./App": "./src/App.jsx", // Exposing the main App component
+        "./ViewTickets": "./src/components/Tickets/Pages/ViewTickets.jsx",
+        "./TicketConfig": "./src/config/Ticket.config.js",
         // './RepositoryRouter': './src/Router/RepositoryRouter.jsx',
         // other components...
       },
@@ -78,20 +80,25 @@ export default defineConfig({
     alias: {
       "shared-store": path.resolve(
         __dirname,
-        "../../packages/shared-store/src"
+        "../../packages/shared-store/src",
       ),
       "shared-signalr": path.resolve(
         __dirname,
-        "../../packages/shared-signalr/src"
+        "../../packages/shared-signalr/src",
       ),
       "shared-table": path.resolve(
         __dirname,
-        "../../packages/DynamicTable/src"
+        "../../packages/DynamicTable/src",
       ),
       "shared-form": path.resolve(
         __dirname,
-        "../../packages/react-input-engine/src"
-      )
+        "../../packages/react-input-engine/src",
+      ),
+      "zustand-data-orchestrator": path.resolve(
+        __dirname,
+        "../../packages/zustand-data-orchestrator/src",
+      ),
+      "app-runtime": path.resolve(__dirname, "../../packages/app-runtime/src"),
     },
   },
   server: {

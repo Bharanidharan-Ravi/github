@@ -44,7 +44,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
         {
             try
             {
-                var validProcedureNames = new[] { "VALIDATEUSER","GETEMPLOYEEMASTER", "GETALLPROJECTDATA" };
+                var validProcedureNames = new[] { "VALIDATEUSER","GETEMPLOYEEMASTER", "GetAllProjData",  };
                 if (!validProcedureNames.Contains(StoredProcedure))
                 {
                     throw new ArgumentException("Invalid stored procedure name", nameof(StoredProcedure));
