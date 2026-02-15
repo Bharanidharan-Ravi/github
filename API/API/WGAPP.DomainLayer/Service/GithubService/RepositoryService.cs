@@ -10,8 +10,6 @@ using WGAPP.DomainLayer.Service.CommonService;
 using WGAPP.ModelLayer.GithubModal.ViewIssues;
 using WGAPP.ModelLayer.GithubModal.RepositoryModal;
 using WGAPP.DomainLayer.Interface.GithubInterface;
-using Microsoft.EntityFrameworkCore;
-using SAPbobsCOM;
 
 namespace WGAPP.DomainLayer.Service.GithubService
 {

@@ -10,7 +10,6 @@ using WGAPP.DomainLayer.DBContext;
 using WGAPP.DomainLayer.Services.CommonServices;
 using WGAPP.BusinessLayer.Helpers.token;
 using WGAPP.BusinessLayer.Helpers;
-using WGAPP.DomainLayer.Connection;
 using WGAPP.DomainLayer.Service.CommonService;
 using WGAPP.BusinessLayer.Interface;
 using WGAPP.DomainLayer.Interface;
@@ -23,7 +22,6 @@ namespace WGAPP.BusinessLayer.Repository
         private readonly ILoginService _LoginService;
         private readonly DecodeHelpers _decodeHelpers;
         private readonly TokenGeneration _tokenGeneration;
-        private readonly ConnectionHelper _connectionHelper;
         private readonly IConfiguration _configuration;
         private readonly WGAPPCommonService _CommonService;
 
@@ -33,7 +31,6 @@ namespace WGAPP.BusinessLayer.Repository
             _LoginService = loginService;
             _decodeHelpers = decodeHelpers;
             _configuration = configuration;
-            _connectionHelper = new ConnectionHelper(configuration);
             _tokenGeneration = tokenGeneration;
         }
         public async Task<string> GetUserinfo(string username, string password, string deviceInfo)
