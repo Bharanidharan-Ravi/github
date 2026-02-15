@@ -157,7 +157,6 @@ vite.config.ts.timestamp-*
 /API/API/WGAPP/WGAPP.csproj.user
 /API/API/WGAPP.BusinessLayer/bin
 /API/API/WGAPP.BusinessLayer/obj
-*.csproj
 /API/API/WGAPP.DomainLayer/bin
 /API/API/WGAPP.ModelLayer/bin
 /API/WGNestAPIGateway/.vs
