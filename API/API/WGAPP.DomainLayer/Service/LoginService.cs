@@ -12,7 +12,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using WGAPP.DomainLayer.DBContext;
 using WGAPP.DomainLayer.Service.CommonService;
-using WGAPP.DomainLayer.Connection;
 using WGAPP.DomainLayer.ErrorException;
 using WGAPP.DomainLayer.Interface;
 using WGAPP.ModelLayer;

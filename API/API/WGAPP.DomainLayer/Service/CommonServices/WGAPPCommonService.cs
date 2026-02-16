@@ -9,10 +9,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using SAPbobsCOM;
+//using SAPbobsCOM;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.CodeAnalysis.Operations;
-using WGAPP.DomainLayer.Connection;
+//using WGAPP.DomainLayer.Connection;
 using WGAPP.DomainLayer.DBContext;
 using Microsoft.EntityFrameworkCore.Storage;
 

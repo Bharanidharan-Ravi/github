@@ -17,8 +17,6 @@ using WGAPP.BusinessLayer.Repository.GithubRepository;
 using WGAPP.DomainLayer.Interface.GithubInterface;
 using WGAPP.DomainLayer.Service.GithubService;
 using WGAPP.BusinessLayer.Hub;
-using Microsoft.Extensions.FileProviders;
-using WGAPP.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,7 +110,7 @@ app.UseCors("AllowAll");
 //    }
 //});
 
-app.UseStaticFileConfig(builder.Configuration);
+//app.UseStaticFileConfig(builder.Configuration);
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<HttpContextMiddleware>();

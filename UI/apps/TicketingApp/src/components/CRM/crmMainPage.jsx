@@ -4,31 +4,34 @@ import { useEffect } from "react";
 import { getOpportunityFields } from "./Config/getOpportunityFields";
 import { useState } from "react";
 import { useOpportunityFormStore } from "./store/useOpportunityFormStore";
-
+import AttachmentPreview from "./Attachment";
 const CRMmainPage = () => {
     const { masters, fetchMasters } = useOpportunityApiStore();
-    const { values, errors, setValue } = useOpportunityFormStore();
-    const [fields, setFields] = useState([]);
+    const { values, setValue, fields, setField, errors } = useOpportunityFormStore();
+    // const [fields, setFields] = useState([]); 
+    ``
     useEffect(() => {
         fetchMasters();
     }, []);
-    // console.log("masters :", masters);
-    useEffect(() => {
-        // console.log("Updated masters :", masters);
-        setFields(getOpportunityFields(masters));
-    }, [masters]);
 
+    useEffect(() => {
+        setField(getOpportunityFields(masters, values));
+    }, [masters, values]);
+console.log("error :", errors);
 
     return (
         <div>
             <h1>CRM Main Page</h1>
+
             <FormEngine
+                errors={errors}
                 fields={fields}
-                onChange={setValue}
                 values={values}
+                onChange={setValue}
             />
+            <AttachmentPreview />
         </div>
     );
-}
+};
 
 export default CRMmainPage;

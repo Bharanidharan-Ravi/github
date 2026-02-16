@@ -1,39 +1,88 @@
 import { create } from "zustand";
 import { useOpportunityApiStore } from "./useOpportunityApiStore";
+import { validateValue } from "../Shared/validationEngine";
 
 export const useOpportunityFormStore = create((set, get) => ({
     values: {},
+    errors: {},
+    fields: [],
+    context: {},
 
-    setValue: (key, value) => {
-        const { masters } = useOpportunityApiStore.getState();
-        const newValues = { ...get().values, [key]: value };
-        console.log("Setting value:", key, value, "New values:", newValues);
-        
-        // 🔁 Customer selected
-        if (key === "customerCode") {
-            const customer = masters.customerDetails.find(
-                c => c.customerCode === value
-            );
-console.log("Found customer for code", value, ":", customer);
-            if (customer) {
-                newValues.customerName = customer.customerName;
-                newValues.salesPerson = customer.slpCode;
-                newValues.contactPerson = customer.contactPersonCode;
+    setField: (fields) => set({ fields }),
+
+    setValue: (key, value, meta = {}) => {
+        const { values, errors, context, fields } = get();
+        const field = fields.find(f => f.name === key);
+        if (!field) return;
+
+        let nextValues = { ...values };
+        let nextErrors = { ...errors };
+        let nextContext = { ...context };
+
+        /* =====================
+           CLEAR CASE
+           ===================== */
+        if (meta.cleared) {
+            nextValues[key] = "";
+
+            // clear context only if config allows
+            if (field.clearContext === true) {
+                nextContext[key] = "";
             }
+
+            delete nextErrors[key];
+
+            set({
+                values: nextValues,
+                errors: nextErrors,
+                context: nextContext
+            });
+            return;
         }
 
-        // 🔁 Sales person selected → filter customer
-        if (key === "salesPerson") {
-            const customer = masters.customerDetails.find(
-                c => c.salesPersonCode === value
-            );
+        /* =====================
+           VALIDATION
+           ===================== */
+        const { value: validatedValue, error } =
+            validateValue(field, value);
 
-            if (customer) {
-                newValues.customerCode = customer.customerCode;
-                newValues.customerName = customer.customerName;
-            }
+        if (error) {
+            nextErrors[key] = error;
+            set({ errors: nextErrors });
+            return;
         }
 
-        set({ values: newValues });
+        delete nextErrors[key];
+console.log("validatedValue :", {validatedValue, key, value, meta});
+
+        /* =====================
+           SET VALUE
+           ===================== */
+        nextValues[key] = validatedValue;
+        nextContext[key] = validatedValue;
+
+        /* =====================
+           APPLY EFFECTS
+           ===================== */
+        if (field.effects && meta.raw) {
+            Object.entries(field.effects).forEach(([target, path]) => {
+                nextContext[target] = path
+                    .split(".")
+                    .reduce((acc, k) => acc?.[k], meta.raw.meta);
+console.log("target :", target, values);
+ 
+                // also mirror to values if that field exists in UI
+                if (fields.some(f => f.name === target)) {
+                    nextValues[target] = meta.raw.meta[target];
+                }
+            });
+        }
+console.log("nextValues :", nextValues);
+
+        set({
+            values: nextValues,
+            errors: nextErrors,
+            context: nextContext
+        });
     }
 }));
