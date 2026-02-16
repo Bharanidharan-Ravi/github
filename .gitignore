@@ -200,3 +200,5 @@ vite.config.ts.timestamp-*
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.dll
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.genruntimeconfig.cache
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/appsettings.json
+/API/WGNestAPIGateway/WGNestAPIGateway/appsettings.json
