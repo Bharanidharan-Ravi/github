@@ -30,13 +30,29 @@ namespace APIGateWay.Business_Layer.Helper
             ["RepoList"] = new SyncRepositoryConfig
             {
                 // Execution
-                SourceType = SyncSourceType.Remote,
-                Endpoint = "api/tickets/Repository/GetAllRepoData",
-                SourceName = "RepoService",
+                SourceType = SyncSourceType.Local,
+                StoredProcedure= "GETALLREPO",
+                EntityType = typeof(GetRepo),
+                SourceName = "SyncExecutionService",
 
                 // Aggregation
                 Type = "array",
-                Strategy = "replace",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+
+            ["TicketsList"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GETISSUSEBYID",
+                EntityType = typeof(GetTickets),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
             }

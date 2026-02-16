@@ -25,6 +25,8 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<CLIENTSMAILIDS> cLIENTSMAILIDs { get; set; }
         public DbSet<GetEmployee> getEmployees { get; set; }
         public DbSet<GetProject> getProjects { get; set; }
+        public DbSet<GetRepo> getRepos { get; set; }
+        public DbSet<GetTickets> getTickets { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<LOGIN_MASTER>(entity =>

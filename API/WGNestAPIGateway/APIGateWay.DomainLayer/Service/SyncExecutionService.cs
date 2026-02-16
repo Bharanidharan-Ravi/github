@@ -138,15 +138,21 @@ namespace APIGateWay.DomainLayer.Service
                 var dbName = _loginContext.databaseName;
 
                 var sqlParams = new List<SqlParameter>
-                {
-                    new("@DatabaseName", dbName),
-                    //new("@LastSyncTime", lastSync ?? (object)DBNull.Value)
-                };
+{
+    new SqlParameter("@DatabaseName", dbName ?? (object)DBNull.Value)
+};
 
                 if (parameters != null)
                 {
                     foreach (var kv in parameters)
-                        sqlParams.Add(new SqlParameter($"@{kv.Key}", kv.Value));
+                    {
+                        if (!sqlParams.Any(p => p.ParameterName == $"@{kv.Key}"))
+                        {
+                            sqlParams.Add(
+                                new SqlParameter($"@{kv.Key}", kv.Value ?? (object)DBNull.Value)
+                            );
+                        }
+                    }
                 }
 
                 var data = await _Service.ExecuteGetItemAsyc<T>(
