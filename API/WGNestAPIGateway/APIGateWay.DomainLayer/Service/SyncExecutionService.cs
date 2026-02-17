@@ -139,7 +139,7 @@ namespace APIGateWay.DomainLayer.Service
 
                 var sqlParams = new List<SqlParameter>
 {
-    new SqlParameter("@DatabaseName", dbName ?? (object)DBNull.Value)
+    new SqlParameter("@DbName", dbName ?? (object)DBNull.Value)
 };
 
                 if (parameters != null)

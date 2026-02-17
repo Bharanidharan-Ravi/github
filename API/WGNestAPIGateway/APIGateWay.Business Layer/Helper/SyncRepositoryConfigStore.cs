@@ -46,7 +46,7 @@ namespace APIGateWay.Business_Layer.Helper
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "GETISSUSEBYID",
+                StoredProcedure = "GetIssuesByID",
                 EntityType = typeof(GetTickets),
                 SourceName = "SyncExecutionService",
 
