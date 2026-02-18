@@ -17,9 +17,9 @@ namespace APIGateWay.BusinessLayer.Repository
             _repoService = repoService;
         }
 
-        public async Task<PostRepositoryModel> PostRepo(LoginMasterDto login, ClientMasterDto clientMaster, PostRepositoryModel repo)
+        public async Task<string> PostRepo(PostRepoDto repo)
         {
-            var response = await _repoService.PostRepo(login, clientMaster, repo);
+            var response = await _repoService.PostRepo(repo);
             return response;
         }
     }

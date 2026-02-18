@@ -9,6 +9,6 @@ namespace APIGateWay.BusinessLayer.Interface
 {
     public interface IRepoRepository
     {
-        Task<PostRepositoryModel> PostRepo(LoginMasterDto login, ClientMasterDto clientMaster, PostRepositoryModel repo);
+        Task<string> PostRepo(PostRepoDto repo);
     }
 }

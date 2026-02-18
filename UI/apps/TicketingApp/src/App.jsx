@@ -18,7 +18,7 @@ import { AppDataSync } from "./Shared/AppDataSync/AppDataSync.jsx";
 import CRMmainPage from "./components/CRM/crmMainPage.jsx";
 import SmartRouteWrapper from "./Router/SmartRouteWrapper.jsx";
 import { TicketModule } from "./Configs/Ticket.config.js";
-import { createRuntime } from "app-runtime/createRuntime";
+// import { createRuntime } from "app-runtime/createRuntime";
 import { initRuntimeStore } from "app-runtime/useRuntimeStore";
 import { AppRuntime } from "app-runtime/AppRuntime";
 
@@ -36,10 +36,10 @@ function App() {
   const basePath = window.location.pathname.split("/")[1];
   const RouterWrapper = ({ children }) =>
     isStandalone ? <BrowserRouter>{children}</BrowserRouter> : <>{children}</>;
-  const runtime = createRuntime({
-    modules: [TicketModule],
-    baseURL: "http://localhost:3000/api",
-  });
+  // const runtime = createRuntime({
+  //   modules: [TicketModule],
+  //   baseURL: "http://localhost:3000/api",
+  // });
 
   initRuntimeStore(runtime.store);
   return (

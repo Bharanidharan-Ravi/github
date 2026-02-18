@@ -119,7 +119,7 @@ namespace APIGateWay.DomainLayer.Service
                     throw new ArgumentException("CreatedFor is required (must be 'Client' or 'Employee').");
 
                 // Common: check if username already exists
-                var existingUser = await _context.lOGIN_MASTER
+                var existingUser = await _context.LOGIN_MASTER
                     .FirstOrDefaultAsync(x => x.UserName == request.Login.UserName);
 
                 if (existingUser != null)
@@ -164,7 +164,7 @@ namespace APIGateWay.DomainLayer.Service
                         ClientId = client.Client_Id,
                     };
 
-                    _context.lOGIN_MASTER.Add(newUser);
+                    _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
                 }
 
@@ -187,7 +187,7 @@ namespace APIGateWay.DomainLayer.Service
                         Role = request.Login.Role
                     };
 
-                    _context.lOGIN_MASTER.Add(newUser);
+                    _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
 
                     // Create EmployeeMaster linked to login
@@ -225,7 +225,7 @@ namespace APIGateWay.DomainLayer.Service
                         Role = request.Login.Role
                     };
 
-                    _context.lOGIN_MASTER.Add(newUser);
+                    _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
                 }
                 else

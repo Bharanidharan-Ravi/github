@@ -13,12 +13,14 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using static APIGateWay.ModelLayer.ErrorException.Exceptionlist;
 using APIGateWay.DomainLayer.Interface;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace APIGateWay.DomainLayer.Service
 {
     public class SyncExecutionService : ISyncExecutionService
 
     {
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly HttpClient _httpClient;
         private readonly APIGateWayCommonService _Service;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -28,12 +30,15 @@ namespace APIGateWay.DomainLayer.Service
             HttpClient httpClient,
             APIGateWayCommonService commonService,
             IHttpContextAccessor httpContextAccessor,
-            ILoginContextService loginContext)
+            ILoginContextService loginContext,
+            IServiceScopeFactory serviceScopeFactory
+            )
         {
             _httpClient = httpClient;
             _Service = commonService;
             _httpContextAccessor = httpContextAccessor;
             _loginContext = loginContext;
+            _scopeFactory = serviceScopeFactory;
         }
         public async Task<RawSyncResult> ExecuteRemoteAsync(
             string endpoint, DateTimeOffset? lastSync, Dictionary<string, string> parameters, string source)

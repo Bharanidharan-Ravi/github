@@ -94,10 +94,6 @@ export default defineConfig({
         __dirname,
         "../../packages/react-input-engine/src",
       ),
-      "zustand-data-orchestrator": path.resolve(
-        __dirname,
-        "../../packages/zustand-data-orchestrator/src",
-      ),
       "app-runtime": path.resolve(__dirname, "../../packages/app-runtime/src"),
     },
   },

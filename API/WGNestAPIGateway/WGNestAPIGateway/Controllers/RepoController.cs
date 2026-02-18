@@ -18,10 +18,9 @@ namespace APIGateway.Controllers
         }
 
         [HttpPost("PostRepo")]
-        public async Task<IActionResult> PostRepo ([FromBody] RepoWithClient repoWith)
+        public async Task<IActionResult> PostRepo ([FromBody] PostRepoDto repoWith)
         {
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(repoWith));
-            var response = await _repo.PostRepo(repoWith.Login, repoWith.Client, repoWith.Repo);
+            var response = await _repo.PostRepo(repoWith);
             return Ok(ApiResponseHelper.Success(response, "Repository create successfully."));
         }
     }

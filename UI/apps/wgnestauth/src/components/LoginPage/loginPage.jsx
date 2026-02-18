@@ -37,7 +37,7 @@ const LoginPage = ({ onLogin }) => {
     const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [shakeField, setShakeField] = useState({ username: false, password: false });
-    const userAgent = window.navigator.userAgent;
+    
 
     const handleChange = (e, setValue, setError, fieldName, characterLimit) => {
         const { name, value, type, checked } = e.target;

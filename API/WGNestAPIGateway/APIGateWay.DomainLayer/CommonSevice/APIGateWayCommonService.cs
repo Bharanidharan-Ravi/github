@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using APIGateWay.ModelLayer.ErrorException;
 using System.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace APIGateWay.DomainLayer.CommonSevice
 {
@@ -30,8 +31,9 @@ namespace APIGateWay.DomainLayer.CommonSevice
         private readonly IConfiguration _configuration;
         private readonly APIGatewayDBContext _dbContext;
         //private readonly string _connectionString;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration)
+        public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory)
         {
             _dbContext = dbContext;
             _configuration = configuration;
@@ -39,32 +41,79 @@ namespace APIGateWay.DomainLayer.CommonSevice
             userName = _configuration["UserDetail:UserName"];
             databaseName = _configuration["UserDetail:DBName"];
             Role = _configuration["UserDetail:Role"];
+            _scopeFactory = serviceScopeFactory;
         }
-        public async Task<List<T>> ExecuteGetItemAsyc<T>(string StoredProcedure, params SqlParameter[] parameters) where T : class
+
+        public async Task<List<T>> ExecuteGetItemAsyc<T>(
+           string storedProcedure,
+           params SqlParameter[] parameters
+       ) where T : class
         {
             try
             {
-                var validProcedureNames = new[] { "VALIDATEUSER","GETEMPLOYEEMASTER", "GetAllProjData", "GETALLREPO", "GetIssuesByID" };
-                if (!validProcedureNames.Contains(StoredProcedure))
-                {
-                    throw new ArgumentException("Invalid stored procedure name", nameof(StoredProcedure));
-                }
-                var sqlCommand = $"EXEC {StoredProcedure} " +
-                          $"{string.Join(", ", parameters.Select(p => $"{p.ParameterName} = @{p.ParameterName.TrimStart('@')}"))}";
+                using var scope = _scopeFactory.CreateScope();
 
-                return await _dbContext.Set<T>()
+                var dbContext = scope.ServiceProvider
+                    .GetRequiredService<APIGatewayDBContext>();  // ✅ FIXED
+
+                var validProcedureNames = new[]
+                {
+                    "VALIDATEUSER",
+                    "GETEMPLOYEEMASTER",
+                    "GetAllProjData",
+                    "GETALLREPO",
+                    "GetIssuesByID",
+                     "GetNextNumber"
+                };
+
+                if (!validProcedureNames.Contains(storedProcedure))
+                    throw new ArgumentException("Invalid stored procedure name");
+
+                var sqlCommand = $"EXEC {storedProcedure} " +
+                    $"{string.Join(", ",
+                        parameters.Select(p =>
+                            $"{p.ParameterName} = @{p.ParameterName.TrimStart('@')}"
+                        )
+                    )}";
+
+                return await dbContext.Set<T>()
                     .FromSqlRaw(sqlCommand, parameters)
                     .AsNoTracking()
                     .ToListAsync();
             }
             catch (Exception ex)
             {
-                // Log the exception
-                Console.Error.WriteLine($"An error occurred while executing the stored procedure: {ex.Message}");
-                // Handle or rethrow the exception as needed
                 throw new InvalidDataException(ex.Message);
             }
         }
+        //public async Task<List<T>> ExecuteGetItemAsyc<T>(string StoredProcedure, params SqlParameter[] parameters) where T : class
+        //{
+        //    try
+        //    {
+        //        using var scope = _scopeFactory.CreateScope();
+
+        //        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        //        var validProcedureNames = new[] { "VALIDATEUSER","GETEMPLOYEEMASTER", "GetAllProjData", "GETALLREPO", "GetIssuesByID" };
+        //        if (!validProcedureNames.Contains(StoredProcedure))
+        //        {
+        //            throw new ArgumentException("Invalid stored procedure name", nameof(StoredProcedure));
+        //        }
+        //        var sqlCommand = $"EXEC {StoredProcedure} " +
+        //                  $"{string.Join(", ", parameters.Select(p => $"{p.ParameterName} = @{p.ParameterName.TrimStart('@')}"))}";
+
+        //        return await dbContext.Set<T>()
+        //            .FromSqlRaw(sqlCommand, parameters)
+        //            .AsNoTracking()
+        //            .ToListAsync();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log the exception
+        //        Console.Error.WriteLine($"An error occurred while executing the stored procedure: {ex.Message}");
+        //        // Handle or rethrow the exception as needed
+        //        throw new InvalidDataException(ex.Message);
+        //    }
+        //}
         public async Task<DataSet> ExecuteReturnAsync(string storedProcedureName, SqlParameter[] parameters)
         {
             var dataSet = new DataSet();

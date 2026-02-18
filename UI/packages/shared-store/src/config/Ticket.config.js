@@ -20,7 +20,7 @@ export const TicketDefinition = {
       key: "list",
       componentKey: "ViewTickets",
       fetcherName: "EnsureTicketMaster",
-      api: DynamicGetData,
+      // api: DynamicGetData,
       configKeys: [
         {
           key: "TicketList",
