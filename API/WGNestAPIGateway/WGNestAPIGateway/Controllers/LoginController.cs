@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WGNestAPIGateway.Controllers
 {
-    [EnableCors("AllowAll")]
+    //[EnableCors("AllowAll")]
     [ApiController]
     [Route("api/[controller]")]
     public class LoginController : ControllerBase
@@ -31,8 +31,8 @@ namespace WGNestAPIGateway.Controllers
         #endregion
 
         #region User Login method 
-        [HttpPost]
         [AllowAnonymous]
+        [HttpPost]
         public async Task<IActionResult> GetUserinfo(userLogin user)
         {
             var response = await _loginRepository.GetUserinfo(user.UserName, user.Password, user.DeviceInfo);

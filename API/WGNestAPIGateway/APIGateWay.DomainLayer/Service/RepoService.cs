@@ -2,11 +2,14 @@
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.GETData;
+using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModelLayer.ErrorException;
 using Azure.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +28,6 @@ namespace APIGateWay.DomainLayer.Service
         private readonly ILoginService _loginService;
         private readonly HttpClient _http;
         private readonly APIGateWayCommonService _commonService;
-
         public RepoService(APIGatewayDBContext dBContext, ILoginContextService contextService, ILoginService login, HttpClient http, APIGateWayCommonService commonService)
         {
             _context = dBContext;
@@ -35,7 +37,7 @@ namespace APIGateWay.DomainLayer.Service
             _commonService = commonService;
         }
 
-        public async Task<string> PostRepo(PostRepoDto repo)
+        public async Task<GetRepo> PostRepo(PostRepoDto repo)
         {
             using var transaction =
                 await _context.Database.BeginTransactionAsync();
@@ -89,18 +91,32 @@ namespace APIGateWay.DomainLayer.Service
                 #region Create Repository
 
                 repo.CreatedBy = _loginContext.userId;
-
-                var repoCreated =
-                    await InsertOrUpdateRepository(
-                        repo,
-                        _loginContext.databaseName
-                    );
+                var result =
+            await InsertOrUpdateRepository(
+                repo,
+                _loginContext.databaseName
+            );
 
                 #endregion
 
                 await transaction.CommitAsync();
+                var repoProjection =
+           BuildRepoProjection(
+               result.RepoEntity,
+               result.RepoUsers
+           );
 
-                return repoCreated;
+                //await _realtimeNotifier.BroadcastAsync(
+                //    new RealtimeMessage
+                //    {
+                //        Entity = "Repo",
+                //        Action = "Create",
+                //        Payload = repoProjection,
+                //        RepoId = repoProjection.Repo_Id,
+                //        Timestamp = DateTime.UtcNow
+                //    }
+                //);
+                return repoProjection;
             }
             catch (Exception)
             {
@@ -109,35 +125,31 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
 
-        public async Task<string> InsertOrUpdateRepository(
-    PostRepoDto data,
-    string DBName
-)
+       
+        public async Task<RepoInsertResult> InsertOrUpdateRepository(
+       PostRepoDto data,
+       string DBName
+   )
         {
-            PostRepositoryModel newRepo = null;
-
             #region Get Repo Sequence
 
             string seriesName = "REPO_Sequence";
 
-            var pSeriesName =
-                new SqlParameter("@SeriesName", seriesName);
+            var pSeriesName = new SqlParameter("@SeriesName", seriesName);
 
-            var nextSeq =
-                await _commonService
-                    .ExecuteGetItemAsyc<SequenceResult>(
-                        "GetNextNumber",
-                        pSeriesName
-                    );
+            var nextSeq = await _commonService
+                .ExecuteGetItemAsyc<SequenceResult>(
+                    "GetNextNumber",
+                    pSeriesName
+                );
 
-            var repoKey =
-                $"R{nextSeq[0].CurrentValue}";
+            var repoKey = $"R{nextSeq[0].CurrentValue}";
 
             #endregion
 
             #region Insert Repo Master
 
-            newRepo = new PostRepositoryModel
+            var newRepo = new PostRepositoryModel
             {
                 RepoKey = repoKey,
                 SiNo = nextSeq[0].CurrentValue,
@@ -156,74 +168,77 @@ namespace APIGateWay.DomainLayer.Service
             };
 
             _context.RepositoryMasters.Add(newRepo);
-
             await _context.SaveChangesAsync();
 
             #endregion
 
             #region Insert Repo Users Mapping
 
+            var insertedUsers = new List<RepoUserList>();
+
             foreach (var mail in data.userLists)
             {
-                string usersSeries =
-                    "RepositoryUserList";
+                string usersSeries = "RepositoryUserList";
 
-                var pUserSeries =
-                    new SqlParameter(
-                        "@SeriesName",
-                        usersSeries
+                var pUserSeries = new SqlParameter("@SeriesName", usersSeries);
+
+                var nextUserSeq = await _commonService
+                    .ExecuteGetItemAsyc<SequenceResult>(
+                        "GetNextNumber",
+                        pUserSeries
                     );
-
-                var nextUserSeq =
-                    await _commonService
-                        .ExecuteGetItemAsyc<SequenceResult>(
-                            "GetNextNumber",
-                            pUserSeries
-                        );
 
                 var userEntity = new RepoUserList
                 {
                     SiNo = nextUserSeq[0].CurrentValue,
-
                     UserName = mail.UserName,
                     MailId = mail.MailId,
                     UserId = mail.UserId,
                     PhoneNumber = mail.PhoneNumber,
-
                     RepoKey = repoKey,
                     Status = "Active"
                 };
 
                 _context.RepoUsers.Add(userEntity);
+                insertedUsers.Add(userEntity);
             }
 
             await _context.SaveChangesAsync();
 
             #endregion
 
-            #region Return Repo
-
-            Guid? repoId = newRepo.Repo_Id;
-
-            var parameters = new SqlParameter[]
+            return new RepoInsertResult
             {
-        new SqlParameter("@DatabaseName", DBName),
-        new SqlParameter(
-            "@RepoId",
-            repoId ?? (object)DBNull.Value
-        )
+                RepoEntity = newRepo,
+                RepoUsers = insertedUsers
             };
+        }
 
-            //var repoData =
-            //    await _commonService
-            //        .ExecuteGetItemAsyc<RepoData>(
-            //            "GETALLREPO",
-            //            parameters
-            //        );
-            string message = "Success";
-            return message;
+        private static GetRepo BuildRepoProjection(PostRepositoryModel repoEntity, List<RepoUserList> repoUsers)
+        {
+            var repoUserListJson =
+                JsonConvert.SerializeObject(
+                    repoUsers.Select(x => new RepoUser
+                    {
+                        UserName = x.UserName,
+                        PhoneNumber = x.PhoneNumber,
+                        MailId = x.MailId,
+                        Status = x.Status
+                    }).ToList()
+                );
 
-            #endregion
+            return new GetRepo
+            {
+                Repo_Id = repoEntity.Repo_Id,
+                RepoKey = repoEntity.RepoKey,
+                Title = repoEntity.Title,
+                Description = repoEntity.Description,
+                CreatedAt = repoEntity.CreatedAt,
+                CreatedBy = repoEntity.CreatedBy,
+                Status = repoEntity.Status,
+                OwnerName = null, // if needed map separately
+                RepoUserList = repoUserListJson
+            };
         }
 
         public async Task<PostRepositoryModel> createRepoAsync (PostRepositoryModel repo, string DBname)

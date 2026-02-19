@@ -16,6 +16,12 @@ namespace APIGateway.Middleware
         {
 
             var currentPath = context.Request.Path.Value.ToLower();
+            if (currentPath.StartsWith("/realtime"))
+            {
+                await _next(context);
+                return;
+            }
+
             context.Items["Request"] = context.Request.Path;
 
             if (!currentPath.Contains("index.html") && !currentPath.Contains("swagger") && !currentPath.Contains("favicon"))

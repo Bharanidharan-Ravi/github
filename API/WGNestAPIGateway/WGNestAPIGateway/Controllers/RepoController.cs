@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace APIGateway.Controllers
 {
-    [EnableCors("AllowAll")]
+    //[EnableCors("AllowAll")]
     [ApiController]
     [Route("api/[controller]")]
     public class RepoController : ControllerBase

@@ -59,7 +59,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
                 var validProcedureNames = new[]
                 {
                     "VALIDATEUSER",
-                    "GETEMPLOYEEMASTER",
+                    "GetEmployeeMaster",
                     "GetAllProjData",
                     "GETALLREPO",
                     "GetIssuesByID",

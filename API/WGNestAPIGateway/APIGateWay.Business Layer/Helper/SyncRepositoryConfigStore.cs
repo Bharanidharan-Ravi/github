@@ -55,6 +55,21 @@ namespace APIGateWay.Business_Layer.Helper
                 Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
+            },
+
+            ["EmployeeList"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetEmployeeMaster",
+                EntityType = typeof(GetEmployee),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "UserID",
+                DeltaEnabled = true
             }
         };
     }

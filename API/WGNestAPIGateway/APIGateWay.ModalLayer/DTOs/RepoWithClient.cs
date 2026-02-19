@@ -101,5 +101,12 @@ namespace APIGateWay.ModalLayer.DTOs
 
         // public string RepoKey { get; set; }
     }
-    
+
+
+    public class RepoInsertResult
+    {
+        public PostRepositoryModel RepoEntity { get; set; }
+        public List<RepoUserList> RepoUsers { get; set; }
+    }
+
 }

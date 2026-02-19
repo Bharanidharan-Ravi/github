@@ -11,7 +11,7 @@ namespace APIGateWay.ModalLayer.GETData
     public class GetRepo
     {
         [Key]
-        public Guid Repo_Id { get; set; }
+        public Guid? Repo_Id { get; set; }
         public string? RepoKey { get; set; }
         public string? Title { get; set; }
         public string? Description { get; set; }

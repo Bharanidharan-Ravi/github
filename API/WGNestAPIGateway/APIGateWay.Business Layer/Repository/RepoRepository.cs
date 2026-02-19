@@ -1,6 +1,9 @@
 ﻿using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.Hub;
+using Azure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,15 +15,45 @@ namespace APIGateWay.BusinessLayer.Repository
     public class RepoRepository : IRepoRepository
     {
         private readonly IRepoService _repoService;
-        public RepoRepository(IRepoService repoService)
+        private readonly IRealtimeNotifier _realtimeNotifier;
+        public RepoRepository(IRepoService repoService, IRealtimeNotifier realtimeNotifier)
         {
             _repoService = repoService;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<string> PostRepo(PostRepoDto repo)
         {
             var response = await _repoService.PostRepo(repo);
-            return response;
+            await _realtimeNotifier.BroadcastAsync(
+                new RealtimeMessage
+                {
+                    Entity = "Repo",
+                    Action = "Create",
+                    Payload = response,
+                    KeyField = "repo_Id",
+                    RepoKey = response.RepoKey,
+                    Timestamp = DateTime.UtcNow
+                }
+            );
+            return "Sucess";
         }
+
+        //public async Task<string> PostRepo(PostRepoDto repo)
+        //{
+        //    string repoIdString = "1d947108-2043-45d5-8c4b-434010ae3d76";
+        //    Guid repoIdGuid = Guid.Parse(repoIdString);
+        //    await _realtimeNotifier.BroadcastAsync(
+        //     new RealtimeMessage
+        //     {
+        //         Entity = "Repo",
+        //         Action = "Create",
+        //         Payload = "succe",
+        //         RepoKey = "R29",
+        //         Timestamp = DateTime.UtcNow
+        //     }
+        // );
+        //    return "Sucess";
+        //}
     }
 }

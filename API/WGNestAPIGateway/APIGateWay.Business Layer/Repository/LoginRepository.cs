@@ -51,7 +51,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 };
 
                 Guid userid = userInfo.UserId;
-                userInfo.JwtToken = _tokenGeneration.GenerateJwtToken(userid);
+                userInfo.JwtToken = _tokenGeneration.GenerateJwtToken(userid, userInfo.UserName, userInfo.Role);
                 _activeJwtTokens[userid] = userInfo.JwtToken;
                 userInfos.Add(userInfo);
             }

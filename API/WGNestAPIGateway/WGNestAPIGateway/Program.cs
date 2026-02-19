@@ -1,4 +1,4 @@
-
+﻿
 
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.Interface;
@@ -19,6 +19,12 @@ using APIGateway.Proxy;
 using Yarp.ReverseProxy.Transforms;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.Repository;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using APIGateWay.BusinessLayer.SignalRHub;
+using APIGateWay.Business_Layer.SignalRHub;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,12 +48,14 @@ builder.Services.AddDbContext<APIGatewayDBContext>(Options =>
 builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<IRepoRepository, RepoRepository>();
 builder.Services.AddScoped<ISyncRepositoryV2, SyncRepositoryV2>();
+builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 
 
 builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IRepoService, RepoService>();
 builder.Services.AddScoped<ILoginContextService, LoginContextService>();
 builder.Services.AddScoped<ISyncExecutionService, SyncExecutionService>();
+builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
 
 
 builder.Services.AddDistributedMemoryCache();
@@ -56,6 +64,9 @@ builder.Services.AddScoped<DecodeHelpers>();
 builder.Services.AddScoped<IlogHelper, LogHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<TokenGeneration>();
+builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IUserIdProvider, GuidUserIdProvider>();
 builder.Services.AddHttpClient<IRepoService, RepoService>(client =>
 {
     client.BaseAddress = new Uri("https://localhost:5070/");
@@ -64,29 +75,80 @@ builder.Services.AddHttpClient<IRepoService, RepoService>(client =>
 builder.Services.AddReverseProxy()
     .AddTransforms(transfromBuilderContext =>
     {
-        transfromBuilderContext.AddRequestTransform(async transfromContext =>
+        transfromBuilderContext.AddRequestTransform(transfromContext =>
         {
-            // Access the HttpContext here
             var httpContext = transfromContext.HttpContext;
             var serviceName = httpContext.Request.Headers["wg_token"].ToString();
+
             if (!string.IsNullOrEmpty(serviceName))
             {
                 transfromContext.ProxyRequest.Headers.Add("X-Service-Name", serviceName);
             }
+
+            return ValueTask.CompletedTask; // 🔥 Required
         });
     })
     .LoadFromMemory(ProxyConfigBuilder.Build().Routes, ProxyConfigBuilder.Build().Clusters);
 
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])
+            ),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var path = context.HttpContext.Request.Path;
+
+                if (path.StartsWithSegments("/realtime"))
+                {
+                    var accessToken =
+                        context.Request.Query["access_token"];
+
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("FrontendPolicy", builder =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        builder.WithOrigins("http://localhost:5173") // exact frontend origin
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // 🔥 REQUIRED FOR SIGNALR
     });
 });
 
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll", builder =>
+//    {
+//        builder
+//                .AllowAnyOrigin()
+//               .AllowAnyMethod()
+//               .AllowAnyHeader();
+//        //.AllowCredentials();
+//    });
+//});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -94,16 +156,16 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 app.UseRouting();
-app.UseCors("AllowAll");
-
-app.UseMiddleware<ResponseWrappingMiddleware>();
-app.UseMiddleware<ErrorHandlingMiddleware>();
-app.UseMiddleware<HttpContextMiddleware>();
-app.UseMiddleware<TokenValidationAuth>();
+app.UseCors("FrontendPolicy");
 
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<RealtimeHub>("/realtime").RequireAuthorization();
+app.UseMiddleware<ResponseWrappingMiddleware>();
+app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseMiddleware<HttpContextMiddleware>();
+app.UseMiddleware<TokenValidationAuth>();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -113,10 +175,8 @@ app.UseSwaggerUI(c =>
 // Enable YARP Reverse Proxy middleware
 app.MapReverseProxy();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-});
+app.MapControllers();
+
 builder.WebHost.UseUrls("https://*:8008");
 
 app.Run();

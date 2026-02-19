@@ -32,6 +32,11 @@ namespace APIGateway.Auth
         public async Task InvokeAsync(HttpContext context)
         {
             var endpoint = context.GetEndpoint();
+            if (context.Request.Method == HttpMethods.Options)
+            {
+                await _next(context);
+                return;
+            }
             if (endpoint == null)
             {
                 _logger.LogWarning("Endpoint is null");
@@ -50,6 +55,12 @@ namespace APIGateway.Auth
                 await _next(context);
                 return;
             }
+            if (context.Request.Path.StartsWithSegments("/realtime"))
+            {
+                await _next(context);
+                return;
+            }
+
             // ✅ 3. Allow webhook route explicitly
 
 

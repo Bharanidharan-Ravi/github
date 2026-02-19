@@ -1,4 +1,5 @@
 ﻿using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.GETData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,6 @@ namespace APIGateWay.DomainLayer.Interface
 {
     public interface IRepoService
     {
-        Task<string> PostRepo(PostRepoDto repo);
+        Task<GetRepo> PostRepo(PostRepoDto repo);
     }
 }
