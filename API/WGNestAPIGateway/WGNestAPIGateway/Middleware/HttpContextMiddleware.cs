@@ -1,5 +1,6 @@
 ﻿using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModelLayer.ErrorException;
+using static APIGateWay.ModalLayer.Helper.HelperModal;
 
 namespace APIGateway.Middleware
 {
@@ -23,6 +24,16 @@ namespace APIGateway.Middleware
             }
 
             context.Items["Request"] = context.Request.Path;
+            //var folders = configuration.GetSection("StaticFolders").Get<List<StaticFolderItem>>() ?? new List<StaticFolderItem>();
+            //foreach (var folder in folders)
+            //{
+            //    if (!string.IsNullOrEmpty(folder.RequestPath) && currentPath.StartsWith(folder.RequestPath.ToLower()))
+            //    {
+            //        await _next(context);
+            //        return;
+            //    }
+            //}
+
 
             if (!currentPath.Contains("index.html") && !currentPath.Contains("swagger") && !currentPath.Contains("favicon"))
             {

@@ -1,55 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WGAPP.ModelLayer.GithubModal.MasterData;
-using WGAPP.ModelLayer.GithubModal.ViewIssues;
+using static APIGateWay.ModalLayer.PostData.PostHelper;
 
-namespace WGAPP.ModelLayer.GithubModal.TicketingModal
+namespace APIGateWay.ModalLayer.PostData
 {
-    public class IssueMaster 
+    public class IssuesPost : IAuditableEntity, IAuditableUser
     {
         [Key]
         public Guid? Issue_Id { get; set; }
         public int? SiNo { get; set; }
-        public Guid? Repo_Id { get; set; }
-
-        [MaxLength(500)]
         public string? Title { get; set; }
-
         public string? Description { get; set; }
-
-        [MaxLength(500)]
-        public Guid? Issuer_Id { get; set; }
-
-        public DateTime? Created_On { get; set; }
-
-   
-        public DateTime? Updated_On { get; set; }
-
-        public Guid? Project_Id { get; set; }
-
-        [MaxLength(100)]
+        public Guid? RepoId { get; set; }
+        public string? RepoKey { get; set; }
+        public Guid? ProjectId { get; set; }
         public Guid? Assignee_Id { get; set; }
-
-      
         public DateTime? Due_Date { get; set; }
-
-        [MaxLength(100)]
+        public DateTime From_Time { get; set; }
+        public DateTime To_Time { get; set; }
+        public string Hours { get; set; }
         public string? Status { get; set; }
-
-        
         public Guid? Issuelink_Id { get; set; }
-
-        [MaxLength(100)]
         public string? Issue_Code { get; set; }
-        public Guid? Updated_By { get; set; }
-
+        public Guid? CreatedBy { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public Guid? UpdatedBy { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         // Navigation
-       // public virtual ICollection<IssueAttachment> IssueAttachments { get; set; }
+        // public virtual ICollection<IssueAttachment> IssueAttachments { get; set; }
     }
     public class AttachmentMaster
     {
@@ -73,7 +55,6 @@ namespace WGAPP.ModelLayer.GithubModal.TicketingModal
     {
         [Key]
         public int Label_Id { get; set; }
-
         public Guid? Issue_Id { get; set; }
     }
 
@@ -84,6 +65,7 @@ namespace WGAPP.ModelLayer.GithubModal.TicketingModal
         public Guid? Repo_Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
+        public string RepoKey { get; set; }
         public Guid? Issuer_Id { get; set; }
         public DateTime Created_On { get; set; }
         public DateTime? Updated_On { get; set; }
@@ -94,42 +76,9 @@ namespace WGAPP.ModelLayer.GithubModal.TicketingModal
         public Guid Issuelink_Id { get; set; }
         public string Issue_Code { get; set; }
         public Guid? Updated_By { get; set; }
+        public string? Hours { get; set; }
         public List<ISSUE_LABELS> Labels { get; set; }
         public TempReturn TempReturns { get; set; }
-        //public List<AttachmentDto> Attachments { get; set; }
     }
-
-
-
-    //public class AttachmentDto
-    //{
-    //    public string Attachment_Title { get; set; }
-    //    public byte[] Attachment_File { get; set; }
-    //    public string Created_By { get; set; }
-    //    public DateTime? Created_On { get; set; }
-    //    public DateTime? Updated_On { get; set; }
-    //    public string Updated_By { get; set; }
-    //    public string Repo_Id { get; set; }
-    //    public string LineId { get; set; }
-    //}
-
-
-   
-
-    //public class IssueAttachment
-    //{
-    //    [Key, Column(Order = 0)]
-    //    public Guid? Issue_Id { get; set; }
-
-    //    [Key, Column(Order = 1)]
-    //    public int Attachment_Id { get; set; }
-
-    //    // Navigation Properties
-    //    [ForeignKey("Issue_Id")]
-    //    public virtual IssueMaster Issue { get; set; }
-
-    //    [ForeignKey("Attachment_Id")]
-    //    public virtual AttachmentMaster Attachment { get; set; }
-    //}
 
 }

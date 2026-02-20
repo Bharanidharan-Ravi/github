@@ -70,6 +70,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetProject> getProjects { get; set; }
         public DbSet<GetRepo> getRepos { get; set; }
         public DbSet<GetTickets> getTickets { get; set; }
+        public DbSet<LabelMaster> labelMaster { get; set; }
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
         public DbSet<SequenceResult> sequenceResults { get; set; }

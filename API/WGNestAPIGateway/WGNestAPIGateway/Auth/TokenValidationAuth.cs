@@ -1,8 +1,10 @@
 ﻿using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using static APIGateWay.ModalLayer.Helper.HelperModal;
 
 namespace APIGateway.Auth
 {
@@ -37,6 +39,17 @@ namespace APIGateway.Auth
                 await _next(context);
                 return;
             }
+            //var currentPath = context.Request.Path.Value.ToLower();
+            //var folders = _configuration.GetSection("StaticFolders").Get<List<StaticFolderItem>>() ?? new List<StaticFolderItem>();
+            //foreach (var folder in folders)
+            //{
+            //    if (!string.IsNullOrEmpty(folder.RequestPath) && currentPath.StartsWith(folder.RequestPath.ToLower()))
+            //    {
+            //        await _next(context);
+            //        return;
+            //    }
+            //}
+
             if (endpoint == null)
             {
                 _logger.LogWarning("Endpoint is null");

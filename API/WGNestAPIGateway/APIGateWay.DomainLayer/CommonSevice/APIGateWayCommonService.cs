@@ -63,6 +63,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "GetAllProjData",
                     "GETALLREPO",
                     "GetIssuesByID",
+                    "GETLABELMASTER",
                      "GetNextNumber"
                 };
 

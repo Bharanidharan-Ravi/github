@@ -25,6 +25,8 @@ using APIGateWay.Business_Layer.SignalRHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.Extensions.FileProviders;
+using static APIGateWay.ModalLayer.Helper.HelperModal;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +51,7 @@ builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<IRepoRepository, RepoRepository>();
 builder.Services.AddScoped<ISyncRepositoryV2, SyncRepositoryV2>();
 builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
+builder.Services.AddScoped<IAttachmentRepo, AttachmentRepo>();
 
 
 builder.Services.AddScoped<ILoginService, LoginService>();
@@ -56,6 +59,7 @@ builder.Services.AddScoped<IRepoService, RepoService>();
 builder.Services.AddScoped<ILoginContextService, LoginContextService>();
 builder.Services.AddScoped<ISyncExecutionService, SyncExecutionService>();
 builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 
 
 builder.Services.AddDistributedMemoryCache();
@@ -158,7 +162,27 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseCors("FrontendPolicy");
 
+// --- SERVE STATIC FILES FROM D: DRIVE ---
+var staticFolders = builder.Configuration.GetSection("StaticFolders").Get<List<StaticFolderItem>>();
+if (staticFolders != null)
+{
+    foreach (var folder in staticFolders)
+    {
+        if (!Directory.Exists(folder.PhysicalPath)) Directory.CreateDirectory(folder.PhysicalPath);
 
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(folder.PhysicalPath),
+            RequestPath = folder.RequestPath,
+            OnPrepareResponse = ctx =>
+            {
+                ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+                ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "Get, OPTIONS");
+            }
+        });
+    }
+}
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<RealtimeHub>("/realtime").RequireAuthorization();

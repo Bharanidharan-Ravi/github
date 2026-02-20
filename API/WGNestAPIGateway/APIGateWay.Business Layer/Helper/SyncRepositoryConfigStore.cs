@@ -1,5 +1,6 @@
 ﻿using APIGateWay.Business_Layer.Configuration;
 using APIGateWay.ModalLayer.GETData;
+using APIGateWay.ModalLayer.MasterData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +70,21 @@ namespace APIGateWay.Business_Layer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "UserID",
+                DeltaEnabled = true
+            },
+
+            ["LabelMaster"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GETLABELMASTER",
+                EntityType = typeof(LabelMaster),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Id",
                 DeltaEnabled = true
             }
         };
