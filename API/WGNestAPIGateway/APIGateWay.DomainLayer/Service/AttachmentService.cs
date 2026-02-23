@@ -1,12 +1,17 @@
-﻿using APIGateWay.DomainLayer.Interface;
+﻿using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static APIGateWay.ModalLayer.Helper.HelperModal;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -15,12 +20,14 @@ namespace APIGateWay.DomainLayer.Service
         private readonly ILoginContextService _loginContextService;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly APIGateWayCommonService _commonService;
 
-        public AttachmentService (ILoginContextService loginContextService,IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public AttachmentService (ILoginContextService loginContextService,IConfiguration configuration, IHttpContextAccessor httpContextAccessor, APIGateWayCommonService aPIGateWay)
         {
             _loginContextService = loginContextService;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _commonService = aPIGateWay;
         }
 
         #region Post a attachment file
@@ -69,5 +76,153 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
         #endregion
+
+        public async Task<ProcessedAttachmentResult> ProcessAndCopyAttachmentsAsync(string rawHtml, List<Tempdata> temps, string relativePermPath, string? entityId, string module)
+        {
+            var result = new ProcessedAttachmentResult { UpdatedHtml = rawHtml ?? "" };
+            if (temps == null || !temps.Any()) return result;
+
+            var permFolderBase = _configuration["FileSettings:OriginalFolder"];
+            var permFolder = Path.Combine(permFolderBase, relativePermPath);
+            Directory.CreateDirectory(permFolder);
+
+            var request = _httpContextAccessor.HttpContext.Request;
+            string baseUrl = $"{request.Scheme}://{request.Host}";
+
+            foreach (var file in temps)
+            {
+                var tempFilePath = Path.Combine(file.LocalPath);
+                var permanentFilePath = Path.Combine(permFolder, file.FileName);
+
+                try
+                {
+                    // 1. COPY the file
+                    if (File.Exists(tempFilePath))
+                    {
+                        File.Copy(tempFilePath, permanentFilePath, overwrite: true);
+                        result.PermanentFilePathsCreated.Add(permanentFilePath);
+                    }
+
+                    // 2. Build the new permanent URL (EscapeDataString converts spaces to %20 so HTML doesn't break)
+                    var encodedFileName = Uri.EscapeDataString(file.FileName);
+                    var newPermUrl = $"{baseUrl}/Uploads/{relativePermPath}/{encodedFileName}";
+
+                    // 3. SAFELY Update the HTML
+                    // Method A: Direct Replace using the exact Temp PublicUrl
+                    result.UpdatedHtml = result.UpdatedHtml.Replace(file.PublicUrl, newPermUrl, StringComparison.OrdinalIgnoreCase);
+
+                    // Method B: Robust Regex Fallback (Catches relative URLs and spaces/%20 variations)
+                    var pattern = $@"(src|href)=[""']([^""']*)/UploadsTemp/([^""']*)/({Regex.Escape(file.FileName)}|{Regex.Escape(encodedFileName)})[""']";
+                    result.UpdatedHtml = Regex.Replace(result.UpdatedHtml, pattern, $"$1=\"{newPermUrl}\"", RegexOptions.IgnoreCase);
+                    string usersSeries = "Attachment";
+
+                    var pUserSeries = new SqlParameter("@SeriesName", usersSeries);
+
+                    var nextUserSeq = await _commonService
+                        .ExecuteGetItemAsyc<SequenceResult>(
+                            "GetNextNumber",
+                            pUserSeries
+                        );
+                    // 4. Create the Attachment metadata (DO NOT SAVE TO DB HERE)
+                    var attachment = new AttachmentMaster
+                    {
+                        AttachmentId= nextUserSeq[0].CurrentValue,
+                        ModuleId = entityId,
+                        Module = module,
+                        FileName = file.FileName,
+                        FilePath = permanentFilePath,
+                        FileType = GetMimeType(permanentFilePath),
+                        FileSize = new FileInfo(permanentFilePath).Length,
+                        //CreatedBy = _loginContextService.userId,
+                        //CreatedAt = DateTime.UtcNow,
+                        //UpdatedBy = _loginContextService.userId,
+                        //UpdatedAt = DateTime.UtcNow,
+                        Status = "Active",
+                        FileExtension = Path.GetExtension(file.FileName).TrimStart('.'),
+                        RelativePath = $"{relativePermPath}/{file.FileName}",
+                    };
+                    result.Attachments.Add(attachment);
+                }
+                catch (Exception ex)
+                {
+                    // If any file copy fails, rollback files immediately and bubble up exception
+                    RollbackPhysicalFiles(result.PermanentFilePathsCreated);
+                    throw new Exception($"Failed to process attachment {file.FileName}", ex);
+                }
+            }
+
+            return result;
+        }
+        // Call this in your catch blocks!
+        public void RollbackPhysicalFiles(List<string> filePaths)
+        {
+            foreach (var path in filePaths)
+            {
+                if (File.Exists(path))
+                {
+                    try { File.Delete(path); }
+                    catch { /* Log failure, but continue deleting others */ }
+                }
+            }
+        }
+
+        private string GetMimeType(string filePath)
+        {
+            var provider = new FileExtensionContentTypeProvider();
+            if (!provider.TryGetContentType(filePath, out string mimeType))
+            {
+                mimeType = "application/octet-stream";
+            }
+            return mimeType;
+        }
+
+        public Task CleanupTempFiles(TempReturn filePaths)
+        {
+            if (filePaths == null || filePaths.temps == null || !filePaths.temps.Any())
+                return Task.CompletedTask;
+
+            // Normalize string (safe compare)
+            var deleteMode = (filePaths.Delete ?? "").Trim().ToLower();
+
+            // CASE 1 — Delete Single File
+            if (deleteMode == "single")
+            {
+                var file = filePaths.temps.First();
+
+                if (System.IO.File.Exists(file.LocalPath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(file.LocalPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting file {file.LocalPath}: {ex.Message}");
+                    }
+                }
+
+                return Task.CompletedTask;
+            }
+
+            // CASE 2 — Delete All Files (delete entire folder)
+            if (deleteMode == "all")
+            {
+                var folderPath = Path.GetDirectoryName(filePaths.temps.First().LocalPath);
+
+                if (Directory.Exists(folderPath))
+                {
+                    try
+                    {
+                        Directory.Delete(folderPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting directory {folderPath}: {ex.Message}");
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

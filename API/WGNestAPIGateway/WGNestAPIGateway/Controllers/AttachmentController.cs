@@ -1,5 +1,6 @@
 ﻿using APIGateWay.Business_Layer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
+using APIGateWay.ModalLayer.PostData;
 using Azure;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,12 @@ namespace APIGateway.Controllers
         public async Task<IActionResult>UploadFilesToTempAsync(IFormFile files)
         {
             var res = await _attachmentRepo.UploadFilesToTempAsync(files);
+            return Ok(ApiResponseHelper.Success(res, "Repository create successfully."));
+        }
+        [HttpPost("tempUpload")]
+        public  Task<IActionResult> CleanupTempFiles(TempReturn filePaths)
+        {
+            var res =  _attachmentRepo.CleanupTempFiles(filePaths);
             return Ok(ApiResponseHelper.Success(res, "Repository create successfully."));
         }
     }

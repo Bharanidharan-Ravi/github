@@ -23,5 +23,10 @@ namespace APIGateWay.Business_Layer.Repository
             var res = await _attachmentService.UploadFilesToTempAsync(files);
             return res;
         }
+        public  Task CleanupTempFiles(TempReturn filePaths)
+        {
+            var res =  _attachmentService.CleanupTempFiles(filePaths);
+            return res;
+        }
     }
 }

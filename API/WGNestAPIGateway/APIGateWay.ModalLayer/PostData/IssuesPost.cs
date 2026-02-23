@@ -33,24 +33,7 @@ namespace APIGateWay.ModalLayer.PostData
         // Navigation
         // public virtual ICollection<IssueAttachment> IssueAttachments { get; set; }
     }
-    public class AttachmentMaster
-    {
-        [Key]
-        public int AttachmentId { get; set; }   // Auto-incremented Attachment ID
-        public Guid? TicketId { get; set; }       // Foreign Key to TicketMaster
-        public string FileName { get; set; }    // Name of the file
-        public string FilePath { get; set; }    // Path of the file
-        public string FileType { get; set; }    // Type of the file (image, pdf, etc.)
-        public long FileSize { get; set; }      // Size of the file
-        public Guid UploadedBy { get; set; }  // User who uploaded the file
-        public DateTime CreatedOn { get; set; } // Date the file was uploaded
-        public string Status { get; set; }      // Status of the file (Active, Deleted)
-        public string FileExtension { get; set; } // File extension (jpg, png, etc.)
-        public string RelativePath { get; set; }
-        public int ThreadId { get; set; }
-
-    }
-
+   
     public class ISSUE_LABELS
     {
         [Key]
