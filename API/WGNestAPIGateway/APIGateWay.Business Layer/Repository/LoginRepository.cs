@@ -61,10 +61,10 @@ namespace APIGateWay.BusinessLayer.Repository
             return (encryptionUser);
         }
 
-        public async Task<List<GetEmployee>> GetEmployeeMaster()
-        {
-            var response = await _loginService.GetEmployeeMaster();
-            return response;
-        }
+        //public async Task<List<GetEmployee>> GetEmployeeMaster()
+        //{
+        //    var response = await _loginService.GetEmployeeMaster();
+        //    return response;
+        //}
     }
 }

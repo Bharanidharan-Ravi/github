@@ -269,14 +269,14 @@ namespace APIGateWay.DomainLayer.Service
 
         #endregion
 
-        public async Task<List<GetEmployee>> GetEmployeeMaster()
-        {
-            var parameters = new SqlParameter[]
-           {
-                new SqlParameter("@DatabaseName", _loginContext.databaseName),
-           };
-            var response = await _commonService.ExecuteGetItemAsyc<GetEmployee>("GETEMPLOYEEMASTER", parameters);
-            return response;
-        }
+        //public async Task<List<GetEmployee>> GetEmployeeMaster()
+        //{
+        //    var parameters = new SqlParameter[]
+        //   {
+        //        new SqlParameter("@DatabaseName", _loginContext.databaseName),
+        //   };
+        //    var response = await _commonService.ExecuteGetItemAsyc<GetEmployee>("GETEMPLOYEEMASTER", parameters);
+        //    return response;
+        //}
     }
 }

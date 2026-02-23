@@ -33,7 +33,7 @@ namespace APIGateWay.ModalLayer.PostData
         // Navigation
         // public virtual ICollection<IssueAttachment> IssueAttachments { get; set; }
     }
-   
+
     public class ISSUE_LABELS
     {
         [Key]

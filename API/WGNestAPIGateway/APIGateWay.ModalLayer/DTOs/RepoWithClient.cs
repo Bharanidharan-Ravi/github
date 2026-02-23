@@ -59,7 +59,7 @@ namespace APIGateWay.ModalLayer.DTOs
         public Guid? Owner2 { get; set; }
 
         public List<RepoUserRegisterDto> userLists { get; set; }
-        public TempReturn temp { get; set; }
+        public TempReturn? temp { get; set; }
     }
     public class RepoUserList
     : IAuditableUser, IAuditableEntity

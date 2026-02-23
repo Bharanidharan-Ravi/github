@@ -5,6 +5,7 @@ using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
 using Azure.Core;
 using Microsoft.Data.SqlClient;
@@ -104,7 +105,7 @@ namespace APIGateWay.DomainLayer.Service
 
                 await transaction.CommitAsync();
                 // 🔥 100% Success! Now we can safely delete the temporary files
-                if (repo.temp.temps != null && repo.temp.temps != null && repo.temp.temps.Any())
+                if (repo.temp?.temps != null && repo.temp.temps.Any())
                 {
                     await _attachmentService.CleanupTempFiles(repo.temp);
                 }
@@ -144,19 +145,28 @@ namespace APIGateWay.DomainLayer.Service
 
             #region Process Attachments (Before creating the Entity)
 
-            // Create the relative path for the permanent folder
-            var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
-            var permRepoFolder = $"{repoKey}-{data.Title}";
-            var relativePath = $"{permUserId}/{permRepoFolder}";
+            string finalDescription = data.Description;
+            ProcessedAttachmentResult attachmentResult = null;
 
-            // Process files and rewrite the HTML description
-            var attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
-                data.Description,
-                data.temp.temps,
-                relativePath,
-                repoKey,
-                "RepositoryMaster"
-            );
+            // 2. ONLY run the attachment logic if temps actually exist
+            if (data.temp != null && data.temp.temps != null && data.temp.temps.Any())
+            {
+                var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+                var permRepoFolder = $"{repoKey}-{data.Title}";
+                var relativePath = $"{permUserId}/{permRepoFolder}";
+
+                // Safely call the service since we know temps is not null
+                attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+                    data.Description,
+                    data.temp.temps,
+                    relativePath,
+                    repoKey,
+                    "RepositoryMaster"
+                );
+
+                // 3. Update the description to use the new HTML with permanent URLs
+                finalDescription = attachmentResult.UpdatedHtml;
+            }
             #endregion
 
             #region Insert Repo Master
@@ -168,7 +178,7 @@ namespace APIGateWay.DomainLayer.Service
                 Repo_Id = Guid.NewGuid(),
 
                 Title = data.Title,
-                Description = attachmentResult.UpdatedHtml,
+                Description = finalDescription,
 
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = data.CreatedBy,
@@ -215,10 +225,11 @@ namespace APIGateWay.DomainLayer.Service
               
                 insertedUsers.Add(userEntity);
             }
-            if (attachmentResult.Attachments != null && attachmentResult.Attachments.Any())
+            if (attachmentResult != null && attachmentResult.Attachments != null && attachmentResult.Attachments.Any())
             {
                 _context.AttachmentMaster.AddRange(attachmentResult.Attachments);
             }
+
             await _context.SaveChangesAsync();
 
             #endregion

@@ -13,6 +13,6 @@ namespace APIGateWay.DomainLayer.Interface
         Task<GetUserList> RegisterUserAsync(RegisterRequestDto request);
         Task<List<GetUserforValidate>> GetUser(string username, string password, string deviceInfo);
         (string hash, string salt) HashPasswordAgron(string password);
-        Task<List<GetEmployee>> GetEmployeeMaster();
+        //Task<List<GetEmployee>> GetEmployeeMaster();
     }
 }

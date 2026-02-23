@@ -40,22 +40,13 @@ namespace WGNestAPIGateway.Controllers
         }
         #endregion
 
-        #region User Login method 
-        [HttpPost("repoPost")]
-        public async Task<IActionResult> postRepo(userLogin user)
-        {
-            var response = await _loginRepository.GetUserinfo(user.UserName, user.Password, user.DeviceInfo);
-            return Ok(ApiResponseHelper.Success(response, "Login successfully."));
-        }
-        #endregion
-
-        #region Get employee master 
-        [HttpGet("GetEmployeeMaster")]
-        public async Task<IActionResult> GetEmployeeMaster()
-        {
-            var response = await _loginRepository.GetEmployeeMaster();
-            return Ok(ApiResponseHelper.Success(response));
-        }
-        #endregion
+        //#region Get employee master 
+        //[HttpGet("GetEmployeeMaster")]
+        //public async Task<IActionResult> GetEmployeeMaster()
+        //{
+        //    var response = await _loginRepository.GetEmployeeMaster();
+        //    return Ok(ApiResponseHelper.Success(response));
+        //}
+        //#endregion
     }
 }
