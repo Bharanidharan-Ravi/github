@@ -11,5 +11,7 @@ namespace APIGateWay.Business_Layer.Interface
     public interface IAttachmentRepo
     {
         Task<Tempdata> UploadFilesToTempAsync(IFormFile files);
+        Task CleanupTempFiles(TempReturn filePaths);
+
     }
 }

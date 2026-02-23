@@ -1,4 +1,5 @@
-﻿using System;
+﻿using APIGateWay.ModalLayer.PostData;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -58,6 +59,7 @@ namespace APIGateWay.ModalLayer.DTOs
         public Guid? Owner2 { get; set; }
 
         public List<RepoUserRegisterDto> userLists { get; set; }
+        public TempReturn temp { get; set; }
     }
     public class RepoUserList
     : IAuditableUser, IAuditableEntity
@@ -107,6 +109,7 @@ namespace APIGateWay.ModalLayer.DTOs
     {
         public PostRepositoryModel RepoEntity { get; set; }
         public List<RepoUserList> RepoUsers { get; set; }
+        public ProcessedAttachmentResult AttachmentResult { get; set; }
     }
 
 }

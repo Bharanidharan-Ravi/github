@@ -8,6 +8,7 @@ using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.PostData;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -74,6 +75,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
         public DbSet<SequenceResult> sequenceResults { get; set; }
+        public DbSet<AttachmentMaster> AttachmentMaster { get; set; }
 
 
         #region SaveChanges Override (Audit)
