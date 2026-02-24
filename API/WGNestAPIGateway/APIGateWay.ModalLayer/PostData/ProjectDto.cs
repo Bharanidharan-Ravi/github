@@ -5,25 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.PostData.PostHelper;
 
-namespace APIGateWay.ModalLayer.MasterData
+namespace APIGateWay.ModalLayer.PostData
 {
-    public class ProjectMaster : IAuditableEntity, IAuditableUser
+    public class ProjectDto
     {
-        public int SiNo { get; set; }
-        public string ProjectKey { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string RepoKey { get; set; }
         public Guid? Responsible { get; set; }
-        public int? Status { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? DueDate { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public Guid? CreatedBy { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-        public Guid? UpdatedBy { get; set; }
-        public Guid? Id { get; set; }
         public Guid? Repo_Id { get; set; }
         public string? HtmlDesc { get; set; }
+        public TempReturn? temp { get; set; }
     }
 }

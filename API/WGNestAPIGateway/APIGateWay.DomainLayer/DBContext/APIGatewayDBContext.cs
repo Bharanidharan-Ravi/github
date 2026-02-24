@@ -75,6 +75,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
         public DbSet<SequenceResult> sequenceResults { get; set; }
+        public DbSet<ProjectMaster> ProjectMasters  { get; set; }
         public DbSet<AttachmentMaster> AttachmentMaster { get; set; }
 
 
