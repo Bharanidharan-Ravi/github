@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
-namespace APIGateWay.Business_Layer.SignalRHub
+namespace APIGateWay.BusinessLayer.SignalRHub
 {
     public class GuidUserIdProvider : IUserIdProvider
     {

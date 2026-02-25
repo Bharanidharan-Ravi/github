@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer.nugetmodal;
 using Microsoft.AspNetCore.Mvc;
 

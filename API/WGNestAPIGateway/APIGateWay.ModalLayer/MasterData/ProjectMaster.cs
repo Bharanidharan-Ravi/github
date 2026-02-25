@@ -1,4 +1,5 @@
-﻿using System;
+﻿using APIGateWay.ModalLayer.Helper;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,13 +7,7 @@ using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.PostHelper;
 
 namespace APIGateWay.ModalLayer.MasterData
-{
-    namespace APIGateWay.ModalLayer.MasterData
     {
-        [AttributeUsage(AttributeTargets.Property)]
-        public class IgnoreMappingAttribute : Attribute
-        {
-        }
         public class ProjectMaster : IAuditableEntity, IAuditableUser
         {
             // --------------------------------------------------------
@@ -61,4 +56,4 @@ namespace APIGateWay.ModalLayer.MasterData
             public Guid? UpdatedBy { get; set; }
         }
     }
-}
+

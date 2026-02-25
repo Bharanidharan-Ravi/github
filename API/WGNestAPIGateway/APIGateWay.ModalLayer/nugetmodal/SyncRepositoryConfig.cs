@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Configuration
+namespace APIGateWay.BusinessLayer.Configuration
 {
     public enum SyncSourceType
     {

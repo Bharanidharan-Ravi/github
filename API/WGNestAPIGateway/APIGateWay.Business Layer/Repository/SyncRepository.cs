@@ -1,18 +1,13 @@
 ﻿
-using APIGateWay.Business_Layer.Configuration;
-using APIGateWay.Business_Layer.Helper;
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Configuration;
+using APIGateWay.BusinessLayer.Helper;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.Interface;
-using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.nugetmodal;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class SyncRepository : ISyncRepository
     {

@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.PostData;
 using Azure;

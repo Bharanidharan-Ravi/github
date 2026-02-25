@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
-using APIGateWay.ModalLayer.MasterData.APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;

@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using APIGateWay.ModelLayer.ErrorException;
+﻿using APIGateWay.ModelLayer.ErrorException;
 using APIGateWay.BusinessLayer.Helpers.ilog;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
 using APIGateWay.DomainLayer.Interface;
-using static APIGateWay.ModelLayer.ErrorException.Exceptionlist;
 using APIGateWay.DomainLayer.CommonSevice;
 
 namespace APIGateWay.BusinessLayer.Helpers.log
@@ -205,8 +198,8 @@ namespace APIGateWay.BusinessLayer.Helpers.log
         {
             var parameters = new[]
                     {
-                new SqlParameter("@userid", int.Parse(_commonService.userId)),
-                new SqlParameter("@username", _commonService.userName),
+                new SqlParameter("@userid", _loginContextService.userId),
+                new SqlParameter("@username", _loginContextService.userName),
                 new SqlParameter("@company", "TestCompany"),
                 new SqlParameter("@database",   "databaseName"),
                 new SqlParameter("@module", module),

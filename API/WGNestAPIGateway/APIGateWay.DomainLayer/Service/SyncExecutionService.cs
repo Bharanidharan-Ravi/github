@@ -1,18 +1,10 @@
 ﻿using APIGateWay.DomainLayer.CommonSevice;
-using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.nugetmodal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using static APIGateWay.ModelLayer.ErrorException.Exceptionlist;
-using APIGateWay.DomainLayer.Interface;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace APIGateWay.DomainLayer.Service

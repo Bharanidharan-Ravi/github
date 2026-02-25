@@ -11,7 +11,7 @@ namespace APIGateWay.ModalLayer.PostData
     {
         public string Title { get; set; }
         public string Description { get; set; }
-        public string RepoKey { get; set; }
+        //public string RepoKey { get; set; }
         public Guid? Responsible { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? DueDate { get; set; }

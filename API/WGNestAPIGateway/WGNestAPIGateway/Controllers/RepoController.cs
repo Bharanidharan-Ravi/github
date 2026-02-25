@@ -1,12 +1,10 @@
 ﻿using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIGateway.Controllers
 {
-    //[EnableCors("AllowAll")]
     [ApiController]
     [Route("api/[controller]")]
     public class RepoController : ControllerBase

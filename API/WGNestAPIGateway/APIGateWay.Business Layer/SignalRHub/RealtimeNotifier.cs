@@ -1,6 +1,5 @@
 ﻿using APIGateWay.ModalLayer.Hub;
 using Microsoft.AspNetCore.SignalR;
-using APIGateWay.BusinessLayer.SignalRHub;
 
 
 namespace APIGateWay.BusinessLayer.SignalRHub

@@ -3,22 +3,13 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
-using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
-using APIGateWay.ModelLayer.ErrorException;
-using Azure.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
-using static APIGateWay.ModelLayer.ErrorException.Exceptionlist;
 
 namespace APIGateWay.DomainLayer.Service
 {

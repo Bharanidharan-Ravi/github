@@ -1,46 +1,25 @@
-﻿using APIGateWay.DomainLayer.DBContext;
+﻿using System;
+using System.Data;
+using APIGateWay.DomainLayer.DBContext;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 using APIGateWay.ModelLayer.ErrorException;
-using System.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace APIGateWay.DomainLayer.CommonSevice
 {
     public class APIGateWayCommonService
     {
-        public readonly string userId;
-        public readonly string userName;
-        public readonly string companyName;
-        public readonly string databaseName;
-        public readonly string SalesEmpCode;
-        public readonly string SalesEmpName;
-        public readonly string CardCode;
-        public readonly string CardName;
-        public readonly string BranchName;
-        public readonly string BranchID;
-        public readonly string WhsCode;
-        public readonly string Role;
         private readonly SqlConnection sqlConnection;
         private readonly IConfiguration _configuration;
         private readonly APIGatewayDBContext _dbContext;
-        //private readonly string _connectionString;
         private readonly IServiceScopeFactory _scopeFactory;
 
         public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory)
         {
             _dbContext = dbContext;
             _configuration = configuration;
-            userId = _configuration["UserDetail:USERID"];
-            userName = _configuration["UserDetail:UserName"];
-            databaseName = _configuration["UserDetail:DBName"];
-            Role = _configuration["UserDetail:Role"];
             _scopeFactory = serviceScopeFactory;
         }
 

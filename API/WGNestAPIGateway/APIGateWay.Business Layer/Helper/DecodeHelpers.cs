@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using APIGateWay.ModalLayer;
-
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 

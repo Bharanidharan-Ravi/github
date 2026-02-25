@@ -6,11 +6,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
 
 namespace APIGateWay.DomainLayer.Service

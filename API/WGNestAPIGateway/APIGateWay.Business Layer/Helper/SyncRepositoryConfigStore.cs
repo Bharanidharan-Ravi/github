@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Configuration;
+﻿using APIGateWay.BusinessLayer.Configuration;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Helper
+namespace APIGateWay.BusinessLayer.Helper
 {
     public static class SyncRepositoryConfigStore
     {

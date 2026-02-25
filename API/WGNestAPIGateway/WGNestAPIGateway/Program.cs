@@ -17,16 +17,14 @@ using APIGateway.Middleware;
 using APIGateway.Auth;
 using APIGateway.Proxy;
 using Yarp.ReverseProxy.Transforms;
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Repository;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using APIGateWay.BusinessLayer.SignalRHub;
-using APIGateWay.Business_Layer.SignalRHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.Extensions.FileProviders;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,14 +50,16 @@ builder.Services.AddScoped<IRepoRepository, RepoRepository>();
 builder.Services.AddScoped<ISyncRepositoryV2, SyncRepositoryV2>();
 builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 builder.Services.AddScoped<IAttachmentRepo, AttachmentRepo>();
+builder.Services.AddScoped<IProjectRepo, ProjectRepo>();
 
 
 builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddScoped<IRepoService, RepoService>();
 builder.Services.AddScoped<ILoginContextService, LoginContextService>();
 builder.Services.AddScoped<ISyncExecutionService, SyncExecutionService>();
 builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IDomainService, DomainService>();
+builder.Services.AddScoped<IHelperGetData, HelperGetData>();
 
 
 builder.Services.AddDistributedMemoryCache();
@@ -69,6 +69,10 @@ builder.Services.AddScoped<IlogHelper, LogHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<TokenGeneration>();
 builder.Services.AddSignalR();
+builder.Services.AddAutoMapper(config =>
+{
+    config.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+});
 
 builder.Services.AddSingleton<IUserIdProvider, GuidUserIdProvider>();
 builder.Services.AddHttpClient<IRepoService, RepoService>(client =>

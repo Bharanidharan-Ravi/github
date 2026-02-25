@@ -1,5 +1,6 @@
 ﻿using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.Interface; // Make sure this matches where IAuditableEntity/User live
+using APIGateWay.ModalLayer.Helper;
 using APIGateWay.ModalLayer.MasterData; // Make sure this matches where your models live
 using AutoMapper;
 using Microsoft.Data.SqlClient;
@@ -45,46 +46,37 @@ namespace APIGateWay.DomainLayer.Helpers
     // =========================================================================
     public static class AutoMapperExtensions
     {
+        // This is the "Engine" that reads the [IgnoreMapping] sticky notes
         public static IMappingExpression<TSource, TDest> ApplyDynamicIgnores<TSource, TDest>(
             this IMappingExpression<TSource, TDest> expression)
         {
-            var destinationType = typeof(TDest);
-
-            // 1. DYNAMICALLY EXTRACT INTERFACE PROPERTIES (No hardcoded strings!)
+            var destType = typeof(TDest);
             var auditableEntityProps = typeof(IAuditableEntity).GetProperties().Select(p => p.Name).ToList();
             var auditableUserProps = typeof(IAuditableUser).GetProperties().Select(p => p.Name).ToList();
 
-            // 2. SOLVE THE NULL EXCEPTION (Conditional Mapping)
-            // If the DTO contains a 'null' value, AutoMapper will NOT try to map it.
-            // It will keep whatever default value the Database or C# class assigned.
             expression.ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            foreach (var property in destinationType.GetProperties())
+            foreach (var property in destType.GetProperties())
             {
-                // 3. Ignore fields explicitly marked with [IgnoreMapping] attribute
-                if (property.GetCustomAttributes(typeof(ModalLayer.MasterData.APIGateWay.ModalLayer.MasterData.IgnoreMappingAttribute), true).Any())
+                // Finds properties with [IgnoreMapping] and tells AutoMapper to skip them
+                if (property.GetCustomAttributes(typeof(IgnoreMappingAttribute), true).Any())
                 {
                     expression.ForMember(property.Name, opt => opt.Ignore());
                     continue;
                 }
 
-                // 4. Dynamically ignore any property that belongs to IAuditableEntity
-                if (typeof(IAuditableEntity).IsAssignableFrom(destinationType) &&
-                    auditableEntityProps.Contains(property.Name))
+                if (typeof(IAuditableEntity).IsAssignableFrom(destType) && auditableEntityProps.Contains(property.Name))
                 {
                     expression.ForMember(property.Name, opt => opt.Ignore());
                     continue;
                 }
 
-                // 5. Dynamically ignore any property that belongs to IAuditableUser
-                if (typeof(IAuditableUser).IsAssignableFrom(destinationType) &&
-                    auditableUserProps.Contains(property.Name))
+                if (typeof(IAuditableUser).IsAssignableFrom(destType) && auditableUserProps.Contains(property.Name))
                 {
                     expression.ForMember(property.Name, opt => opt.Ignore());
                     continue;
                 }
             }
-
             return expression;
         }
     }
