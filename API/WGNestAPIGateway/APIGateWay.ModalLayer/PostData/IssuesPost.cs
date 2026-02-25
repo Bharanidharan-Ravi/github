@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static APIGateWay.ModalLayer.PostData.PostHelper;
+using static APIGateWay.ModalLayer.Helper.PostHelper;
 
 namespace APIGateWay.ModalLayer.PostData
 {

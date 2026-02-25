@@ -154,18 +154,31 @@ namespace APIGateWay.DomainLayer.Service
             return result;
         }
         // Call this in your catch blocks!
+ 
+        #region Rollback Physical Files (Failsafe)
+        // 🔥 The Rollback Method: Called by Business Layer catch blocks or internal catch blocks
         public void RollbackPhysicalFiles(List<string> filePaths)
         {
+            if (filePaths == null || !filePaths.Any())
+                return;
+
             foreach (var path in filePaths)
             {
                 if (File.Exists(path))
                 {
-                    try { File.Delete(path); }
-                    catch { /* Log failure, but continue deleting others */ }
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log failure, but continue deleting the other files in the list
+                        Console.WriteLine($"Failed to rollback file {path}: {ex.Message}");
+                    }
                 }
             }
         }
-
+        #endregion
         private string GetMimeType(string filePath)
         {
             var provider = new FileExtensionContentTypeProvider();

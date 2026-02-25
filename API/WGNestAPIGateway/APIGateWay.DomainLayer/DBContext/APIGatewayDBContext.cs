@@ -8,12 +8,13 @@ using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.MasterData.APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
-using static APIGateWay.ModalLayer.PostData.PostHelper;
+using static APIGateWay.ModalLayer.Helper.PostHelper;
 
 namespace APIGateWay.DomainLayer.DBContext
 {
