@@ -23,7 +23,8 @@ namespace APIGateWay.ModalLayer.MasterData
             [IgnoreMapping] // Generated manually via Guid.NewGuid() in Business Layer
             public Guid? Id { get; set; }
 
-            [IgnoreMapping] // Hardcoded to 1 (Active) in Business Layer
+            [IgnoreMapping] // Hardcoded to 1 (
+                            // ) in Business Layer
             public int? Status { get; set; }
 
             [IgnoreMapping] // Handled strictly by HtmlUtilities.ConvertToPlainText()

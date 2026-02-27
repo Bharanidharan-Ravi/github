@@ -53,7 +53,8 @@ namespace APIGateWay.DomainLayer.Service
 
             var user = userList.FirstOrDefault();
 
-            if (user.Status != "Active")
+            if (user.Status != "
+                ")
             {
                 throw new Exceptionlist.LoginException("Your account is inactive. Please contact Admin.", username, deviceInfo, password);
             }

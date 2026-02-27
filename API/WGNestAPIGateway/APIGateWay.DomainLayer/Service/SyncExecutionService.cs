@@ -85,7 +85,7 @@ namespace APIGateWay.DomainLayer.Service
                     {
                         Ok = false,
                         ErrorCode = "INVALID_REMOTE_RESPONSE",
-                        ErrorMessage = "Unexpected response format",
+                        ErrorMessage = "Invalid server response.",
                         Retryable = false,
                         Source = source
                     };
@@ -103,7 +103,7 @@ namespace APIGateWay.DomainLayer.Service
                 {
                     Ok = false,
                     ErrorCode = "REMOTE_JSON_ERROR",
-                    ErrorMessage = ex.Message,
+                    ErrorMessage = "Data format error.",
                     Retryable = false,
                     Source = source
                 };
@@ -114,7 +114,7 @@ namespace APIGateWay.DomainLayer.Service
                 {
                     Ok = false,
                     ErrorCode = "REMOTE_EXECUTION_ERROR",
-                    ErrorMessage = ex.Message,
+                    ErrorMessage = "Network error. Check connection.",
                     Retryable = true,
                     Source = source
                 };
@@ -168,7 +168,7 @@ namespace APIGateWay.DomainLayer.Service
                 return new RawSyncResult
                 {
                     Ok = false,
-                    ErrorCode = "DB_FAILURE",
+                    ErrorCode = "Database error. Try again.",
                     ErrorMessage = ex.Message,
                     Retryable = true,
                     Source = source
@@ -179,7 +179,7 @@ namespace APIGateWay.DomainLayer.Service
                 return new RawSyncResult
                 {
                     Ok = false,
-                    ErrorCode = "LOCAL_EXECUTION_ERROR",
+                    ErrorCode = "System error. Contact admin.",
                     ErrorMessage = ex.Message,
                     Retryable = false,
                     Source = source

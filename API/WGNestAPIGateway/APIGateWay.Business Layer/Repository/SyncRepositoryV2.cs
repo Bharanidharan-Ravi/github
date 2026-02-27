@@ -30,7 +30,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     {
                         Ok = false,
                         ErrorCode = "INVALID_CONFIG_KEY",
-                        ErrorMessage = $"Unknown key: {key}",
+                        ErrorMessage = "Invalid setup. Contact admin.",
                         Retryable = false,
                         Source = "Repository"
                     });
@@ -57,7 +57,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     {
                         Ok = false,
                         ErrorCode = "INVALID_SOURCE_TYPE",
-                        ErrorMessage = "Unknown source type",
+                        ErrorMessage = "Config error. Contact admin.",
                         Retryable = false,
                         Source = "Repository"
                     })

@@ -133,7 +133,8 @@ namespace APIGateWay.DomainLayer.Service
                         //CreatedAt = DateTime.UtcNow,
                         //UpdatedBy = _loginContextService.userId,
                         //UpdatedAt = DateTime.UtcNow,
-                        Status = "Active",
+                        Status = "
+                        ",
                         FileExtension = Path.GetExtension(file.FileName).TrimStart('.'),
                         RelativePath = $"{relativePermPath}/{file.FileName}",
                     };
