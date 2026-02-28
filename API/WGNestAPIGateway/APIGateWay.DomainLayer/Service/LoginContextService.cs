@@ -32,7 +32,12 @@ namespace APIGateWay.DomainLayer.Service
         public string userName => httpContext.Items["UserDetail:UserName"]?.ToString();
         public string databaseName => httpContext.Items["UserDetail:DBName"]?.ToString();
         public string Status => httpContext.Items["UserDetail:Status"]?.ToString();
-        public string Role => httpContext.Items["UserDetail:Role"]?.ToString();
+        // ── ADD THIS ──────────────────────────────────────────────────
+        // HttpContextMiddleware already decoded the JWT and stored the role.
+        // We simply read it. No decoding happens here.
+        public int role =>
+            int.TryParse(httpContext?.Items["UserDetail:Role"]?.ToString(), out var r)
+                ? r : 0;
         public string JwtToken => httpContext.Items["jwtToken"]?.ToString();
         public string RequestPath => httpContext.Items["Request"]?.ToString();
     }

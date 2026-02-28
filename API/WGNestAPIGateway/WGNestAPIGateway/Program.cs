@@ -25,6 +25,7 @@ using System.Text;
 using Microsoft.Extensions.FileProviders;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
 using Microsoft.Extensions.DependencyInjection;
+using APIGateWay.Business_Layer.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,7 +61,8 @@ builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IDomainService, DomainService>();
 builder.Services.AddScoped<IHelperGetData, HelperGetData>();
-
+builder.Services.AddScoped<IRepoScopeValidator, RepoScopeValidator>();
+builder.Services.AddScoped<ISyncRoleGuard, SyncRoleGuard>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<APIGateWayCommonService>();
