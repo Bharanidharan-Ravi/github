@@ -13,7 +13,7 @@ namespace APIGateWay.DomainLayer.Interface
         /// Roles 1 and 2 always return true (no scope restriction).
         /// Role 3 is checked against RepoUsers table via RepoAccessService.
         /// </summary>
-        Task<bool> CanAccessRepoAsync(string repoId);
+        //Task<bool> CanAccessRepoAsync(string repoId);
 
         /// <summary>
         /// Returns all repoIds the current user can access.

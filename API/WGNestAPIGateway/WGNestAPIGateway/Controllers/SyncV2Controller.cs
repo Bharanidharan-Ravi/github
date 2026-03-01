@@ -1,5 +1,4 @@
-﻿using APIGateWay.Business_Layer.Auth;
-using APIGateWay.BusinessLayer.Auth;
+﻿using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer.nugerModalV2;
 using APIGateWay.ModalLayer.nugetmodal;

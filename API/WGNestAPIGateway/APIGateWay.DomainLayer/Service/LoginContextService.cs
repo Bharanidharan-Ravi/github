@@ -1,6 +1,6 @@
 ﻿using APIGateWay.DomainLayer.Interface;
 using Microsoft.AspNetCore.Http;
-using System;
+using System.Security.Claims;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -13,32 +13,42 @@ namespace APIGateWay.DomainLayer.Service
             _httpContextAccessor = httpContextAccessor;
         }
 
-        private HttpContext httpContext => _httpContextAccessor.HttpContext;
+        private HttpContext HttpContext => _httpContextAccessor.HttpContext;
+
+        private ClaimsPrincipal User => HttpContext?.User;
 
         public Guid userId
         {
             get
             {
-                var userIdObj = httpContext.Items["UserDetail:USERID"];
-                if (userIdObj != null && Guid.TryParse(userIdObj.ToString(), out var result))
-                {
-                    return result; // Successfully parsed, return the Guid
-                }
-
-                // Handle the case where parsing fails, for example, return a default Guid (Guid.Empty)
-                return Guid.Empty;
+                var value = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                return Guid.TryParse(value, out var id) ? id : Guid.Empty;
             }
         }
-        public string userName => httpContext.Items["UserDetail:UserName"]?.ToString();
-        public string databaseName => httpContext.Items["UserDetail:DBName"]?.ToString();
-        public string Status => httpContext.Items["UserDetail:Status"]?.ToString();
-        // ── ADD THIS ──────────────────────────────────────────────────
-        // HttpContextMiddleware already decoded the JWT and stored the role.
-        // We simply read it. No decoding happens here.
-        public int role =>
-            int.TryParse(httpContext?.Items["UserDetail:Role"]?.ToString(), out var r)
-                ? r : 0;
-        public string JwtToken => httpContext.Items["jwtToken"]?.ToString();
-        public string RequestPath => httpContext.Items["Request"]?.ToString();
+
+        public string userName =>
+            User?.FindFirst(ClaimTypes.Name)?.Value;
+
+        public string databaseName =>
+            User?.FindFirst("DbName")?.Value;   // custom claim
+
+        public string Status =>
+            User?.FindFirst("Status")?.Value;   // if exists in JWT
+
+        public int role
+        {
+            get
+            {
+                var value = User?.FindFirst(ClaimTypes.Role)?.Value;
+                return int.TryParse(value, out var r) ? r : 0;
+            }
+        }
+
+        public string JwtToken =>
+            HttpContext?.Request.Headers["Authorization"]
+                .FirstOrDefault()?.Replace("Bearer ", "");
+
+        public string RequestPath =>
+            HttpContext?.Request.Path.Value;
     }
 }

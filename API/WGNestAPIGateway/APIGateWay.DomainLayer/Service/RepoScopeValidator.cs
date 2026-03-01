@@ -44,22 +44,22 @@ namespace APIGateWay.DomainLayer.Service
         ///   Guard calls:   CanAccessRepoAsync("abc-123-def")
         ///   This method:   parses "abc-123-def" as Guid, queries RepoUsers by Repo_Id
         /// </summary>
-        public async Task<bool> CanAccessRepoAsync(string repoIdString)
-        {
-            // Roles 1 and 2 — always allowed, no DB call
-            if (_loginCtx.role == AppRoles.Admin || _loginCtx.role == AppRoles.Manager)
-                return true;
+        //public async Task<bool> CanAccessRepoAsync(string repoIdString)
+        //{
+        //    // Roles 1 and 2 — always allowed, no DB call
+        //    if (_loginCtx.role == AppRoles.Admin || _loginCtx.role == AppRoles.Manager)
+        //        return true;
 
-            // Role 3 — parse the GUID from the string the frontend sent
-            if (!Guid.TryParse(repoIdString, out var repoGuid))
-            {
-                // Value is not a valid GUID — deny
-                return false;
-            }
+        //    // Role 3 — parse the GUID from the string the frontend sent
+        //    if (!Guid.TryParse(repoIdString, out var repoGuid))
+        //    {
+        //        // Value is not a valid GUID — deny
+        //        return false;
+        //    }
 
-            // Check RepoUsers WHERE UserId = current user AND RepoId = requested repo
-            return await _repoAccess.UserCanAccessRepoByIdAsync(_loginCtx.userId, repoGuid);
-        }
+        //    // Check RepoUsers WHERE UserId = current user AND RepoId = requested repo
+        //    return await _repoAccess.UserCanAccessRepoByIdAsync(_loginCtx.userId, repoGuid);
+        //}
         /// <summary>
         /// Returns the list of repoId strings Role 3 can access.
         /// Not used by SyncRoleGuard (it calls CanAccessRepoAsync directly)

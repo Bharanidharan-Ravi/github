@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Auth
+namespace APIGateWay.BusinessLayer.Auth
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
-    public class RequireRoleAttribute : Attribute, IActionFilter
+    public sealed class RequireRoleAttribute : Attribute, IActionFilter
     {
         private readonly int[] _allowedRoles;
 
@@ -20,11 +20,9 @@ namespace APIGateWay.Business_Layer.Auth
 
         public void OnActionExecuting(ActionExecutingContext context)
         {
-            // Role was already decoded by HttpContextMiddleware
             var roleStr = context.HttpContext.Items["UserDetail:Role"]?.ToString();
-            var hasRole = int.TryParse(roleStr, out var role);
 
-            if (!hasRole)
+            if (!int.TryParse(roleStr, out var role))
             {
                 context.Result = new UnauthorizedObjectResult(new
                 {
@@ -39,7 +37,7 @@ namespace APIGateWay.Business_Layer.Auth
                 context.Result = new ObjectResult(new
                 {
                     ErrorCode = 403,
-                    ErrorMessage = $"Role {role} is not permitted to perform this action."
+                    ErrorMessage = "You do not have permission to perform this action."
                 })
                 { StatusCode = 403 };
             }

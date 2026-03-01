@@ -8,9 +8,9 @@ namespace APIGateWay.ModalLayer
 {
     public static class AppRoles
     {
-        public const int Admin = 1;   // Master admin — full access
-        public const int Manager = 2;   // All pages, view-only on labels/employees
-        public const int Viewer = 3;   // Only their own repos, tickets, projects
+        public const int Admin = 1;  // Master admin  — full access, zero additional checks
+        public const int Manager = 2;  // Manager       — all views scoped to their repos, no repo creation
+        public const int Viewer = 3;  // Viewer        — project + ticket only, scoped to their repos
 
         public static readonly int[] All = { Admin, Manager, Viewer };
         public static readonly int[] AdminManager = { Admin, Manager };

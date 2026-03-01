@@ -21,129 +21,96 @@
 //
 // ──────────────────────────────────────────────────────────────────────────────
 
-using APIGateWay.Business_Layer.Auth;
+using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.nugetmodal;
+using Microsoft.AspNetCore.Http;
 
 namespace APIGateWay.BusinessLayer.Auth
 {
     public class SyncRequestEnricher : ISyncRequestEnricher
     {
-        private readonly ILoginContextService _loginCtx;
-        private readonly IRepoAccessService _repoAccess;
+        private readonly ILoginContextService _login;
+        private readonly IHttpContextAccessor _httpCtx;
 
-        public SyncRequestEnricher(
-            ILoginContextService loginCtx,
-            IRepoAccessService repoAccess)
+        public SyncRequestEnricher(ILoginContextService login, IHttpContextAccessor httpCtx)
         {
-            _loginCtx = loginCtx;
-            _repoAccess = repoAccess;
+            _login = login;
+            _httpCtx = httpCtx;
         }
 
         public async Task<EnrichedSyncRequest> EnrichAsync(DynamicSyncRequest request)
         {
             var enriched = new EnrichedSyncRequest();
-            var userRole = _loginCtx.role;
+            var role = _login.role;
 
-            // ── Roles 1 and 2: pass every key through unchanged ───────────────
-            if (userRole == AppRoles.Admin || userRole == AppRoles.Manager)
+            // ── Role 1: unrestricted pass-through ─────────────────────────────
+            if (role == AppRoles.Admin || role == AppRoles.Manager)
             {
                 foreach (var key in request.ConfigKeys)
                 {
                     request.Timestamps.TryGetValue(key, out var ts);
                     request.Params.TryGetValue(key, out var p);
-
-                    enriched.Units.Add(new SyncExecutionUnit
-                    {
-                        ConfigKey = key,
-                        ResultKey = key,
-                        LastSync = ts,
-                        Params = p ?? new Dictionary<string, string>()
-                    });
+                    enriched.Units.Add(Unit(key, ts, p ?? new()));
                 }
                 return enriched;
             }
 
-            // ── Role 3: fetch their repos once, then fan out ──────────────────
-            // GetUserRepoIdsAsync returns the RepoKey list (used by SignalR groups).
-            // We also need Repo_Id GUIDs for the SP params.
-            // Fetch both in one call using the extended service.
-            var allowedRepoIds = await _repoAccess.GetUserRepoGuidsAsync(_loginCtx.userId);
-            // Returns List<UserRepoAccess> with both RepoId (GUID) and RepoKey
+            // ── Role 2 / 3: read repo cache set by middleware ─────────────────
+            var allowedRepos = _httpCtx.HttpContext?.Items["AllowedRepos"]
+                as List<UserRepoAccess>
+                ?? new List<UserRepoAccess>();
 
             foreach (var key in request.ConfigKeys)
             {
-                // Look up the policy rule for this key
-                if (!SyncKeyPolicy.Rules.TryGetValue(key, out var rule))
-                {
-                    // Unknown key — pass through, let SyncRepositoryV2 handle the error
-                    request.Timestamps.TryGetValue(key, out var ts);
-                    request.Params.TryGetValue(key, out var p);
-                    enriched.Units.Add(new SyncExecutionUnit
-                    {
-                        ConfigKey = key,
-                        ResultKey = key,
-                        LastSync = ts,
-                        Params = p ?? new()
-                    });
-                    continue;
-                }
-
-                // ── CASE A: Role 3 not allowed for this key at all ────────────
-                if (!rule.AllowedRoles.Contains(userRole))
-                {
-                    enriched.DeniedKeys[key] =
-                        $"Your role does not have access to '{key}'.";
-                    continue;
-                }
-
                 request.Timestamps.TryGetValue(key, out var lastSync);
                 request.Params.TryGetValue(key, out var baseParams);
                 baseParams ??= new Dictionary<string, string>();
 
-                // ── CASE B: Repo-scoped — fan out per repo ────────────────────
+                // Unknown key — let SyncRepositoryV2 return INVALID_CONFIG_KEY
+                if (!SyncKeyPolicy.Rules.TryGetValue(key, out var rule))
+                {
+                    enriched.Units.Add(Unit(key, lastSync, baseParams));
+                    continue;
+                }
+
+                // Role not in allowed list for this key
+                if (!rule.AllowedRoles.Contains(role))
+                {
+                    enriched.DeniedKeys[key] = $"Your role does not have access to '{key}'.";
+                    continue;
+                }
+
+                // Repo-scoped → fan out one unit per allowed repo
                 if (rule.IsRepoScoped)
                 {
-                    if (allowedRepoIds == null || !allowedRepoIds.Any())
+                    if (!allowedRepos.Any())
                     {
-                        // User has no repo access at all
-                        enriched.DeniedKeys[key] =
-                            "You have not been assigned to any repository.";
+                        enriched.DeniedKeys[key] = "You have not been assigned to any repository.";
                         continue;
                     }
 
-                    foreach (var repo in allowedRepoIds)
+                    foreach (var repo in allowedRepos)
                     {
-                        // Clone base params, inject repoId for this repo
                         var unitParams = new Dictionary<string, string>(baseParams)
                         {
-                            // Overwrite/add the repoId param the SP expects
                             [rule.RepoParamKey] = repo.RepoId.ToString()
                         };
-
-                        enriched.Units.Add(new SyncExecutionUnit
-                        {
-                            ConfigKey = key,
-                            ResultKey = key,          // results merged under the same key
-                            LastSync = lastSync,
-                            Params = unitParams
-                        });
+                        enriched.Units.Add(Unit(key, lastSync, unitParams));
                     }
                     continue;
                 }
 
-                // ── CASE C: Not repo-scoped — pass through normally ───────────
-                enriched.Units.Add(new SyncExecutionUnit
-                {
-                    ConfigKey = key,
-                    ResultKey = key,
-                    LastSync = lastSync,
-                    Params = baseParams
-                });
+                // Not repo-scoped — pass through
+                enriched.Units.Add(Unit(key, lastSync, baseParams));
             }
 
             return enriched;
         }
+
+        private static SyncExecutionUnit Unit(
+            string key, DateTimeOffset? ts, Dictionary<string, string> p) =>
+            new() { ConfigKey = key, ResultKey = key, LastSync = ts, Params = p };
     }
 }

@@ -38,7 +38,7 @@ namespace APIGateWay.ModalLayer.MasterData
             // --------------------------------------------------------
 
             public string Title { get; set; }
-            public string RepoKey { get; set; }
+            public string? RepoKey { get; set; }
             public Guid? Responsible { get; set; }
             public DateTime? StartDate { get; set; }
             public DateTime? DueDate { get; set; }

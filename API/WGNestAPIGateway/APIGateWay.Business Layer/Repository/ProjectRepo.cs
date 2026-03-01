@@ -101,7 +101,6 @@ namespace APIGateWay.BusinessLayer.Repository
                 finalProjectData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
                     var projectMaster = _mapper.Map<ProjectMaster>(projectDto);
-                    projectMaster.Id = Guid.NewGuid();
                     projectMaster.Status = 1;
 
                     if (!projectDto.Repo_Id.HasValue)
@@ -113,7 +112,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var seq = await _commonService.GetNextSequenceAsync(secureRepoKey, "Project", "Proj_Sequence");
                     projectMaster.SiNo = seq.CurrentValue;
                     projectMaster.ProjectKey = $"P{seq.ColumnValue}";
-
+                    projectMaster.RepoKey = secureRepoKey;
                     string finalHtmlDescription = projectDto.Description;
 
                     if (projectDto.temp?.temps != null && projectDto.temp.temps.Any())
@@ -180,6 +179,171 @@ namespace APIGateWay.BusinessLayer.Repository
             }
 
             // 6. Return to the Controller
+            return finalProjectData;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // FULL UPDATE
+        // PUT /api/project/{id}
+        //
+        // What changes:  Title, HtmlDesc, Description, DueDate, Status (optional)
+        //                New attachments added if uploaded
+        // What NEVER changes: Id, ProjectKey, SiNo, Repo_Id, CreatedAt, CreatedBy
+        // Auto-updated:  UpdatedAt, UpdatedBy — DBContext audit handles this
+        //
+        // No sequence call — ProjectKey never regenerates on update.
+        // Repo scope validated by RepoScopeHandler BEFORE this runs.
+        // ─────────────────────────────────────────────────────────────────────
+        public async Task<GetProject> UpdateProjectAsync(Guid projectId, UpdateProjectDto dto)
+        {
+            ProcessedAttachmentResult attachmentResult = null;
+            GetProject finalProjectData = null;
+
+            try
+            {
+                finalProjectData = await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    string finalHtmlDescription = dto.Description ?? string.Empty;
+
+                    // Process new attachments if uploaded
+                    if (dto.temp?.temps != null && dto.temp.temps.Any())
+                    {
+                        // Folder uses userId + projectId — consistent on update
+                        var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+                        var relativePath = $"{permUserId}/{projectId}";
+
+                        attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+                            dto.Description, dto.temp.temps, relativePath,
+                            projectId.ToString(), "ProjectMaster");
+
+                        finalHtmlDescription = attachmentResult.UpdatedHtml;
+                    }
+
+                    // Capture for use inside lambda (closure)
+                    var capturedHtml = finalHtmlDescription;
+
+                    // UpdateEntityWithAttachmentsAsync:
+                    //   → finds ProjectMaster by projectId (EF tracks it)
+                    //   → calls your lambda — ONLY listed fields are marked Modified
+                    //   → DBContext audit sets UpdatedAt/UpdatedBy on SaveChangesAsync
+                    //   → CreatedAt/CreatedBy protected automatically
+                    var updatedProject = await _domainService.UpdateEntityWithAttachmentsAsync<ProjectMaster>(
+                        projectId,
+                        entity =>
+                        {
+                            entity.Title = dto.Title;
+                            entity.HtmlDesc = capturedHtml;
+                            entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
+
+                            if (dto.DueDate.HasValue)
+                                entity.DueDate = dto.DueDate.Value;
+
+                            // Status is optional in full update — only change if sent
+                            if (dto.Status.HasValue)
+                                entity.Status = dto.Status.Value;
+
+                            // Id, ProjectKey, SiNo, Repo_Id, CreatedAt, CreatedBy
+                            // are NOT listed here = EF never sends them to DB
+                        },
+                        attachmentResult?.Attachments
+                    );
+
+                    if (dto.temp?.temps != null && dto.temp.temps.Any())
+                        await _attachmentService.CleanupTempFiles(dto.temp);
+
+                    return _mapper.Map<GetProject>(updatedProject);
+                });
+            }
+            catch (Exception ex)
+            {
+                if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
+                    _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
+
+                throw new Exception("Project update failed. Everything was rolled back safely.", ex);
+            }
+
+            if (finalProjectData != null)
+            {
+                try
+                {
+                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                    {
+                        Entity = "ProjectList",
+                        Action = "Update",
+                        Payload = finalProjectData,
+                        KeyField = "Id",
+                        RepoKey = finalProjectData.RepoKey,
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to broadcast project update: {ex.Message}");
+                }
+            }
+
+            return finalProjectData;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // STATUS-ONLY UPDATE
+        // PATCH /api/project/{id}/status
+        // Body: { "Status": 2 }
+        //
+        // Only Status column changes in DB.
+        // EF sends: UPDATE ProjectMasters SET Status = @p0, UpdatedAt = @p1, UpdatedBy = @p2
+        //           WHERE Id = @p3
+        // Everything else in the row stays exactly as-is.
+        //
+        // No Repo_Id in body — RepoScopeHandler looked up this project's Repo_Id
+        // from DB using {id} route param and validated before reaching here.
+        // ─────────────────────────────────────────────────────────────────────
+        public async Task<GetProject> UpdateProjectStatusAsync(Guid projectId, UpdateStatusDto dto)
+        {
+            GetProject finalProjectData = null;
+
+            try
+            {
+                finalProjectData = await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    var updatedProject = await _domainService.UpdateEntityWithAttachmentsAsync<ProjectMaster>(
+                        projectId,
+                        entity =>
+                        {
+                            // Only Status — nothing else touches the row
+                            entity.Status = dto.Status;
+                        }
+                        // no newAttachments = null by default
+                    );
+
+                    return _mapper.Map<GetProject>(updatedProject);
+                });
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Project status update failed. Everything was rolled back safely.", ex);
+            }
+
+            if (finalProjectData != null)
+            {
+                try
+                {
+                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                    {
+                        Entity = "ProjectList",
+                        Action = "StatusUpdate",
+                        Payload = finalProjectData,
+                        KeyField = "Id",
+                        RepoKey = finalProjectData.RepoKey,
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to broadcast project status update: {ex.Message}");
+                }
+            }
+
             return finalProjectData;
         }
     }   
