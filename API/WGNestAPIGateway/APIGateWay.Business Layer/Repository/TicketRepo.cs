@@ -1,9 +1,11 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
+using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
 using System;
@@ -12,7 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class TicketRepo : ITicketRepo
     {
@@ -192,14 +194,11 @@ namespace APIGateWay.Business_Layer.Repository
                             entity.HtmlDesc = capturedHtml;
                             entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
 
-                            if (dto.Priority.HasValue)
-                                entity.Priority = dto.Priority.Value;
-
                             if (dto.AssigneeId.HasValue)
-                                entity.AssigneeId = dto.AssigneeId.Value;
+                                entity.Assignee_Id = dto.AssigneeId.Value;
 
                             if (dto.DueDate.HasValue)
-                                entity.DueDate = dto.DueDate.Value;
+                                entity.Due_Date = dto.DueDate.Value;
 
                             if (dto.Status.HasValue)
                                 entity.Status = dto.Status.Value;
@@ -222,7 +221,7 @@ namespace APIGateWay.Business_Layer.Repository
                             Label_Id = l.Id
                         }).ToList();
 
-                        await _domainService.ReplaceLabelsAsync(ticketId, newLabels);
+                        await _domainService.UpdateLabelAsync(ticketId, newLabels);
                     }
 
                     if (dto.temp?.temps != null && dto.temp.temps.Any())

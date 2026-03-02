@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,7 +19,7 @@ namespace APIGateway.Controllers
         // POST /api/ticket
         // All roles. RepoScopeHandler validates RepoId from body.
         // ─────────────────────────────────────────────────────────────────────
-        [HttpPost]
+        [HttpPost("CreateTicket")]
         public async Task<IActionResult> CreateTicket([FromBody] PostTicketDto dto)
         {
             if (dto == null)

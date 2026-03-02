@@ -1,4 +1,5 @@
-﻿using System;
+﻿using APIGateWay.ModalLayer.GETData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,5 +10,6 @@ namespace APIGateWay.DomainLayer.Interface
     public interface IHelperGetData
     {
         Task<string> GetRepoKeyByIdAsync(Guid repoId);
+        Task<IssueRepositoryInfo> GetIssueRepositoryInfoAsync(Guid IssueId);
     }
 }

@@ -73,7 +73,11 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<SequenceResult> sequenceResults { get; set; }
         public DbSet<ProjectMaster> ProjectMasters  { get; set; }
         public DbSet<AttachmentMaster> AttachmentMaster { get; set; }
-
+        public DbSet<IssueLabel> ISSUE_LABELS { get; set; }
+        public DbSet<TicketMaster> ISSUEMASTER { get; set; }
+        public DbSet<DashBoardTimeSheetData> dashBoardTimeSheets { get; set; }
+        public DbSet<ThreadMaster> ISSUETHREADS { get; set; }
+        public DbSet<ThreadList> threadLists { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -147,6 +151,12 @@ namespace APIGateWay.DomainLayer.DBContext
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder); // Keep this if you already have it
+
+            // Tell EF Core that Issue_Id AND Label_Id together make the Primary Key
+            modelBuilder.Entity<IssueLabel>()
+                .HasKey(il => new { il.Issue_Id, il.Label_Id });
+
             modelBuilder.Entity<LOGIN_MASTER>(entity =>
             {
                 entity.Property(e => e.Status).HasDefaultValue("Active");

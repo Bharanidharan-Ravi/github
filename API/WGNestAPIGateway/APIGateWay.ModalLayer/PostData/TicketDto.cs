@@ -6,9 +6,29 @@ using System.Threading.Tasks;
 
 namespace APIGateWay.ModalLayer.PostData
 {
-    public class TicketDto
+    public class PostTicketDto
     {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Hours { get; set; }
+        //public string RepoKey { get; set; }
+        public Guid? Project_Id { get; set; }
+
+        public DateTime? Due_Date { get; set; }
+        public Guid? Assignee_Id { get; set; }
+        public Guid? RepoId { get; set; }
+        public string? HtmlDesc { get; set; }
+        public TempReturn? temp { get; set; }
+        public List<LabelData>? labelId { get; set; }
+
+
     }
+
+    public class LabelData
+    {
+        public int? Id { get; set; }
+    }
+
     public class UpdateTicketDto
     {
         public Guid? RepoId { get; set; }   // matches PostTicketDto.RepoId
@@ -24,7 +44,7 @@ namespace APIGateWay.ModalLayer.PostData
         // null   → labels not touched
         // empty  → all labels removed
         // filled → delete old labels, insert these
-        public List<LabelRef>? labelId { get; set; }
+        public List<LabelData>? labelId { get; set; }
     }
 
     // ── PATCH /api/ticket/{id}/status ─────────────────────────────────────────

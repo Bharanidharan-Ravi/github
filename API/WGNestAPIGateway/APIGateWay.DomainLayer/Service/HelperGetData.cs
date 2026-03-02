@@ -1,5 +1,6 @@
 ﻿using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.GETData;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -30,6 +31,22 @@ namespace APIGateWay.DomainLayer.Service
             }
 
             return repoKey;
+        }
+
+        public async Task<IssueRepositoryInfo> GetIssueRepositoryInfoAsync(Guid IssueId)
+        {
+            var issue = await _dbContext.ISSUEMASTER
+                .Where(x => x.Issue_Id == IssueId)
+                .Select(x => new { x.RepoId, x.RepoKey, x.Title })
+                .FirstOrDefaultAsync();
+
+            return new IssueRepositoryInfo
+            {
+                RepoId = issue.RepoId,
+                RepoKey = issue.RepoKey,
+                IssueTitle = issue.Title,
+            };
+
         }
     }
 }

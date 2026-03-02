@@ -11,8 +11,8 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid Id { get; set; }
         public string Project_Name { get; set; }
         public string Description { get; set; }
-        public string HtmlDesc { get; set; }
-        public string ProjectKey { get; set; }
+        public string? HtmlDesc { get; set; }
+        public string? ProjectKey { get; set; }
         public Guid? Repo_Id { get; set; }
         public string? RepoKey { get; set; }
         public string? Repo_Name { get; set; }

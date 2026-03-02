@@ -31,6 +31,17 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
 
+        public async Task SaveLabelAsync(List<IssueLabel> labels)
+        {
+            if (labels != null && labels.Any())
+            {
+
+                await _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+            }
+
+            await _dBContext.SaveChangesAsync(); // Commit the changes to the database
+        }
+
         // 2. The ✨ GENERIC ✨ Save Method
         // This will accept ProjectMaster, RepositoryMaster, IssueMaster, etc.!
         public async Task SaveEntityWithAttachmentsAsync<TEntity>(TEntity entity, List<AttachmentMaster> attachments) where TEntity : class
@@ -64,10 +75,10 @@ namespace APIGateWay.DomainLayer.Service
         //   Status update → mutator sets ONLY Status, nothing else
         //
         public async Task<TEntity> UpdateEntityWithAttachmentsAsync<TEntity>(
-            Guid id,
-            Action<TEntity> mutator,
-            List<AttachmentMaster>? newAttachments = null)
-            where TEntity : class
+              Guid id,
+              Action<TEntity> mutator,
+              List<AttachmentMaster>? newAttachments = null)
+              where TEntity : class
         {
             // Find tracked entity — EF will detect changes on it
             var entity = await _dBContext.Set<TEntity>().FindAsync(id);
@@ -90,6 +101,20 @@ namespace APIGateWay.DomainLayer.Service
             await _dBContext.SaveChangesAsync();
 
             return entity;
+        }
+        public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
+        {
+            var existing = _dBContext.ISSUE_LABELS
+                .Where(x => x.Issue_Id == id)
+                .ToList();
+
+            if (existing.Any())
+                _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+
+            if (labels != null && labels.Any())
+                await _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+
+            await _dBContext.SaveChangesAsync();
         }
     }
 }

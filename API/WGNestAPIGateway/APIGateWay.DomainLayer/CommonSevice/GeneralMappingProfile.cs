@@ -15,9 +15,17 @@ namespace APIGateWay.DomainLayer.CommonSevice
         public GeneralMappingProfile()
         {
             CreateMap<ProjectDto, ProjectMaster>().ApplyDynamicIgnores();
+            CreateMap<PostTicketDto, TicketMaster>().ApplyDynamicIgnores();
+            CreateMap<PostThreadsDto, ThreadMaster>().ApplyDynamicIgnores();
 
             CreateMap<ProjectMaster, GetProject>()
                 .ForMember(dest => dest.Project_Name, opt => opt.MapFrom(src => src.Title));
+           
+            CreateMap<TicketMaster, GetTickets>()
+                .ForMember(dest => dest.Issue_Id, opt => opt.MapFrom(src => src.Issue_Id));
+
+            CreateMap<ThreadMaster, ThreadList>()
+                .ForMember(dest => dest.ThreadId, opt => opt.MapFrom(src => src.ThreadId));
         }
     }
 }

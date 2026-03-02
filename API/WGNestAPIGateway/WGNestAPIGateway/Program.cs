@@ -3,6 +3,8 @@ using APIGateway.Infrastructure;
 using APIGateway.Middleware;
 using APIGateway.Proxy;
 using APIGateway.Swagger;
+using APIGateWay.Business_Layer.Interface;
+using APIGateWay.Business_Layer.Repository;
 using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Helpers.ilog;
@@ -16,14 +18,10 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
 using APIGateWay.Middelware;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Yarp.ReverseProxy.Transforms;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
 
@@ -63,6 +61,9 @@ builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 builder.Services.AddScoped<IAttachmentRepo, AttachmentRepo>();
 builder.Services.AddScoped<IProjectRepo, ProjectRepo>();
 builder.Services.AddScoped<ISyncRequestEnricher, SyncRequestEnricher>();
+builder.Services.AddScoped<IDashBoardDataRepo, DashBoardDataRepo>();
+builder.Services.AddScoped<IThreadsRepository, ThreadsRepository>();
+builder.Services.AddScoped<ITicketRepo, TicketRepo>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
@@ -74,6 +75,7 @@ builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IDomainService, DomainService>();
 builder.Services.AddScoped<IHelperGetData, HelperGetData>();
+builder.Services.AddScoped<IDashBoardDataService, DashBoardDataService>();
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure

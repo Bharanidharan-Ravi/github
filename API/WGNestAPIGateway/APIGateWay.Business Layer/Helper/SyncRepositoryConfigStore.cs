@@ -86,6 +86,35 @@ namespace APIGateWay.BusinessLayer.Helper
                 Strategy = "merge",
                 IdKey = "Id",
                 DeltaEnabled = true
+            },
+
+            ["TimeSheet"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "DashBoardTimesheetData",
+                EntityType = typeof(DashBoardTimeSheetData),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Id",
+                DeltaEnabled = true
+            },
+            ["ThreadsList"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GETTHREADLIST",
+                EntityType = typeof(ThreadList),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "IssuesId",
+                DeltaEnabled = true
             }
         };
     }
