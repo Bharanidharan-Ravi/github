@@ -13,6 +13,7 @@ namespace APIGateWay.ModalLayer.Hub
         public string KeyField { get; set; }
         public object Payload { get; set; }
         public string? RepoKey { get; set; }
+        public Guid? IssueId { get; set; }
         public DateTime Timestamp { get; set; }
     }
 }

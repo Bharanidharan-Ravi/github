@@ -87,7 +87,12 @@ builder.Services.AddScoped<IlogHelper, LogHelper>();
 builder.Services.AddScoped<TokenGeneration>();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSignalR();
+builder.Services
+    .AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+    });
 builder.Services.AddAutoMapper(config =>
     config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
 builder.Services.AddSingleton<IUserIdProvider, GuidUserIdProvider>();
@@ -139,7 +144,8 @@ builder.Services.AddScoped<IAuthorizationHandler, RepoScopeHandler>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173",
+    "http://localhost:4173")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());

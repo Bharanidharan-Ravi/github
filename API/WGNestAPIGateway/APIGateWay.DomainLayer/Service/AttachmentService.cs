@@ -77,7 +77,7 @@ namespace APIGateWay.DomainLayer.Service
         {
             var result = new ProcessedAttachmentResult { UpdatedHtml = rawHtml ?? "" };
             if (temps == null || !temps.Any()) return result;
-
+            relativePermPath = string.Join("/", relativePermPath.Split('/').Select(folder => folder.Trim()));
             var permFolderBase = _configuration["FileSettings:OriginalFolder"];
             var permFolder = Path.Combine(permFolderBase, relativePermPath);
             Directory.CreateDirectory(permFolder);

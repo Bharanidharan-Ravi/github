@@ -58,10 +58,6 @@ namespace APIGateWay.ModalLayer.GETData
 
         public Guid UpdatedBy { get; set; }
 
-        public TimeOnly? From_Time { get; set; }
-
-        public TimeOnly? To_Time { get; set; }
-
         public string? Hours { get; set; }
 
         public string? RepoKey { get; set; }
