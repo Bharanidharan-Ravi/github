@@ -27,6 +27,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? Due_Date { get; set; }
         public string? Status { get; set; }
         public string? Issue_Code { get; set; }
+        public string? Hours { get; set; }
         public string? Labels_JSON { get; set; }
         public string? Attachment_JSON { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }

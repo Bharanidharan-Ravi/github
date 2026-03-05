@@ -1,8 +1,10 @@
-﻿using APIGateWay.BusinessLayer.Interface;
+﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -25,10 +27,11 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IAttachmentService _attachmentService;
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
+        private readonly ISyncExecutionService _syncExecutionService;
         public ProjectRepo(
             IDomainService domainService, APIGateWayCommonService service,
             IMapper mapper, ILoginContextService loginContext, IAttachmentService attachmentService, 
-            IHelperGetData helperGet, IRealtimeNotifier realtimeNotifier)
+            IHelperGetData helperGet, IRealtimeNotifier realtimeNotifier, ISyncExecutionService syncExecutionService)
         {
             _domainService = domainService;
             _commonService = service;
@@ -37,6 +40,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _attachmentService = attachmentService;
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
+            _syncExecutionService = syncExecutionService;
         }
 
         //public async Task<GetProject> CreateProjectAsync(ProjectDto projectDto)
@@ -163,7 +167,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 {
                     await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                     {
-                        Entity = "ProjectList",
+                        Entity = "Project",
                         Action = "Create",
                         Payload = finalProjectData,
                         KeyField = "Id",
@@ -261,18 +265,26 @@ namespace APIGateWay.BusinessLayer.Repository
 
                 throw new Exception("Project update failed. Everything was rolled back safely.", ex);
             }
+            var richProjectData = await _syncExecutionService.FetchRichDataAsync<GetProject>(
 
-            if (finalProjectData != null)
+                configKey: "ProjectList",
+                syncParams: new Dictionary<string, string> { { "ProjId", finalProjectData.Id.ToString() } },
+                matchPredicate: p => p.Id == finalProjectData.Id,
+                fallbackData: finalProjectData,
+                lastSync: null // Optional: pass DateTimeOffset if your SP requires it
+            );
+
+            if (richProjectData != null)
             {
                 try
                 {
                     await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                     {
-                        Entity = "ProjectList",
+                        Entity = "Project",
                         Action = "Update",
-                        Payload = finalProjectData,
+                        Payload = richProjectData,
                         KeyField = "Id",
-                        RepoKey = finalProjectData.RepoKey,
+                        RepoKey = richProjectData.RepoKey,
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -282,7 +294,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 }
             }
 
-            return finalProjectData;
+            return richProjectData;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -324,7 +336,15 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Project status update failed. Everything was rolled back safely.", ex);
             }
 
-            if (finalProjectData != null)
+            var richProjectData = await _syncExecutionService.FetchRichDataAsync<GetProject>(
+                
+                configKey: "ProjectList",
+                syncParams: new Dictionary<string, string> { { "ProjectId", finalProjectData.Id.ToString() } },
+                matchPredicate: p => p.Id == finalProjectData.Id,
+                fallbackData: finalProjectData,
+                lastSync: null // Optional: pass DateTimeOffset if your SP requires it
+            );
+            if (richProjectData != null)
             {
                 try
                 {
@@ -332,9 +352,9 @@ namespace APIGateWay.BusinessLayer.Repository
                     {
                         Entity = "ProjectList",
                         Action = "StatusUpdate",
-                        Payload = finalProjectData,
+                        Payload = richProjectData,
                         KeyField = "Id",
-                        RepoKey = finalProjectData.RepoKey,
+                        RepoKey = richProjectData.RepoKey,
                         Timestamp = DateTime.UtcNow
                     });
                 }

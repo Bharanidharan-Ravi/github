@@ -1,8 +1,10 @@
-﻿using APIGateWay.BusinessLayer.Interface;
+﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -25,6 +27,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IAttachmentService _attachmentService;
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
+        private readonly ISyncExecutionService _syncExecutionService;
 
         public TicketRepo(
             IDomainService domainService,
@@ -33,7 +36,8 @@ namespace APIGateWay.BusinessLayer.Repository
             ILoginContextService loginContext,
             IAttachmentService attachmentService,
             IHelperGetData helperGet,
-            IRealtimeNotifier realtimeNotifier)
+            IRealtimeNotifier realtimeNotifier,
+            ISyncExecutionService syncExecutionService)
         {
             _domainService = domainService;
             _commonService = service;
@@ -42,6 +46,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _attachmentService = attachmentService;
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
+            _syncExecutionService = syncExecutionService;   
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -115,17 +120,26 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Ticket creation failed. Everything was rolled back safely.", ex);
             }
 
-            if (finalTicketData != null)
+            var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
+
+               configKey: "TicketsList",
+               syncParams: new Dictionary<string, string> { { "IssueId", finalTicketData.Issue_Id.ToString() } },
+               matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
+               fallbackData: finalTicketData,
+               lastSync: null // Optional: pass DateTimeOffset if your SP requires it
+           );
+
+            if (richTicketData != null)
             {
                 try
                 {
                     await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                     {
-                        Entity = "TicketsList",
+                        Entity = "Ticket",
                         Action = "Create",
-                        Payload = finalTicketData,
+                        Payload = richTicketData,
                         KeyField = "Issue_Id",
-                        RepoKey = finalTicketData.RepoKey,
+                        RepoKey = richTicketData.RepoKey,
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -135,7 +149,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 }
             }
 
-            return finalTicketData;
+            return richTicketData;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -238,17 +252,26 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Ticket update failed. Everything was rolled back safely.", ex);
             }
 
-            if (finalTicketData != null)
+            var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
+
+               configKey: "TicketsList",
+               syncParams: new Dictionary<string, string> { { "IssueId", finalTicketData.Issue_Id.ToString() } },
+               matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
+               fallbackData: finalTicketData,
+               lastSync: null // Optional: pass DateTimeOffset if your SP requires it
+           );
+
+            if (richTicketData != null)
             {
                 try
                 {
                     await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                     {
-                        Entity = "TicketsList",
+                        Entity = "Ticket",
                         Action = "Update",
-                        Payload = finalTicketData,
+                        Payload = richTicketData,
                         KeyField = "Issue_Id",
-                        RepoKey = finalTicketData.RepoKey,
+                        RepoKey = richTicketData.RepoKey,
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -258,7 +281,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 }
             }
 
-            return finalTicketData;
+            return richTicketData;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -301,17 +324,26 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Ticket status update failed. Everything was rolled back safely.", ex);
             }
 
-            if (finalTicketData != null)
+            var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
+
+               configKey: "TicketsList",
+               syncParams: new Dictionary<string, string> { { "IssueId", finalTicketData.Issue_Id.ToString() } },
+               matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
+               fallbackData: finalTicketData,
+               lastSync: null // Optional: pass DateTimeOffset if your SP requires it
+           );
+
+            if (richTicketData != null)
             {
                 try
                 {
                     await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                     {
-                        Entity = "TicketsList",
+                        Entity = "Ticket",
                         Action = "StatusUpdate",
-                        Payload = finalTicketData,
+                        Payload = richTicketData,
                         KeyField = "Issue_Id",
-                        RepoKey = finalTicketData.RepoKey,
+                        RepoKey = richTicketData.RepoKey,
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -321,7 +353,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 }
             }
 
-            return finalTicketData;
+            return richTicketData;
         }
     }
 }
