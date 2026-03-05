@@ -78,7 +78,7 @@ namespace APIGateWay.BusinessLayer.Helper
                 // Execution
                 SourceType = SyncSourceType.Local,
                 StoredProcedure = "GETLABELMASTER",
-                EntityType = typeof(LabelMaster),
+                EntityType = typeof(GetLabel),
                 SourceName = "SyncExecutionService",
 
                 // Aggregation

@@ -64,6 +64,7 @@ builder.Services.AddScoped<ISyncRequestEnricher, SyncRequestEnricher>();
 builder.Services.AddScoped<IDashBoardDataRepo, DashBoardDataRepo>();
 builder.Services.AddScoped<IThreadsRepository, ThreadsRepository>();
 builder.Services.AddScoped<ITicketRepo, TicketRepo>();
+builder.Services.AddScoped<ILabelRepo, LabelRepo>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer

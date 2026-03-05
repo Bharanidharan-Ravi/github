@@ -116,5 +116,24 @@ namespace APIGateWay.DomainLayer.Service
 
             await _dBContext.SaveChangesAsync();
         }
+
+        public async Task<TEntity> UpdateEntityByIntIdAsync<TEntity>(
+            int id,
+            Action<TEntity> mutator)
+            where TEntity : class
+        {
+            // FindAsync works with int PK exactly like Guid PK
+            // EF uses the configured primary key type of the entity
+            var entity = await _dBContext.Set<TEntity>().FindAsync(id);
+
+            if (entity == null)
+                throw new Exceptionlist.DataNotFoundException(
+                    $"{typeof(TEntity).Name} with Id '{id}' not found.");
+
+            mutator(entity);
+
+            await _dBContext.SaveChangesAsync();
+            return entity;
+        }
     }
 }

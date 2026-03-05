@@ -20,5 +20,10 @@ namespace APIGateWay.DomainLayer.Interface
             where TEntity : class;
 
         Task UpdateLabelAsync(Guid id, List<IssueLabel> labels);
+
+        Task<TEntity> UpdateEntityByIntIdAsync<TEntity>(
+        int id,
+        Action<TEntity> mutator)
+        where TEntity : class;
     }
 }

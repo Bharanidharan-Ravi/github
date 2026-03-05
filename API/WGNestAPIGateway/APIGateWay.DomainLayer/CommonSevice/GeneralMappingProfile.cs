@@ -17,6 +17,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
             CreateMap<ProjectDto, ProjectMaster>().ApplyDynamicIgnores();
             CreateMap<PostTicketDto, TicketMaster>().ApplyDynamicIgnores();
             CreateMap<PostThreadsDto, ThreadMaster>().ApplyDynamicIgnores();
+            CreateMap<CreateLabelDto, LabelMaster>().ApplyDynamicIgnores();
 
             CreateMap<ProjectMaster, GetProject>()
                 .ForMember(dest => dest.Project_Name, opt => opt.MapFrom(src => src.Title));
@@ -26,6 +27,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
 
             CreateMap<ThreadMaster, ThreadList>()
                 .ForMember(dest => dest.ThreadId, opt => opt.MapFrom(src => src.ThreadId));
+            CreateMap<LabelMaster, GetLabel>();
         }
     }
 }
