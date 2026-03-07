@@ -2,6 +2,7 @@
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace APIGateWay.DomainLayer.Service
@@ -104,18 +105,50 @@ namespace APIGateWay.DomainLayer.Service
         }
         public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
         {
-            var existing = _dBContext.ISSUE_LABELS
+            var existing = await _dBContext.ISSUE_LABELS
                 .Where(x => x.Issue_Id == id)
+                .ToListAsync();
+
+            var existingIds = existing.Select(x => x.Label_Id).ToList();
+            var incomingIds = labels?.Select(x => x.Label_Id).Distinct().ToList() ?? new List<int?>();
+
+            // Labels to add
+            var toAdd = incomingIds
+                .Except(existingIds)
+                .Select(labelId => new IssueLabel
+                {
+                    Issue_Id = id,
+                    Label_Id = labelId
+                })
                 .ToList();
 
-            if (existing.Any())
-                _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+            // Labels to remove
+            var toRemove = existing
+                .Where(x => !incomingIds.Contains(x.Label_Id))
+                .ToList();
 
-            if (labels != null && labels.Any())
-                await _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+            if (toAdd.Any())
+                await _dBContext.ISSUE_LABELS.AddRangeAsync(toAdd);
+
+            if (toRemove.Any())
+                _dBContext.ISSUE_LABELS.RemoveRange(toRemove);
 
             await _dBContext.SaveChangesAsync();
         }
+        //public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
+        //{
+        //    var existing = _dBContext.ISSUE_LABELS
+        //        .Where(x => x.Issue_Id == id)
+        //        .ToList();
+
+        //    if (existing.Any())
+        //        _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+
+        //    if (labels != null && labels.Any())
+        //        await _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
+
+        //    await _dBContext.SaveChangesAsync();
+        //}
 
         public async Task<TEntity> UpdateEntityByIntIdAsync<TEntity>(
             int id,
