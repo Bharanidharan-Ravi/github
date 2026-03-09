@@ -65,6 +65,7 @@ builder.Services.AddScoped<IDashBoardDataRepo, DashBoardDataRepo>();
 builder.Services.AddScoped<IThreadsRepository, ThreadsRepository>();
 builder.Services.AddScoped<ITicketRepo, TicketRepo>();
 builder.Services.AddScoped<ILabelRepo, LabelRepo>();
+builder.Services.AddScoped<IDailyPlanRepo, DailyPlanRepo>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer

@@ -79,6 +79,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ThreadMaster> ISSUETHREADS { get; set; }
         public DbSet<ThreadList> threadLists { get; set; }
         public DbSet<GetLabel> getLabels { get; set; }
+        public DbSet<DailyPlan> DailyPlans { get; set; }
 
         #region SaveChanges Override (Audit)
 
