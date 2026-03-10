@@ -80,6 +80,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ThreadList> threadLists { get; set; }
         public DbSet<GetLabel> getLabels { get; set; }
         public DbSet<DailyPlan> DailyPlans { get; set; }
+        public DbSet<WorkStream> WorkStreams { get; set; }
 
         #region SaveChanges Override (Audit)
 

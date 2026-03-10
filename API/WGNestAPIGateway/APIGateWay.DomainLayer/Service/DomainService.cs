@@ -4,6 +4,7 @@ using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Linq.Expressions;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -102,6 +103,33 @@ namespace APIGateWay.DomainLayer.Service
             await _dBContext.SaveChangesAsync();
 
             return entity;
+        }
+
+        public async Task UpdateTrackedEntityAsync<TEntity>(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> mutator)
+        where TEntity : class
+        {
+            TEntity entity;
+            try
+            {
+                entity = await _dBContext.Set<TEntity>()
+                    .FirstOrDefaultAsync(predicate);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message — it will say which column/property is null
+                throw new Exception(
+                    $"Failed to load {typeof(TEntity).Name}. " +
+                    $"A non-nullable property maps to a NULL DB column. Detail: {ex.Message}", ex);
+            }
+
+            if (entity == null)
+                throw new Exceptionlist.DataNotFoundException(
+                    $"{typeof(TEntity).Name} not found.");
+
+            mutator(entity);
+            await _dBContext.SaveChangesAsync();
         }
         public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
         {

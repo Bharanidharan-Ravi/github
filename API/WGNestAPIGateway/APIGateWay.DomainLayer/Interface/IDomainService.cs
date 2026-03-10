@@ -1,5 +1,6 @@
 ﻿using APIGateWay.ModalLayer.PostData;
 using System;
+using System.Linq.Expressions;
 
 namespace APIGateWay.DomainLayer.Interface
 {
@@ -13,6 +14,10 @@ namespace APIGateWay.DomainLayer.Interface
         // Finds entity by id, calls mutator to apply your changes, saves.
         // DBContext audit sets UpdatedAt + UpdatedBy automatically.
         // No sequence call — keys never change on update.
+        Task UpdateTrackedEntityAsync<TEntity>(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> mutator)
+        where TEntity : class;
         Task<TEntity> UpdateEntityWithAttachmentsAsync<TEntity>(
             Guid id,
             Action<TEntity> mutator,

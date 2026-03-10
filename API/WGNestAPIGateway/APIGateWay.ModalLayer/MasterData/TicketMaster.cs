@@ -34,10 +34,13 @@ namespace APIGateWay.ModalLayer.MasterData
         public string Title { get; set; }
         //public string RepoKey { get; set; }
         public string Hours { get; set; }
+        public string? StreamName { get; set; }
         public Guid? Assignee_Id { get; set; }
         public Guid? Project_Id { get; set; }
         public DateTime? Due_Date { get; set; }
         public Guid? RepoId { get; set; }
+        public Guid? StreamId { get; set; }
+        public Guid? ResourceId { get; set; }
 
         // --------------------------------------------------------
         // 🛡️ AUDIT FIELDS (Handled dynamically)

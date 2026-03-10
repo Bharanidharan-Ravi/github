@@ -2,6 +2,7 @@
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.GETData;
@@ -9,7 +10,9 @@ using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using ReverseMarkdown.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,8 +31,10 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
         private readonly ISyncExecutionService _syncExecutionService;
+        private readonly APIGatewayDBContext _dBContext;
         public ThreadsRepository(
             IDomainService domainService, APIGateWayCommonService service,
+            APIGatewayDBContext dbContext,
             IMapper mapper, ILoginContextService loginContext, IAttachmentService attachmentService,
             IHelperGetData helperGet, IRealtimeNotifier realtimeNotifier, ISyncExecutionService syncExecutionService)
         {
@@ -41,12 +46,22 @@ namespace APIGateWay.BusinessLayer.Repository
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
             _syncExecutionService = syncExecutionService;
+            _dBContext = dbContext;
         }
+        private static readonly HashSet<string> _selfResourceStreams =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "IN_PROGRESS",
+            "HOLD",
+            "AWAITING_CLIENT"
+        };
+
         public async Task<ThreadList> CreateThreadAsync(PostThreadsDto threadDto)
         {
             ProcessedAttachmentResult attachmentResult = null;
             ThreadList finalThreadData = null;
             IssueRepositoryInfo issueRepoInfo = null;
+            WorkStream workStream = null; 
             long newThreadId = 0; // Capture the new ID to filter it later
 
             try
@@ -83,6 +98,59 @@ namespace APIGateWay.BusinessLayer.Repository
                     threadMaster.HtmlDesc = finalHtmlDescription;
                     threadMaster.CommentText = HtmlUtilities.ConvertToPlainText(finalHtmlDescription);
 
+                    var resolvedResourceId = _selfResourceStreams.Contains(threadDto.StreamName ?? "")
+                     ? _loginContext.userId
+                     : threadDto.ResourceId;
+
+                    // RULE 2: Check LAST row for this IssueId — not any row
+                    var lastWorkStream = await _dBContext.WorkStreams
+                        .Where(ws => ws.IssueId == threadDto.Issue_Id)
+                        .OrderByDescending(ws => ws.CreatedAt)
+                        .FirstOrDefaultAsync();
+
+                    // Match only if the last row has the SAME StreamName as current post
+                    var existingWorkStream = (lastWorkStream?.StreamName == threadDto.StreamName)
+                        ? lastWorkStream
+                        : null;
+
+                    if (existingWorkStream != null)
+                    {
+                        // Last row is same StreamName → UPDATE CompletionPct only
+                        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+                            ws => ws.Id == existingWorkStream.Id,   // use Id — safest predicate
+                            ws =>
+                            {
+                                ws.CompletionPct = threadDto.CompletionPct ?? ws.CompletionPct;
+                                ws.ResourceId = resolvedResourceId;
+                            }
+                        );
+                        workStream = existingWorkStream;
+                    }
+                    else
+                    {
+                        // Last row is different StreamName (or no rows yet) → INSERT new row
+                        workStream = new WorkStream
+                        {
+                            IssueId = threadDto.Issue_Id,
+                            StreamName = threadDto.StreamName,
+                            ResourceId = resolvedResourceId,
+                            StreamStatus = 1,
+                            CompletionPct = threadDto.CompletionPct ?? 0,
+                            TargetDate = threadDto.TargetDate,
+                        };
+                        await _domainService.SaveEntityWithAttachmentsAsync(workStream, null);
+                    }
+
+                    // UPDATE TicketMaster — always runs, insert or update path
+                    await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
+                        ticket => ticket.Issue_Id == threadDto.Issue_Id,
+                        ticket =>
+                        {
+                            ticket.StreamId = workStream.Id;
+                            ticket.StreamName = workStream.StreamName;
+                            ticket.ResourceId = workStream.ResourceId;
+                        }
+                    );
                     await _domainService.SaveEntityWithAttachmentsAsync(threadMaster, attachmentResult?.Attachments);
 
                     if (threadDto.temp?.temps != null && threadDto.temp.temps.Any())
