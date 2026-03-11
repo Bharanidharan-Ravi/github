@@ -20,10 +20,13 @@ namespace APIGateWay.ModalLayer.PostData
         public string? HtmlDesc { get; set; }
         public TempReturn? temp { get; set; }
         public List<LabelData>? labelId { get; set; }
-
-
+        public List<Assignees>? assignees { get; set; }
     }
 
+    public class Assignees
+    {
+        public Guid? Id { get; set; }
+    }
     public class LabelData
     {
         public int? Id { get; set; }

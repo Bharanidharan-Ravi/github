@@ -40,4 +40,33 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? CreatedBy { get; set; }
         public Guid? UpdatedBy { get; set; }
     }
+
+    public class WorkStreamContext
+    {
+        // ── Required ─────────────────────────────────────────────────────────
+        public Guid IssueId { get; set; }
+
+        // ── Optional — auto-resolved from EMPLOYEEMASTER.Team if null ────────
+        // Pass null  → StreamName = current user's Team (e.g. "Development")
+        // Pass value → use that value directly (owner forcing a stage)
+        public string? StreamName { get; set; }
+
+        // ── Optional — auto-resolved from ResourceId rules if null ───────────
+        // Pass null  → service applies _selfResourceStreams rule
+        // Pass value → used only when StreamName is NOT a self-resource stream
+        public Guid? ResourceId { get; set; }
+
+        // ── WorkStream data ───────────────────────────────────────────────────
+        public decimal? CompletionPct { get; set; }
+        public DateTime? TargetDate { get; set; }
+    }
+
+    // Returned by UpsertWorkStreamAsync so callers can update TicketMaster
+    public class WorkStreamResult
+    {
+        public Guid Id { get; set; }
+        public string? StreamName { get; set; }
+        public Guid? ResourceId { get; set; }
+        public bool WasInserted { get; set; }  // true = new row, false = updated existing
+    }
 }

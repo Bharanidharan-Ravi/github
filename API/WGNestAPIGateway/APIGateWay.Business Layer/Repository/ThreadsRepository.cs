@@ -5,6 +5,7 @@ using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -32,11 +33,12 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IRealtimeNotifier _realtimeNotifier;
         private readonly ISyncExecutionService _syncExecutionService;
         private readonly APIGatewayDBContext _dBContext;
+        private readonly IWorkStreamService _workStreamService;
         public ThreadsRepository(
             IDomainService domainService, APIGateWayCommonService service,
             APIGatewayDBContext dbContext,
             IMapper mapper, ILoginContextService loginContext, IAttachmentService attachmentService,
-            IHelperGetData helperGet, IRealtimeNotifier realtimeNotifier, ISyncExecutionService syncExecutionService)
+            IHelperGetData helperGet, IRealtimeNotifier realtimeNotifier, ISyncExecutionService syncExecutionService, IWorkStreamService workStreamService)
         {
             _domainService = domainService;
             _commonService = service;
@@ -47,6 +49,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _realtimeNotifier = realtimeNotifier;
             _syncExecutionService = syncExecutionService;
             _dBContext = dbContext;
+            _workStreamService = workStreamService;
         }
         private static readonly HashSet<string> _selfResourceStreams =
         new(StringComparer.OrdinalIgnoreCase)
@@ -97,50 +100,88 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     threadMaster.HtmlDesc = finalHtmlDescription;
                     threadMaster.CommentText = HtmlUtilities.ConvertToPlainText(finalHtmlDescription);
+                    var streamResult = await _workStreamService.UpsertWorkStreamAsync(
+                       new WorkStreamContext
+                       {
+                           IssueId = threadDto.Issue_Id,
+                           StreamName = threadDto.StreamName,   // null = auto from dept
+                           ResourceId = threadDto.ResourceId,
+                           CompletionPct = threadDto.CompletionPct,
+                           TargetDate = threadDto.TargetDate,
+                       }
+                   );
 
-                    var resolvedResourceId = _selfResourceStreams.Contains(threadDto.StreamName ?? "")
-                     ? _loginContext.userId
-                     : threadDto.ResourceId;
+                    //// ====================================================================
+                    //// 🔥 1. DETERMINE DYNAMIC RESOURCE ID
+                    //// ====================================================================
+                    //var resolvedResourceId = _selfResourceStreams.Contains(threadDto.StreamName ?? "")
+                    // ? _loginContext.userId
+                    // : threadDto.ResourceId;
 
-                    // RULE 2: Check LAST row for this IssueId — not any row
-                    var lastWorkStream = await _dBContext.WorkStreams
-                        .Where(ws => ws.IssueId == threadDto.Issue_Id)
-                        .OrderByDescending(ws => ws.CreatedAt)
-                        .FirstOrDefaultAsync();
 
-                    // Match only if the last row has the SAME StreamName as current post
-                    var existingWorkStream = (lastWorkStream?.StreamName == threadDto.StreamName)
-                        ? lastWorkStream
-                        : null;
+                    //// ====================================================================
+                    //// 🔥 2. HANDOFF LOGIC: Close previous stream if changing phases
+                    //// ====================================================================
+                    //var previousActiveStream = await _dBContext.WorkStreams
+                    //    .Where(ws => ws.IssueId == threadDto.Issue_Id
+                    //              && ws.ResourceId == _loginContext.userId // Only target THIS user's active work
+                    //              && ws.StreamStatus == 1                  // Assuming 1 = Active/In Progress
+                    //              && ws.StreamName != threadDto.StreamName) // Ensure they are actually changing the phase
+                    //    .FirstOrDefaultAsync();
 
-                    if (existingWorkStream != null)
-                    {
-                        // Last row is same StreamName → UPDATE CompletionPct only
-                        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-                            ws => ws.Id == existingWorkStream.Id,   // use Id — safest predicate
-                            ws =>
-                            {
-                                ws.CompletionPct = threadDto.CompletionPct ?? ws.CompletionPct;
-                                ws.ResourceId = resolvedResourceId;
-                            }
-                        );
-                        workStream = existingWorkStream;
-                    }
-                    else
-                    {
-                        // Last row is different StreamName (or no rows yet) → INSERT new row
-                        workStream = new WorkStream
-                        {
-                            IssueId = threadDto.Issue_Id,
-                            StreamName = threadDto.StreamName,
-                            ResourceId = resolvedResourceId,
-                            StreamStatus = 1,
-                            CompletionPct = threadDto.CompletionPct ?? 0,
-                            TargetDate = threadDto.TargetDate,
-                        };
-                        await _domainService.SaveEntityWithAttachmentsAsync(workStream, null);
-                    }
+                    //if (previousActiveStream != null)
+                    //{
+                    //    await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+                    //        ws => ws.Id == previousActiveStream.Id,
+                    //        ws =>
+                    //        {
+                    //            ws.StreamStatus = 2;       // Assuming 2 = Completed / Closed
+                    //            ws.CompletionPct = 100;    // Auto-complete their portion of the work
+                    //        }
+                    //    );
+                    //}
 
+                    //// ====================================================================
+                    //// 🔥 3. UPSERT LOGIC: Handle the new/current stream
+                    //// ====================================================================
+                    //// Check LAST row for this IssueId
+                    //var lastWorkStream = await _dBContext.WorkStreams
+                    //    .Where(ws => ws.IssueId == threadDto.Issue_Id)
+                    //    .OrderByDescending(ws => ws.CreatedAt)
+                    //    .FirstOrDefaultAsync();
+
+                    //// Match only if the last row has the SAME StreamName as current post
+                    //var existingWorkStream = (lastWorkStream?.StreamName == threadDto.StreamName)
+                    //    ? lastWorkStream
+                    //    : null;
+
+                    //if (existingWorkStream != null)
+                    //{
+                    //    // Last row is same StreamName → UPDATE CompletionPct only
+                    //    await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+                    //        ws => ws.Id == existingWorkStream.Id,   // use Id — safest predicate
+                    //        ws =>
+                    //        {
+                    //            ws.CompletionPct = threadDto.CompletionPct ?? ws.CompletionPct;
+                    //            ws.ResourceId = resolvedResourceId;
+                    //        }
+                    //    );
+                    //    workStream = existingWorkStream;
+                    //}
+                    //else
+                    //{
+                    //    // Last row is different StreamName (or no rows yet) → INSERT new row
+                    //    workStream = new WorkStream
+                    //    {
+                    //        IssueId = threadDto.Issue_Id,
+                    //        StreamName = threadDto.StreamName,
+                    //        ResourceId = resolvedResourceId,
+                    //        StreamStatus = 1,
+                    //        CompletionPct = threadDto.CompletionPct ?? 0,
+                    //        TargetDate = threadDto.TargetDate,
+                    //    };
+                    //    await _domainService.SaveEntityWithAttachmentsAsync(workStream, null);
+                    //}
                     // UPDATE TicketMaster — always runs, insert or update path
                     await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
                         ticket => ticket.Issue_Id == threadDto.Issue_Id,
