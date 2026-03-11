@@ -14,7 +14,7 @@ namespace APIGateWay.ModalLayer.MasterData
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // matches newsequentialid()
-        public Guid Id { get; set; }
+        public Guid StreamId { get; set; }
 
         // FK → TicketMaster.Issue_Id  (same as ThreadMaster.TicketId)
         public Guid? IssueId { get; set; }
@@ -43,30 +43,31 @@ namespace APIGateWay.ModalLayer.MasterData
 
     public class WorkStreamContext
     {
-        // ── Required ─────────────────────────────────────────────────────────
-        public Guid IssueId { get; set; }
-
-        // ── Optional — auto-resolved from EMPLOYEEMASTER.Team if null ────────
-        // Pass null  → StreamName = current user's Team (e.g. "Development")
-        // Pass value → use that value directly (owner forcing a stage)
-        public string? StreamName { get; set; }
-
-        // ── Optional — auto-resolved from ResourceId rules if null ───────────
-        // Pass null  → service applies _selfResourceStreams rule
-        // Pass value → used only when StreamName is NOT a self-resource stream
-        public Guid? ResourceId { get; set; }
-
-        // ── WorkStream data ───────────────────────────────────────────────────
+        public Guid? IssueId { get; set; }
+        public Guid ResourceId { get; set; }  // the assignee
+        public int StreamStatus { get; set; } = WorkStreamStatus.InProgress;
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
+        // StreamName is NOT here — auto-resolved from EMPLOYEEMASTER.Team of ResourceId
     }
 
-    // Returned by UpsertWorkStreamAsync so callers can update TicketMaster
+    // Returned by UpsertWorkStreamAsync to callers
     public class WorkStreamResult
     {
-        public Guid Id { get; set; }
+        public Guid StreamId { get; set; }
         public string? StreamName { get; set; }
-        public Guid? ResourceId { get; set; }
-        public bool WasInserted { get; set; }  // true = new row, false = updated existing
+        public Guid ResourceId { get; set; }
+        public int StreamStatus { get; set; }
+        public bool WasInserted { get; set; }
+    }
+
+    // StreamStatus int constants — use these everywhere, no magic numbers
+    public static class WorkStreamStatus
+    {
+        public const int InProgress = 1;
+        public const int Hold = 2;
+        public const int AwaitingClient = 3;
+        public const int Completed = 4;
+        public const int Inactive = 5;
     }
 }

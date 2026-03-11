@@ -100,16 +100,37 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     threadMaster.HtmlDesc = finalHtmlDescription;
                     threadMaster.CommentText = HtmlUtilities.ConvertToPlainText(finalHtmlDescription);
-                    var streamResult = await _workStreamService.UpsertWorkStreamAsync(
-                       new WorkStreamContext
-                       {
-                           IssueId = threadDto.Issue_Id,
-                           StreamName = threadDto.StreamName,   // null = auto from dept
-                           ResourceId = threadDto.ResourceId,
-                           CompletionPct = threadDto.CompletionPct,
-                           TargetDate = threadDto.TargetDate,
-                       }
-                   );
+                    // ── WorkStream: single upsert for this assignee ───────────
+                    // One thread = one person posting = one ResourceId
+                    // StreamName is auto-resolved from EMPLOYEEMASTER.Team of ResourceId
+                    // NOT from _loginContext.userId — from the passed ResourceId
+                    var resolvedResourceId = threadDto.ResourceId ?? _loginContext.userId;
+                    
+                        var streamResult = await _workStreamService.UpsertWorkStreamAsync(
+                            new WorkStreamContext
+                            {
+                                IssueId = threadDto.Issue_Id,
+                                ResourceId = resolvedResourceId,
+                                StreamStatus = threadDto.StreamStatus ?? WorkStreamStatus.InProgress,
+                                CompletionPct = threadDto.CompletionPct,
+                                TargetDate = threadDto.TargetDate,
+                                // StreamName → auto-resolved inside service from assignee's dept
+                            }
+                        );
+
+                        // Update TicketMaster to always point to the latest active stream
+                        // This lets the ticket card show "who is currently working on it"
+                        //await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
+                        //    ticket => ticket.Issue_Id == threadDto.Issue_Id,
+                        //    ticket =>
+                        //    {
+                        //        ticket.StreamId = streamResult.StreamId;
+                        //        ticket.StreamName = streamResult.StreamName;  // dept name
+                        //        ticket.ResourceId = streamResult.ResourceId;
+                        //    }
+                        //);
+                   
+
 
                     //// ====================================================================
                     //// 🔥 1. DETERMINE DYNAMIC RESOURCE ID
@@ -183,15 +204,15 @@ namespace APIGateWay.BusinessLayer.Repository
                     //    await _domainService.SaveEntityWithAttachmentsAsync(workStream, null);
                     //}
                     // UPDATE TicketMaster — always runs, insert or update path
-                    await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
-                        ticket => ticket.Issue_Id == threadDto.Issue_Id,
-                        ticket =>
-                        {
-                            ticket.StreamId = workStream.Id;
-                            ticket.StreamName = workStream.StreamName;
-                            ticket.ResourceId = workStream.ResourceId;
-                        }
-                    );
+                    //await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
+                    //    ticket => ticket.Issue_Id == threadDto.Issue_Id,
+                    //    ticket =>
+                    //    {
+                    //        ticket.StreamId = workStream.StreamId;
+                    //        ticket.StreamName = workStream.StreamName;
+                    //        ticket.ResourceId = workStream.ResourceId;
+                    //    }
+                    //);
                     await _domainService.SaveEntityWithAttachmentsAsync(threadMaster, attachmentResult?.Attachments);
 
                     if (threadDto.temp?.temps != null && threadDto.temp.temps.Any())

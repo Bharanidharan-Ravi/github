@@ -78,6 +78,7 @@ builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IDomainService, DomainService>();
 builder.Services.AddScoped<IHelperGetData, HelperGetData>();
 builder.Services.AddScoped<IDashBoardDataService, DashBoardDataService>();
+builder.Services.AddScoped<IWorkStreamService, WorkStreamService>();
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure

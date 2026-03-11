@@ -2,6 +2,7 @@
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
@@ -10,6 +11,8 @@ using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using ReverseMarkdown.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +31,8 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
         private readonly ISyncExecutionService _syncExecutionService;
+        private readonly IWorkStreamService _workStreamService;
+        private readonly APIGatewayDBContext _db;
 
         public TicketRepo(
             IDomainService domainService,
@@ -37,7 +42,9 @@ namespace APIGateWay.BusinessLayer.Repository
             IAttachmentService attachmentService,
             IHelperGetData helperGet,
             IRealtimeNotifier realtimeNotifier,
-            ISyncExecutionService syncExecutionService)
+            ISyncExecutionService syncExecutionService,
+            IWorkStreamService workStreamService,
+            APIGatewayDBContext dBContext)
         {
             _domainService = domainService;
             _commonService = service;
@@ -46,7 +53,9 @@ namespace APIGateWay.BusinessLayer.Repository
             _attachmentService = attachmentService;
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
-            _syncExecutionService = syncExecutionService;   
+            _syncExecutionService = syncExecutionService;  
+            _workStreamService = workStreamService;
+            _db = dBContext;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -104,6 +113,27 @@ namespace APIGateWay.BusinessLayer.Repository
                             Label_Id = l.Id
                         }).ToList();
                         await _domainService.SaveLabelAsync(issueLabels);
+                    }
+
+
+                    // ── Save WorkStreams — one row per assignee ────────────────
+                    // Mirrors the labels pattern: loop + insert per resource
+                    // ResourceIds null/empty → no WorkStream rows created yet
+                    // (assignees can be added later via ticket update)
+                    var createResourceIds = ticketDto.resourceIds?
+                  .Where(r => r.Id.HasValue)
+                  .Select(r => r.Id!.Value)
+                  .ToList();
+
+                    if (createResourceIds != null && createResourceIds.Any())
+                    {
+                        await _workStreamService.UpsertWorkStreamsAsync(
+                            issueId: ticketMaster.Issue_Id,
+                            resourceIds: createResourceIds,
+                            streamStatus: WorkStreamStatus.InProgress,
+                            completionPct: 0,
+                            targetDate: ticketDto.TargetDate
+                        );
                     }
 
                     if (ticketDto.temp?.temps != null && ticketDto.temp.temps.Any())
@@ -208,8 +238,8 @@ namespace APIGateWay.BusinessLayer.Repository
                             entity.HtmlDesc = capturedHtml;
                             entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
 
-                            if (dto.AssigneeId.HasValue)
-                                entity.Assignee_Id = dto.AssigneeId.Value;
+                            if (dto.Assignee_Id.HasValue)
+                                entity.Assignee_Id = dto.Assignee_Id.Value;
 
                             if (dto.DueDate.HasValue)
                                 entity.Due_Date = dto.DueDate.Value;
@@ -236,6 +266,55 @@ namespace APIGateWay.BusinessLayer.Repository
                         }).ToList();
 
                         await _domainService.UpdateLabelAsync(ticketId, newLabels);
+                    }
+
+                    // ── WorkStreams — same null/[]/[ids] pattern as labels ─────
+                    // null     → skip entirely, no change to WorkStreams
+                    // []       → soft-close all rows (all assignees marked completed)
+                    // [ids]    → upsert each: existing person = update, new = insert
+                    if (dto.resourceIds != null)
+                    {
+                        var updateResourceIds = dto.resourceIds
+                            .Where(r => r.Id.HasValue)
+                            .Select(r => r.Id!.Value)
+                            .ToList();
+
+                        if (!updateResourceIds.Any())
+                        {
+                            // Empty list → mark ALL active WorkStreams as Inactive
+                            await _workStreamService.ClearWorkStreamsAsync(ticketId);
+                        }
+                        else
+                        {
+                            // Step 1: find who was active before this update
+                            // Compare with new list to detect who was removed
+                            var currentlyActiveIds = await _db.WorkStreams
+                                .Where(ws =>
+                                    ws.IssueId == ticketId &&
+                                    ws.StreamStatus != WorkStreamStatus.Inactive &&
+                                    ws.StreamStatus != WorkStreamStatus.Completed)
+                                .Select(ws => ws.ResourceId!.Value)
+                                .ToListAsync();
+
+                            var removedIds = currentlyActiveIds
+                                .Where(id => !updateResourceIds.Contains(id))
+                                .ToList();
+
+                            // Step 2: mark removed people Inactive
+                            if (removedIds.Any())
+                                await _workStreamService.MarkInactiveAsync(ticketId, removedIds);
+
+                            // Step 3: upsert each person in the new list
+                            // existing active person → UPDATE status + %
+                            // new person (or previously inactive) → INSERT fresh row
+                            await _workStreamService.UpsertWorkStreamsAsync(
+                                issueId: ticketId,
+                                resourceIds: updateResourceIds,
+                                streamStatus: dto.StreamStatus ?? WorkStreamStatus.InProgress,
+                                completionPct: dto.CompletionPct,
+                                targetDate: dto.TargetDate
+                            );
+                        }
                     }
 
                     if (dto.temp?.temps != null && dto.temp.temps.Any())

@@ -11,7 +11,6 @@ namespace APIGateWay.ModalLayer.PostData
         public string Title { get; set; }
         public string Description { get; set; }
         public string Hours { get; set; }
-        //public string RepoKey { get; set; }
         public Guid? Project_Id { get; set; }
 
         public DateTime? Due_Date { get; set; }
@@ -20,10 +19,11 @@ namespace APIGateWay.ModalLayer.PostData
         public string? HtmlDesc { get; set; }
         public TempReturn? temp { get; set; }
         public List<LabelData>? labelId { get; set; }
-        public List<Assignees>? assignees { get; set; }
+        public List<ResourceIds>? resourceIds { get; set; }
+        public DateTime? TargetDate { get; set; }
     }
 
-    public class Assignees
+    public class ResourceIds
     {
         public Guid? Id { get; set; }
     }
@@ -39,9 +39,14 @@ namespace APIGateWay.ModalLayer.PostData
         public string? Description { get; set; }   // HTML from rich editor
         public int? Status { get; set; }   // optional — change in same call
         public int? Priority { get; set; }
-        public Guid? AssigneeId { get; set; }
+        public Guid? Assignee_Id { get; set; }
         public DateTime? DueDate { get; set; }
         public TempReturn? temp { get; set; }   // new file uploads if any
+        public List<ResourceIds>? resourceIds { get; set; }
+
+        public int? StreamStatus { get; set; }
+        public decimal? CompletionPct { get; set; }
+        public DateTime? TargetDate { get; set; }
 
         // Same shape as PostTicketDto.labelId — full replacement list on update
         // null   → labels not touched
