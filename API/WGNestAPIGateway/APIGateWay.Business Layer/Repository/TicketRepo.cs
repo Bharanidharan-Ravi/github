@@ -80,7 +80,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     string secureRepoKey = await _helperGet.GetRepoKeyByIdAsync(ticketDto.RepoId.Value);
                     var seq = await _commonService.GetNextSequenceAsync(secureRepoKey, "Tickets", "IssueMaster");
                     ticketMaster.SiNo = seq.CurrentValue;
-                    ticketMaster.Issue_Code = $"P{seq.ColumnValue}";
+                    ticketMaster.Issue_Code = $"T{seq.ColumnValue}";
 
                     string finalHtmlDescription = ticketDto.Description;
 

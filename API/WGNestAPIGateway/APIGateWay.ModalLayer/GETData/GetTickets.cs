@@ -24,6 +24,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? RepoKey { get; set; }
         public Guid? Assignee_Id { get; set; }
         public string? Assignee_Name { get; set; }
+        public string? All_Assignees { get; set; }
         public DateTime? Due_Date { get; set; }
         public string? Status { get; set; }
         public string? Issue_Code { get; set; }
