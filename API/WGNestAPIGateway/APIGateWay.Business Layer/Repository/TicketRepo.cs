@@ -237,6 +237,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             entity.Title = dto.Title;
                             entity.HtmlDesc = capturedHtml;
                             entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
+                            entity.Priority = dto.Priority;
 
                             if (dto.Assignee_Id.HasValue)
                                 entity.Assignee_Id = dto.Assignee_Id.Value;
