@@ -13,7 +13,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string Hours { get; set; }
         public Guid? Project_Id { get; set; }
 
-        public DateTime? DueDate { get; set; }
+        public DateTime? Due_Date { get; set; }
         public Guid? Assignee_Id { get; set; }
         public Guid? RepoId { get; set; }
         public string? HtmlDesc { get; set; }
@@ -41,7 +41,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? Priority { get; set; }   // HTML from rich editor
         public int? Status { get; set; }
         public Guid? Assignee_Id { get; set; }
-        public DateTime? DueDate { get; set; }
+        public DateTime? Due_Date { get; set; }
         public TempReturn? temp { get; set; }   // new file uploads if any
         public List<ResourceIds>? resourceIds { get; set; }
 

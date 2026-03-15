@@ -84,7 +84,7 @@ namespace APIGateWay.DomainLayer.Service
                     {
                         ws.StreamStatus = ctx.StreamStatus;
                         ws.CompletionPct = ctx.CompletionPct ?? ws.CompletionPct;
-
+                        ws.ThreadId = ctx.ThreadId;
                         if (ctx.TargetDate.HasValue)
                             ws.TargetDate = ctx.TargetDate;
 

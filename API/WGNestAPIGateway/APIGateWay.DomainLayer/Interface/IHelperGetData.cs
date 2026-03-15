@@ -9,6 +9,7 @@ namespace APIGateWay.DomainLayer.Interface
 {
     public interface IHelperGetData
     {
+        Task<ProjectKeysDto> GetProjectByIdAsync(Guid projId);
         Task<string> GetRepoKeyByIdAsync(Guid repoId);
         Task<IssueRepositoryInfo> GetIssueRepositoryInfoAsync(Guid IssueId);
     }

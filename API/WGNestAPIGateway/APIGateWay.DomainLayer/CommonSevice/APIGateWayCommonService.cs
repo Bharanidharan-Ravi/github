@@ -43,9 +43,10 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "GETALLREPO",
                     "GetIssuesByID",
                     "GETLABELMASTER",
-                     "GetNextNumber",
-                     "DashBoardTimesheetData",
-                     "GETTHREADLIST"
+                    "GetNextNumber",
+                    "DashBoardTimesheetData",
+                    "GETTHREADLIST",
+                    "GetStatusMaster"
                 };
 
                 if (!validProcedureNames.Contains(storedProcedure))

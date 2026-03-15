@@ -24,6 +24,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         // 1 = Active (default on create)
         public int? StreamStatus { get; set; } = 1;
+        public int? ThreadId { get; set; }
 
         // FK → Employee/User who is responsible for this stream
         public Guid? ResourceId { get; set; }
@@ -48,6 +49,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public int StreamStatus { get; set; } = WorkStreamStatus.InProgress;
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
+        public int ThreadId { get; set; }
         // StreamName is NOT here — auto-resolved from EMPLOYEEMASTER.Team of ResourceId
     }
 

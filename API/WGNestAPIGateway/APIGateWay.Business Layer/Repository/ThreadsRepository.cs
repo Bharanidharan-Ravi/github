@@ -64,6 +64,7 @@ namespace APIGateWay.BusinessLayer.Repository
             ProcessedAttachmentResult attachmentResult = null;
             ThreadList finalThreadData = null;
             IssueRepositoryInfo issueRepoInfo = null;
+          
             WorkStream workStream = null; 
             long newThreadId = 0; // Capture the new ID to filter it later
 
@@ -114,6 +115,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                 StreamStatus = threadDto.StreamStatus ?? WorkStreamStatus.InProgress,
                                 CompletionPct = threadDto.CompletionPct,
                                 TargetDate = threadDto.TargetDate,
+                                ThreadId = threadMaster.ThreadId
                                 // StreamName → auto-resolved inside service from assignee's dept
                             }
                         );

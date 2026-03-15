@@ -79,4 +79,10 @@ namespace APIGateWay.ModalLayer.GETData
         public string? IssueTitle { get; set; }
 
     }
+
+    public class ProjectKeysDto
+    {
+        public string RepoKey { get; set; }
+        public string ProjectKey { get; set; }
+    }
 }

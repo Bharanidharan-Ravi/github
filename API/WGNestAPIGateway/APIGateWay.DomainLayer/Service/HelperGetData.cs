@@ -18,6 +18,24 @@ namespace APIGateWay.DomainLayer.Service
             _dbContext = dbContext;
         }
 
+        public async Task<ProjectKeysDto> GetProjectByIdAsync(Guid projId)
+        {
+            var result = await _dbContext.ProjectMasters
+                .Where(x => x.Id == projId)
+                .Select(x => new ProjectKeysDto
+                {
+                    RepoKey = x.RepoKey,
+                    ProjectKey = x.ProjectKey
+                })
+                .FirstOrDefaultAsync();
+
+            if (result == null)
+            {
+                throw new Exception("Project not found.");
+            }
+
+            return result;
+        }
         public async Task<string> GetRepoKeyByIdAsync(Guid repoId)
         {
             var repoKey = await _dbContext.RepositoryMasters

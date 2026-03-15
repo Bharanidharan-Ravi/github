@@ -65,6 +65,7 @@ namespace APIGateWay.BusinessLayer.Repository
         {
             ProcessedAttachmentResult attachmentResult = null;
             GetTickets finalTicketData = null;
+            ProjectKeysDto projectKey = null;
 
             try
             {
@@ -77,11 +78,12 @@ namespace APIGateWay.BusinessLayer.Repository
                     if (!ticketDto.RepoId.HasValue)
                         throw new Exception("Repo_Id is required to create a Ticket.");
 
-                    string secureRepoKey = await _helperGet.GetRepoKeyByIdAsync(ticketDto.RepoId.Value);
-                    var seq = await _commonService.GetNextSequenceAsync(secureRepoKey, "Tickets", "IssueMaster");
+                    projectKey = await _helperGet.GetProjectByIdAsync(ticketDto.Project_Id.Value);
+                    var seq = await _commonService.GetNextSequenceAsync(projectKey.RepoKey, "Tickets", "IssueMaster");
                     ticketMaster.SiNo = seq.CurrentValue;
                     ticketMaster.Issue_Code = $"T{seq.ColumnValue}";
-
+                    ticketMaster.RepoKey = projectKey.RepoKey;
+                    ticketMaster.ProjectKey = projectKey.ProjectKey;
                     string finalHtmlDescription = ticketDto.Description;
 
                     if (ticketDto.temp?.temps != null && ticketDto.temp.temps.Any())
@@ -242,8 +244,8 @@ namespace APIGateWay.BusinessLayer.Repository
                             if (dto.Assignee_Id.HasValue)
                                 entity.Assignee_Id = dto.Assignee_Id.Value;
 
-                            if (dto.DueDate.HasValue)
-                                entity.Due_Date = dto.DueDate.Value;
+                            if (dto.Due_Date.HasValue)
+                                entity.Due_Date = dto.Due_Date.Value;
 
                             if (dto.Status.HasValue)
                                 entity.Status = dto.Status.Value;
