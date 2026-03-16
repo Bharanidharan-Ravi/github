@@ -1,6 +1,10 @@
-﻿using APIGateWay.DomainLayer.DBContext;
+﻿using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.DBContext;
+using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -44,6 +48,7 @@ namespace APIGateWay.DomainLayer.Service
     {
         private readonly IDomainService _domainService;
         private readonly APIGatewayDBContext _db;
+       
 
         public WorkStreamService(
             IDomainService domainService,
@@ -53,6 +58,7 @@ namespace APIGateWay.DomainLayer.Service
             _db = db;
         }
 
+       
         // =====================================================================
         // SINGLE UPSERT
         // Used by: ThreadRepo.CreateThreadAsync (one person per thread)
@@ -84,7 +90,7 @@ namespace APIGateWay.DomainLayer.Service
                     {
                         ws.StreamStatus = ctx.StreamStatus;
                         ws.CompletionPct = ctx.CompletionPct ?? ws.CompletionPct;
-                        ws.ThreadId = ctx.ThreadId;
+                        ws.ThreadId = ctx.ParentThreadId;
                         if (ctx.TargetDate.HasValue)
                             ws.TargetDate = ctx.TargetDate;
 
@@ -138,7 +144,7 @@ namespace APIGateWay.DomainLayer.Service
         public async Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
             Guid? issueId,
             List<Guid> resourceIds,
-            int streamStatus,
+            int? streamStatus,
             decimal? completionPct,
             DateTime? targetDate)
         {
@@ -172,14 +178,14 @@ namespace APIGateWay.DomainLayer.Service
                 .Where(ws =>
                     ws.IssueId == issueId &&
                     removedResourceIds.Contains(ws.ResourceId!.Value) &&
-                    ws.StreamStatus != WorkStreamStatus.Inactive)   // don't touch already inactive
+                    ws.StreamStatus != StatusId.Inactive)   // don't touch already inactive
                 .ToListAsync();
 
             if (!rowsToDeactivate.Any()) return;
 
             foreach (var row in rowsToDeactivate)
             {
-                row.StreamStatus = WorkStreamStatus.Inactive;
+                row.StreamStatus = StatusId.Inactive;
                 // CompletionPct kept as-is — preserves their last known progress
                 // UpdatedAt, UpdatedBy → DBContext audit on SaveChangesAsync
             }
@@ -197,15 +203,15 @@ namespace APIGateWay.DomainLayer.Service
         {
             var activeRows = await _db.WorkStreams
                 .Where(ws =>
-                    ws.IssueId == issueId &&
-                    ws.StreamStatus != WorkStreamStatus.Completed)
+                    ws.IssueId == issueId )
+                    //ws.StreamStatus != StatusId.a)
                 .ToListAsync();
 
             if (!activeRows.Any()) return;
 
             foreach (var row in activeRows)
             {
-                row.StreamStatus = WorkStreamStatus.Completed;
+                //row.StreamStatus = StatusId.IsCompleted;
                 row.CompletionPct = 100;
                 // UpdatedAt, UpdatedBy → DBContext audit on SaveChangesAsync
             }
@@ -229,5 +235,7 @@ namespace APIGateWay.DomainLayer.Service
                 ? "General"
                 : employee.Team.Trim();
         }
+
+     
     }
 }

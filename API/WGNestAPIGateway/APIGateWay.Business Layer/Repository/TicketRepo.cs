@@ -83,7 +83,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     ticketMaster.SiNo = seq.CurrentValue;
                     ticketMaster.Issue_Code = $"T{seq.ColumnValue}";
                     ticketMaster.RepoKey = projectKey.RepoKey;
-                    ticketMaster.ProjectKey = projectKey.ProjectKey;
+                    ticketMaster.ProjKey = projectKey.ProjectKey;
                     string finalHtmlDescription = ticketDto.Description;
 
                     if (ticketDto.temp?.temps != null && ticketDto.temp.temps.Any())
@@ -132,7 +132,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         await _workStreamService.UpsertWorkStreamsAsync(
                             issueId: ticketMaster.Issue_Id,
                             resourceIds: createResourceIds,
-                            streamStatus: WorkStreamStatus.InProgress,
+                            streamStatus: StatusId.New,
                             completionPct: 0,
                             targetDate: ticketDto.TargetDate
                         );
@@ -294,8 +294,9 @@ namespace APIGateWay.BusinessLayer.Repository
                             var currentlyActiveIds = await _db.WorkStreams
                                 .Where(ws =>
                                     ws.IssueId == ticketId &&
-                                    ws.StreamStatus != WorkStreamStatus.Inactive &&
-                                    ws.StreamStatus != WorkStreamStatus.Completed)
+                                    ws.StreamStatus != StatusId.Inactive
+                                    //&& ws.StreamStatus != StatusId.
+                                    )
                                 .Select(ws => ws.ResourceId!.Value)
                                 .ToListAsync();
 
@@ -313,7 +314,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             await _workStreamService.UpsertWorkStreamsAsync(
                                 issueId: ticketId,
                                 resourceIds: updateResourceIds,
-                                streamStatus: dto.StreamStatus ?? WorkStreamStatus.InProgress,
+                                streamStatus: dto.StreamStatus,
                                 completionPct: dto.CompletionPct,
                                 targetDate: dto.TargetDate
                             );

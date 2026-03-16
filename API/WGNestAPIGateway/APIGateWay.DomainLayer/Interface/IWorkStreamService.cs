@@ -1,4 +1,5 @@
 ﻿using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +16,14 @@ namespace APIGateWay.DomainLayer.Interface
         Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
             Guid? issueId,
             List<Guid> resourceIds,
-            int streamStatus,
+            int? streamStatus,
             decimal? completionPct,
             DateTime? targetDate);
 
         Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds);
         // Clear all — TicketRepo when ResourceIds = [] on update
         Task ClearWorkStreamsAsync(Guid issueId);
+
+        //Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(Guid issueId);
     }
 }

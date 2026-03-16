@@ -112,10 +112,10 @@ namespace APIGateWay.BusinessLayer.Repository
                             {
                                 IssueId = threadDto.Issue_Id,
                                 ResourceId = resolvedResourceId,
-                                StreamStatus = threadDto.StreamStatus ?? WorkStreamStatus.InProgress,
+                                StreamStatus = threadDto.StreamStatus,
                                 CompletionPct = threadDto.CompletionPct,
                                 TargetDate = threadDto.TargetDate,
-                                ThreadId = threadMaster.ThreadId
+                                ParentThreadId = threadMaster.ThreadId
                                 // StreamName → auto-resolved inside service from assignee's dept
                             }
                         );

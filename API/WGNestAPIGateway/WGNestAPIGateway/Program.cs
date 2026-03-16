@@ -66,6 +66,7 @@ builder.Services.AddScoped<IThreadsRepository, ThreadsRepository>();
 builder.Services.AddScoped<ITicketRepo, TicketRepo>();
 builder.Services.AddScoped<ILabelRepo, LabelRepo>();
 builder.Services.AddScoped<IDailyPlanRepo, DailyPlanRepo>();
+builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer

@@ -36,7 +36,7 @@ namespace APIGateWay.DomainLayer.Service
 
             return result;
         }
-        public async Task<string> GetRepoKeyByIdAsync(Guid repoId)
+        public async Task<string> GetRepoKeyByIdAsync(Guid? repoId)
         {
             var repoKey = await _dbContext.RepositoryMasters
                 .Where(x => x.Repo_Id == repoId)
