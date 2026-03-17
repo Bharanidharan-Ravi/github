@@ -26,12 +26,13 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly APIGatewayDBContext _db;
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
+        private readonly IWorkStreamService _workStream;
 
         public WorkStreamRepo(IDomainService domainService, ILoginContextService loginContext
             , APIGateWayCommonService aPIGateWay
             , APIGatewayDBContext aPIGatewayDB
             , IHelperGetData helperGet
-            , IRealtimeNotifier realtimeNotifier)
+            , IRealtimeNotifier realtimeNotifier, IWorkStreamService workStream)
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -39,6 +40,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _db = aPIGatewayDB;
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
+            _workStream = workStream;
         }
 
 
@@ -109,6 +111,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     ws.StreamStatus != null &&
                     ws.StreamStatus != StatusId.Inactive);
 
+                var streamName = await _workStream.GetDepartmentNameAsync(dto.ResourceId);
                 Guid workStreamId = Guid.Empty;
                 long? parentThreadId = null;
 
@@ -118,7 +121,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         ws => ws.StreamId == existingRow.StreamId,
                         ws =>
                         {
-                            ws.StreamName = dto.StreamName;
+                            //ws.StreamName = dto.StreamName;
                             ws.StreamStatus = dto.StreamStatus; // StatusId int from UI
                             ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
                             ws.ThreadId = threadId;
@@ -139,7 +142,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var newRow = new WorkStream
                     {
                         IssueId = dto.IssueId,
-                        StreamName = dto.StreamName,
+                        StreamName = streamName,
                         ResourceId = resourceId,
                         StreamStatus = dto.StreamStatus,
                         CompletionPct = dto.CompletionPct ?? 0,
@@ -166,7 +169,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     WorkStreamId = workStreamId,
                     ThreadId = threadId,
                     ParentThreadId = parentThreadId,
-                    StreamName = dto.StreamName,
+                    StreamName = streamName,
                     StreamStatus = dto.StreamStatus,
                     StatusName = statusName,
                     ThreadCreated = threadCreated,

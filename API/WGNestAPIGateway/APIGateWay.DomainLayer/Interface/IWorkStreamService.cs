@@ -23,6 +23,7 @@ namespace APIGateWay.DomainLayer.Interface
         Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds);
         // Clear all — TicketRepo when ResourceIds = [] on update
         Task ClearWorkStreamsAsync(Guid issueId);
+        Task<string> GetDepartmentNameAsync(Guid? resourceId);
 
         //Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(Guid issueId);
     }

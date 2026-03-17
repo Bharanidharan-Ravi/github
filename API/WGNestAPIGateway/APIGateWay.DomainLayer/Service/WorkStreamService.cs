@@ -129,7 +129,7 @@ namespace APIGateWay.DomainLayer.Service
                     StreamId = newRow.StreamId,
                     StreamName = newRow.StreamName,
                     ResourceId = newRow.ResourceId!.Value,
-                    StreamStatus = newRow.StreamStatus!.Value,
+                    StreamStatus = newRow.StreamStatus ?? 0,
                     WasInserted = true,
                 };
             }
@@ -224,7 +224,7 @@ namespace APIGateWay.DomainLayer.Service
         // Reads EMPLOYEEMASTER.Team of the given ResourceId (the assignee).
         // Falls back to "General" if not found or Team is empty.
         // =====================================================================
-        private async Task<string> GetDepartmentNameAsync(Guid resourceId)
+        public async Task<string> GetDepartmentNameAsync(Guid? resourceId)
         {
             var employee = await _db.eMPLOYEEMASTERs
                 .Where(e => e.EmployeeID == resourceId)
