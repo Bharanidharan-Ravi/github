@@ -36,6 +36,7 @@ namespace APIGateWay.ModalLayer.MasterData
         //public string RepoKey { get; set; }
         public string Hours { get; set; }
         public string? Priority { get; set; }
+        public string? StatusName { get; set; }
         public decimal? CompletionPct { get; set; }
         //public string? StreamName { get; set; }
         public Guid? Assignee_Id { get; set; }

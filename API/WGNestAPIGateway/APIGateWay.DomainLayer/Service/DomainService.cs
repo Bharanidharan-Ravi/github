@@ -128,8 +128,17 @@ namespace APIGateWay.DomainLayer.Service
                 throw new Exceptionlist.DataNotFoundException(
                     $"{typeof(TEntity).Name} not found.");
 
-            mutator(entity);
-            await _dBContext.SaveChangesAsync();
+            try
+            {
+                mutator(entity);
+                await _dBContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Use InnerException to get the actual SQL error from Entity Framework
+                var actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Failed to save changes for {typeof(TEntity).Name}. Detail: {actualError}", ex);
+            }
         }
         public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
         {

@@ -48,8 +48,9 @@ builder.Services.AddSwaggerGen();
 // ─────────────────────────────────────────────────────────────
 // Database
 // ─────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<APIGatewayDBContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<APIGatewayDBContext>();
+    //(opt =>
+    //opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ─────────────────────────────────────────────────────────────
 // Business Layer

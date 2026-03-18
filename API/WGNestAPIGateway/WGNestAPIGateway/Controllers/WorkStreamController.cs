@@ -20,10 +20,6 @@ namespace APIGateway.Controllers
             // ── Validation ────────────────────────────────────────────────────
             if (dto.IssueId == Guid.Empty)
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "IssueId is required." });
-
-            if (string.IsNullOrWhiteSpace(dto.StreamName))
-                return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "StreamName is required." });
-
             if (!dto.UseLastThread && string.IsNullOrWhiteSpace(dto.Comment))
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Comment is required when not using last thread." });
 

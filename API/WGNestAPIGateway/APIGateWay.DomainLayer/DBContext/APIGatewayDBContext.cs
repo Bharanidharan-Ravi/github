@@ -178,6 +178,9 @@ namespace APIGateWay.DomainLayer.DBContext
             });
             //modelBuilder.Entity<CLIENTSMAILIDS>()
             //    .HasNoKey();
+            modelBuilder.Entity<TicketMaster>()
+                .Property(t => t.CompletionPct)
+                .HasColumnType("decimal(5, 2)");
 
             modelBuilder.Entity<GetEmployee>().HasNoKey();
             modelBuilder.Entity<ClientMaster>()

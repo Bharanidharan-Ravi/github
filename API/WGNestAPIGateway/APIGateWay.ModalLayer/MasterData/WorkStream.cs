@@ -89,7 +89,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public long? ThreadId { get; set; }
         public long? ParentThreadId { get; set; }
         public string StreamName { get; set; } = string.Empty;
-        public int StreamStatus { get; set; }
+        public int? StreamStatus { get; set; }
         public string? StatusName { get; set; }  // human-readable from Status_Master
         public bool ThreadCreated { get; set; }
         public bool TicketCompleted { get; set; }

@@ -17,18 +17,18 @@ namespace APIGateWay.ModalLayer.PostData
         public const int DevelopmentCompleted = 6;   // DEV-C
         public const int UnitTesting = 7;   // UTEST
         public const int FunctionalTesting = 8;   // FTEST
-        public const int QATesting = 9;   // QA
-        public const int UATTesting = 10;  // UAT
-        public const int AwaitingClientResponse = 11;  // ACR
-        public const int FunctionalFixCompleted = 12;  // FUNC-C
-        public const int TransportCreated = 13;  // TR-C
-        public const int TransportReleased = 14;  // TR-R
-        public const int MovedToQA = 15;  // QA-M
-        public const int MovedToProduction = 16;  // PRD-M
-        public const int OnHold = 17;  // HLD
-        public const int Closed = 18;  // CLS
-        public const int Cancelled = 19;  // CAN
-        public const int Inactive = 20;  // INA
+        //public const int QATesting = 9;   // QA
+        public const int UATTesting = 9;  // UAT
+        public const int AwaitingClientResponse = 10;  // ACR
+        public const int FunctionalFixCompleted = 11;  // FUNC-C
+        //public const int TransportCreated = 13;  // TR-C
+        //public const int TransportReleased = 14;  // TR-R
+        //public const int MovedToQA = 15;  // QA-M
+        public const int MovedToProduction = 12;  // PRD-M
+        public const int OnHold = 13;  // HLD
+        public const int Closed = 14;  // CLS
+        public const int Cancelled = 15;  // CAN
+        public const int Inactive = 16;  // INA
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -37,7 +37,8 @@ namespace APIGateWay.ModalLayer.PostData
         {
             New, Assigned, InAnalysis, AwaitingInformation,
             InDevelopment, UnitTesting, FunctionalTesting,
-            QATesting, UATTesting, AwaitingClientResponse, OnHold
+            //QATesting,
+            UATTesting, AwaitingClientResponse, OnHold
         };
 
         // Statuses that count as "completed" for ticket auto-completion check
@@ -45,8 +46,8 @@ namespace APIGateWay.ModalLayer.PostData
         public static readonly HashSet<int> CompletedStatuses = new()
         {
             DevelopmentCompleted, FunctionalFixCompleted,
-            TransportCreated, TransportReleased,
-            MovedToQA, MovedToProduction,
+            //TransportCreated, TransportReleased, MovedToQA, 
+            MovedToProduction,
             Closed
         };
 

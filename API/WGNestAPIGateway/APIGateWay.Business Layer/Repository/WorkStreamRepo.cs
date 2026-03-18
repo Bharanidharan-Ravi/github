@@ -111,7 +111,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     ws.StreamStatus != null &&
                     ws.StreamStatus != StatusId.Inactive);
 
-                var streamName = await _workStream.GetDepartmentNameAsync(dto.ResourceId);
+                var streamName = await _workStream.GetDepartmentNameAsync(resourceId);
                 Guid workStreamId = Guid.Empty;
                 long? parentThreadId = null;
 
@@ -121,13 +121,15 @@ namespace APIGateWay.BusinessLayer.Repository
                         ws => ws.StreamId == existingRow.StreamId,
                         ws =>
                         {
-                            //ws.StreamName = dto.StreamName;
-                            ws.StreamStatus = dto.StreamStatus; // StatusId int from UI
+                            //ws.StreamName = streamName;
+                            ws.StreamStatus = dto.StreamStatus ?? ws.StreamStatus;
+
+                            // 👇 This is already perfectly written!
                             ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
                             ws.ThreadId = threadId;
 
-                            if (dto.ParentThreadId.HasValue && ws.ParentThreadId == null)
-                                ws.ParentThreadId = dto.ParentThreadId;
+                            //if (dto.ParentThreadId.HasValue && ws.ParentThreadId == null)
+                            //    ws.ParentThreadId = dto.ParentThreadId;
 
                             if (dto.TargetDate.HasValue)
                                 ws.TargetDate = dto.TargetDate;
@@ -148,7 +150,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         CompletionPct = dto.CompletionPct ?? 0,
                         TargetDate = dto.TargetDate,
                         ThreadId = threadId,
-                        ParentThreadId = dto.ParentThreadId,
+                        ParentThreadId = threadId,
                     };
 
                     await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
@@ -162,7 +164,9 @@ namespace APIGateWay.BusinessLayer.Repository
                 var ticketCompleted = statusResult.TicketAutoCompleted;
 
                 // ── Step 5: get status name for response ──────────────────────
-                var statusName = await GetStatusNameAsync(dto.StreamStatus);
+                //var statusName = await GetStatusNameAsync(dto.StreamStatus); 
+                var finalStreamStatus = dto.StreamStatus ?? existingRow?.StreamStatus;
+                var statusName = finalStreamStatus.HasValue ? await GetStatusNameAsync(finalStreamStatus.Value) : null;
 
                 response = new PostWorkStreamResponse
                 {
@@ -170,7 +174,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     ThreadId = threadId,
                     ParentThreadId = parentThreadId,
                     StreamName = streamName,
-                    StreamStatus = dto.StreamStatus,
+                    StreamStatus = finalStreamStatus,
                     StatusName = statusName,
                     ThreadCreated = threadCreated,
                     TicketCompleted = ticketCompleted,
@@ -289,7 +293,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return true;  // ticket was just auto-completed
         }
-        private async Task<string?> GetStatusNameAsync(int statusId)
+        private async Task<string?> GetStatusNameAsync(int? statusId)
         {
             var status = await _db.StatusMasters
                 .Where(s => s.Status_Id == statusId)
@@ -407,7 +411,8 @@ namespace APIGateWay.BusinessLayer.Repository
                     t =>
                     {
                         t.Status = computedStatusId;
-                        t.CompletionPct = (decimal)overallPct;
+                        t.CompletionPct = (decimal?)overallPct;
+                        t.StatusName = computedStatusName;
                         // UpdatedAt, UpdatedBy → DBContext audit
                     }
                 );

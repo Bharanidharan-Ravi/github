@@ -13,11 +13,11 @@ namespace APIGateWay.ModalLayer.PostData
         public Guid? ResourceId { get; set; }  // null = current user
 
         // StreamName from UI dropdown (user picks their stage explicitly)
-        public string StreamName { get; set; } = string.Empty;
+        //public string StreamName { get; set; } = string.Empty;
 
         // StatusId from Status_Master — sent from UI
         // e.g. user picks "In Development" → UI sends 5
-        public int StreamStatus { get; set; }
+        public int? StreamStatus { get; set; }
 
         // Toggle button:
         //   true  = link last thread of this user for this ticket
