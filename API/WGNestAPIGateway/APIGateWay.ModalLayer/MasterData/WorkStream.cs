@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.PostHelper;
+using APIGateWay.ModalLayer.PostData;
 
 namespace APIGateWay.ModalLayer.MasterData
 {
@@ -53,6 +54,11 @@ namespace APIGateWay.ModalLayer.MasterData
         // Navigation (optional — for joins without EF Include)
         [ForeignKey("StreamStatus")]
         public StatusMaster? Status { get; set; }
+        public bool BlockedByTestFailure { get; set; } = false;
+        public string? BlockedReason { get; set; }
+        public DateTime? BlockedAt { get; set; }
+        public Guid? BlockedByResourceId { get; set; }
+
     }
 
     // Input for UpsertWorkStreamAsync
@@ -74,23 +80,33 @@ namespace APIGateWay.ModalLayer.MasterData
     {
         public Guid StreamId { get; set; }
         public string? StreamName { get; set; }
-        public string? StatusName { get; set; }  // e.g. "In Development"
+        public string? StatusName { get; set; }
         public Guid ResourceId { get; set; }
-        public int? StreamStatus { get; set; }  // FK int → Status_Master.Id
+        public int? StreamStatus { get; set; }
         public long? ParentThreadId { get; set; }
         public long? ThreadId { get; set; }
         public bool WasInserted { get; set; }
+        public bool IsBlocked { get; set; }
+        public string? BlockedReason { get; set; }
+
+        // ← Returned so the Business Layer caller can broadcast without
+        //   making another DB round trip
+        public TicketStatusResult? TicketStatus { get; set; }
     }
 
     // Response for PostWorkStreamAsync
     public class PostWorkStreamResponse
     {
         public Guid WorkStreamId { get; set; }
+        public Guid ResourceId { get; set; }
         public long? ThreadId { get; set; }
         public long? ParentThreadId { get; set; }
         public string StreamName { get; set; } = string.Empty;
+
         public int? StreamStatus { get; set; }
         public string? StatusName { get; set; }  // human-readable from Status_Master
+        public bool IsBlocked { get; set; }
+        public string? BlockedReason { get; set; }
         public bool ThreadCreated { get; set; }
         public bool TicketCompleted { get; set; }
         public int TicketStatusId { get; set; }
@@ -99,5 +115,65 @@ namespace APIGateWay.ModalLayer.MasterData
         public int? TotalSubtasks { get; set; }
         public int CompletedSubtasks { get; set; }
         public int ActiveSubtasks { get; set; }
+        public bool DeveloperBlocked { get; set; }
+        public string BlockSummary { get; set; }
+        public bool IsTerminal { get; set; }
+        public string RepoKey { get; set; }
+        public Guid IssueId { get; set; }
+        public object? BroadcastPayload { get; set; }
+        // Tells the UI the block was cleared (dev can now mark DevCompleted)
+        public bool DeveloperUnblocked { get; set; }
     }
 }
+
+
+
+// =============================================================================
+// WHAT UI SENDS FOR EACH SCENARIO
+// =============================================================================
+ 
+// SCENARIO 1: Developer posts normal progress
+// POST /api/workstream
+// {
+//   "IssueId":      "ticket-guid",
+//   "StreamName":   "Development",
+//   "StreamStatus": 5,              // InDevelopment
+//   "CompletionPct": 80,
+//   "UseLastThread": false,
+//   "Comment":      "Fixed auth module, 80% done"
+// }
+ 
+// SCENARIO 2: Developer marks DevCompleted (normal path, no block)
+// {
+//   "StreamStatus": 6,              // DevelopmentCompleted
+//   "CompletionPct": 100,
+//   ...
+// }
+ 
+// SCENARIO 3: Tester reports failure (blocks developer A)
+// {
+//   "StreamStatus":            8,   // FunctionalTesting (tester's own status)
+//   "CompletionPct":           60,  // tester's own progress
+//   "ReportTestFailure":       true,
+//   "TestFailureComment":      "Login button throws 500 on wrong password",
+//   "TargetDeveloperResourceId": "developer-A-guid",  // null = block all devs
+//   "PercentageDrop":          30,  // drop dev by 30%
+//   ...
+// }
+ 
+// SCENARIO 4: Tester clears failure (unblocks developer)
+// {
+//   "StreamStatus":            8,   // FunctionalTesting (tester's own status)
+//   "CompletionPct":           90,  // tester's own progress
+//   "ClearTestFailure":        true,
+//   "TargetDeveloperResourceId": "developer-A-guid",
+//   ...
+// }
+ 
+// SCENARIO 5: Developer marks DevCompleted after being unblocked
+// {
+//   "StreamStatus": 6,   // DevelopmentCompleted — now allowed since block cleared
+//   "CompletionPct": 100,
+//   ...
+// }
+// If block NOT cleared → throws 400: "Cannot mark DevelopmentCompleted. Testing failed..."

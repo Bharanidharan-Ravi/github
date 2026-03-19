@@ -10,15 +10,20 @@ namespace APIGateWay.DomainLayer.Interface
 {
     public interface IWorkStreamService
     {
+        Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto);
         Task<WorkStreamResult> UpsertWorkStreamAsync(WorkStreamContext ctx);
 
         // Bulk upsert — TicketRepo (multiple assignees on create/update)
+        //Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
+        //    Guid? issueId,
+        //    List<Guid> resourceIds,
+        //    int? streamStatus,
+        //    decimal? completionPct,
+        //    DateTime? targetDate);
+
         Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
-            Guid? issueId,
-            List<Guid> resourceIds,
-            int? streamStatus,
-            decimal? completionPct,
-            DateTime? targetDate);
+           Guid? issueId, List<Guid> resourceIds,
+           int? streamStatus, decimal? completionPct, DateTime? targetDate);
 
         Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds);
         // Clear all — TicketRepo when ResourceIds = [] on update

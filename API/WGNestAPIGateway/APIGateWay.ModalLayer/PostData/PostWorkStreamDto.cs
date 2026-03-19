@@ -23,10 +23,16 @@ namespace APIGateWay.ModalLayer.PostData
         //   true  = link last thread of this user for this ticket
         //   false = create new ThreadMaster row from Comment
         public bool UseLastThread { get; set; } = false;
-        public string? Comment { get; set; }  // required when UseLastThread=false
-
+        public string? Comment { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
         public long? ParentThreadId { get; set; }
+        public bool ReportTestFailure { get; set; } = false;
+        public string? TestFailureComment { get; set; }
+        public bool ClearTestFailure { get; set; } = false;
+        public Guid? TargetDeveloperResourceId { get; set; }
+        public decimal? PercentageDrop { get; set; }
+        public TempReturn? temp { get; set; }
+        public string StreamName { get; set; }
     }
 }

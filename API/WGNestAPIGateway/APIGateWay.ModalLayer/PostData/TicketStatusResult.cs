@@ -8,24 +8,24 @@ namespace APIGateWay.ModalLayer.PostData
 {
     public class TicketStatusResult
     {
-        // ── Computed status ───────────────────────────────────────────────────
-        // The Status_Master.Id to set on the ticket
+        // ── Computed values ───────────────────────────────────────────────────────
         public int ComputedStatusId { get; set; }
-
-        // Human-readable label from Status_Master.Status_Name
         public string ComputedStatusName { get; set; } = string.Empty;
-
-        // ── Computed percentage ───────────────────────────────────────────────
-        // Simple average of all non-inactive subtask CompletionPct values
-        // e.g. subtasks at 100, 80, 50, 20, 0 → OverallPct = 50.00
         public decimal OverallPct { get; set; }
-
-        // ── Whether ticket was auto-completed ─────────────────────────────────
         public bool TicketAutoCompleted { get; set; }
+        public int? TotalSubtasks { get; set; }
+        public int CompletedSubtasks { get; set; }
+        public int ActiveSubtasks { get; set; }
 
-        // ── Breakdown — for debugging / frontend display ──────────────────────
-        public int? TotalSubtasks { get; set; }  // non-inactive count
-        public int CompletedSubtasks { get; set; }  // in CompletedStatuses
-        public int ActiveSubtasks { get; set; }  // still in progress
+        // ── Broadcast data — resolved inside service, consumed by Business Layer ──
+        // Service reads RepoKey from DB so the repo doesn't need to do a second lookup
+        public string RepoKey { get; set; } = string.Empty;
+
+        // True when ticket was already Closed/Cancelled before this update
+        // Business Layer uses this to skip the broadcast
+        public bool IsTerminal { get; set; }
+
+        // Pre-built payload so Business Layer just passes this to BroadcastAsync
+        public object? BroadcastPayload { get; set; }
     }
 }

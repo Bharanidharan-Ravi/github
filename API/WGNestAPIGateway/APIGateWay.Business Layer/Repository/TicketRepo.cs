@@ -149,7 +149,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
                     _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
 
-                throw new Exception("Ticket creation failed. Everything was rolled back safely.", ex);
+                throw new Exception($"Ticket creation failed. Everything was rolled back safely.{ex}", ex);
             }
 
             var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
@@ -332,7 +332,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
                     _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
 
-                throw new Exception("Ticket update failed. Everything was rolled back safely.", ex);
+                throw new Exception($"Ticket update failed. Everything was rolled back safely.{ex}", ex);
             }
 
             var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(

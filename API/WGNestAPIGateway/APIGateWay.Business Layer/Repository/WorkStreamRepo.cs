@@ -6,6 +6,7 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
+using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
@@ -27,12 +28,13 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IHelperGetData _helperGet;
         private readonly IRealtimeNotifier _realtimeNotifier;
         private readonly IWorkStreamService _workStream;
+        private readonly ISyncExecutionService _syncExecutionService;
 
         public WorkStreamRepo(IDomainService domainService, ILoginContextService loginContext
             , APIGateWayCommonService aPIGateWay
             , APIGatewayDBContext aPIGatewayDB
             , IHelperGetData helperGet
-            , IRealtimeNotifier realtimeNotifier, IWorkStreamService workStream)
+            , IRealtimeNotifier realtimeNotifier, IWorkStreamService workStream, ISyncExecutionService syncExecutionService)
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -41,6 +43,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _helperGet = helperGet;
             _realtimeNotifier = realtimeNotifier;
             _workStream = workStream;
+            _syncExecutionService = syncExecutionService;
         }
 
 
@@ -54,143 +57,283 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
         {
-            PostWorkStreamResponse response = null;
+            // ── Step 1: domain logic (DB writes, status compute) ──────────────
+            var response = await _workStream.PostWorkStreamAsync(dto);
 
-            await _domainService.ExecuteInTransactionAsync(async () =>
+            // ── Step 2: thread broadcast (only when a new thread was created) ──
+            // UseLastThread=true or pure % update → no new thread → skip
+            if (response.ThreadCreated && response.ThreadId.HasValue)
             {
-                // ── Step 1: resolve who this is for ───────────────────────────
-                var resourceId = dto.ResourceId ?? _loginContextService.userId;
+                await BroadcastThreadCreatedAsync(
+                    issueId: dto.IssueId,
+                    threadId: response.ThreadId.Value,
+                    repoKey: response.RepoKey
+                );
+            }
 
-                // ── Step 2: resolve ThreadId from toggle ──────────────────────
-                int threadId = 0;
-                bool threadCreated = false;
+            // ── Step 3: ticket status broadcast (always fires) ────────────────
+            await BroadcastTicketStatusAsync(response);
 
-                if (dto.UseLastThread)
+            return response;
+        }
+
+        // =====================================================================
+        // THREAD BROADCAST
+        //
+        // Fetches rich thread data from GETTHREADLIST SP — same as original
+        // ThreadRepo.CreateThreadAsync pattern.
+        // Broadcasts ThreadsList → Create so all clients see the new comment.
+        // =====================================================================
+        private async Task BroadcastThreadCreatedAsync(
+            Guid issueId,
+            long threadId,
+            string repoKey)
+        {
+            if (string.IsNullOrEmpty(repoKey)) return;
+
+            // Fetch rich thread data via SP — same SP used by ThreadRepo
+            ThreadList? freshThread = null;
+            try
+            {
+                var syncParams = new Dictionary<string, string>
                 {
-                    // Find last thread this user posted for this ticket
-                    var lastThread = await _db.ISSUETHREADS
-                        .Where(t =>
-                            t.Issue_Id == dto.IssueId &&
-                            t.CreatedBy == resourceId)
-                        .OrderByDescending(t => t.ThreadId)
-                        .FirstOrDefaultAsync();
-
-                    if (lastThread == null)
-                        throw new InvalidOperationException(
-                            "No previous thread found for this user on this ticket. " +
-                            "Please add a comment instead (toggle off).");
-
-                    threadId = lastThread.ThreadId;
-                }
-                else
-                {
-                    if (string.IsNullOrWhiteSpace(dto.Comment))
-                        throw new InvalidOperationException(
-                            "A comment is required when not using the last thread.");
-
-                    var seq = await _commonService.GetNextSequenceAsync("ISSUETHREADS");
-
-                    var newThread = new ThreadMaster
-                    {
-                        ThreadId = seq.CurrentValue,
-                        Issue_Id = dto.IssueId,
-                        CommentText = dto.Comment,
-                        HtmlDesc = dto.Comment,
-                    };
-
-                    await _domainService.SaveEntityWithAttachmentsAsync(newThread, null);
-                    threadId = seq.CurrentValue;
-                    threadCreated = true;
-                }
-
-                // ── Step 3: upsert subtask row ────────────────────────────────
-                var existingRow = await _db.WorkStreams
-                .FirstOrDefaultAsync(ws =>
-                    ws.IssueId == dto.IssueId &&
-                    ws.ResourceId == resourceId &&
-                    ws.StreamStatus != null &&
-                    ws.StreamStatus != StatusId.Inactive);
-
-                var streamName = await _workStream.GetDepartmentNameAsync(resourceId);
-                Guid workStreamId = Guid.Empty;
-                long? parentThreadId = null;
-
-                if (existingRow != null)
-                {
-                    await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-                        ws => ws.StreamId == existingRow.StreamId,
-                        ws =>
-                        {
-                            //ws.StreamName = streamName;
-                            ws.StreamStatus = dto.StreamStatus ?? ws.StreamStatus;
-
-                            // 👇 This is already perfectly written!
-                            ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
-                            ws.ThreadId = threadId;
-
-                            //if (dto.ParentThreadId.HasValue && ws.ParentThreadId == null)
-                            //    ws.ParentThreadId = dto.ParentThreadId;
-
-                            if (dto.TargetDate.HasValue)
-                                ws.TargetDate = dto.TargetDate;
-                        }
-                    );
-
-                    workStreamId = existingRow.StreamId;
-                    parentThreadId = existingRow.ParentThreadId ?? dto.ParentThreadId;
-                }
-                else
-                {
-                    var newRow = new WorkStream
-                    {
-                        IssueId = dto.IssueId,
-                        StreamName = streamName,
-                        ResourceId = resourceId,
-                        StreamStatus = dto.StreamStatus,
-                        CompletionPct = dto.CompletionPct ?? 0,
-                        TargetDate = dto.TargetDate,
-                        ThreadId = threadId,
-                        ParentThreadId = threadId,
-                    };
-
-                    await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
-                    workStreamId = newRow.StreamId;
-                    parentThreadId = newRow.ParentThreadId;
-                }
-
-                // ── Step 4: check ticket completion ───────────────────────────
-                //var ticketCompleted = await CheckAndCompleteTicketAsync(dto.IssueId);
-                var statusResult = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
-                var ticketCompleted = statusResult.TicketAutoCompleted;
-
-                // ── Step 5: get status name for response ──────────────────────
-                //var statusName = await GetStatusNameAsync(dto.StreamStatus); 
-                var finalStreamStatus = dto.StreamStatus ?? existingRow?.StreamStatus;
-                var statusName = finalStreamStatus.HasValue ? await GetStatusNameAsync(finalStreamStatus.Value) : null;
-
-                response = new PostWorkStreamResponse
-                {
-                    WorkStreamId = workStreamId,
-                    ThreadId = threadId,
-                    ParentThreadId = parentThreadId,
-                    StreamName = streamName,
-                    StreamStatus = finalStreamStatus,
-                    StatusName = statusName,
-                    ThreadCreated = threadCreated,
-                    TicketCompleted = ticketCompleted,
-                    TicketStatusId = statusResult.ComputedStatusId,
-                    TicketStatusName = statusResult.ComputedStatusName,
-                    TicketOverallPct = statusResult.OverallPct,
-                    TotalSubtasks = statusResult.TotalSubtasks,
-                    CompletedSubtasks = statusResult.CompletedSubtasks,
-                    ActiveSubtasks = statusResult.ActiveSubtasks,
+                    { "IssuesId", issueId.ToString() }
                 };
 
-                return true;
-            });
+                var syncResponse = await _syncExecutionService.ExecuteLocalAsync<ThreadList>(
+                    databaseName: "",
+                    storedProcedure: "GETTHREADLIST",
+                    lastSync: null,
+                    parameters: syncParams,
+                    source: "WorkStreamRepo"
+                );
 
-            return response!;
+                if (syncResponse.Ok && syncResponse.Data != null)
+                {
+                    var threads = syncResponse.Data as IEnumerable<ThreadList>;
+
+                    // Fallback: data layer returns JsonElement instead of typed list
+                    if (threads == null &&
+                        syncResponse.Data is System.Text.Json.JsonElement jsonElement)
+                    {
+                        threads = System.Text.Json.JsonSerializer.Deserialize<List<ThreadList>>(
+                            jsonElement.GetRawText(),
+                            new System.Text.Json.JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                    }
+
+                    // Find the exact thread we just inserted by its sequence ID
+                    freshThread = threads?.FirstOrDefault(t => t.ThreadId == threadId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // SP fetch failure must never break the response
+                // Thread is already saved in DB — just log and skip the broadcast
+                Console.WriteLine(
+                    $"[WorkStreamRepo] GETTHREADLIST fetch failed for thread {threadId}: {ex.Message}");
+                return;
+            }
+
+            if (freshThread == null) return;
+
+            try
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "ThreadsList",
+                    Action = "Create",
+                    Payload = freshThread,     // rich SP data with all joined fields
+                    KeyField = "ThreadId",
+                    IssueId = issueId,
+                    RepoKey = repoKey,
+                    Timestamp = DateTime.UtcNow,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[WorkStreamRepo] ThreadsList broadcast failed: {ex.Message}");
+            }
         }
+
+        // =====================================================================
+        // TICKET STATUS BROADCAST
+        //
+        // Uses pre-built payload from WorkStreamService — no extra DB call.
+        // Skips if ticket is already terminal (Closed/Cancelled).
+        // =====================================================================
+        private async Task BroadcastTicketStatusAsync(PostWorkStreamResponse response)
+        {
+            // Service sets IsTerminal=true when ticket was already Closed/Cancelled
+            // No point broadcasting a status update for a terminal ticket
+            if (response.IsTerminal) return;
+
+            if (string.IsNullOrEmpty(response.RepoKey)) return;
+
+            if (response.BroadcastPayload == null) return;
+
+            try
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "TicketsList",
+                    Action = "StatusUpdate",
+                    Payload = response.BroadcastPayload,  // pre-built by service
+                    KeyField = "Issue_Id",
+                    IssueId = response.IssueId,
+                    RepoKey = response.RepoKey,
+                    Timestamp = DateTime.UtcNow,
+                });
+            }
+            catch (Exception ex)
+            {
+                // SignalR failure must never break the API response
+                Console.WriteLine(
+                    $"[WorkStreamRepo] TicketsList broadcast failed: {ex.Message}");
+            }
+        }
+        //public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
+        //{
+        //    PostWorkStreamResponse response = null;
+
+        //    await _domainService.ExecuteInTransactionAsync(async () =>
+        //    {
+        //        // ── Step 1: resolve who this is for ───────────────────────────
+        //        var resourceId = dto.ResourceId ?? _loginContextService.userId;
+
+        //        // ── Step 2: resolve ThreadId from toggle ──────────────────────
+        //        int threadId = 0;
+        //        bool threadCreated = false;
+
+        //        if (dto.UseLastThread)
+        //        {
+        //            // Find last thread this user posted for this ticket
+        //            var lastThread = await _db.ISSUETHREADS
+        //                .Where(t =>
+        //                    t.Issue_Id == dto.IssueId &&
+        //                    t.CreatedBy == resourceId)
+        //                .OrderByDescending(t => t.ThreadId)
+        //                .FirstOrDefaultAsync();
+
+        //            if (lastThread == null)
+        //                throw new InvalidOperationException(
+        //                    "No previous thread found for this user on this ticket. " +
+        //                    "Please add a comment instead (toggle off).");
+
+        //            threadId = lastThread.ThreadId;
+        //        }
+        //        else
+        //        {
+        //            if (string.IsNullOrWhiteSpace(dto.Comment))
+        //                throw new InvalidOperationException(
+        //                    "A comment is required when not using the last thread.");
+
+        //            var seq = await _commonService.GetNextSequenceAsync("ISSUETHREADS");
+
+        //            var newThread = new ThreadMaster
+        //            {
+        //                ThreadId = seq.CurrentValue,
+        //                Issue_Id = dto.IssueId,
+        //                CommentText = dto.Comment,
+        //                HtmlDesc = dto.Comment,
+        //            };
+
+        //            await _domainService.SaveEntityWithAttachmentsAsync(newThread, null);
+        //            threadId = seq.CurrentValue;
+        //            threadCreated = true;
+        //        }
+
+        //        // ── Step 3: upsert subtask row ────────────────────────────────
+        //        var existingRow = await _db.WorkStreams
+        //        .FirstOrDefaultAsync(ws =>
+        //            ws.IssueId == dto.IssueId &&
+        //            ws.ResourceId == resourceId &&
+        //            ws.StreamStatus != null &&
+        //            ws.StreamStatus != StatusId.Inactive);
+
+        //        var streamName = await _workStream.GetDepartmentNameAsync(resourceId);
+        //        Guid workStreamId = Guid.Empty;
+        //        long? parentThreadId = null;
+
+        //        if (existingRow != null)
+        //        {
+        //            await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+        //                ws => ws.StreamId == existingRow.StreamId,
+        //                ws =>
+        //                {
+        //                    //ws.StreamName = streamName;
+        //                    ws.StreamStatus = dto.StreamStatus ?? ws.StreamStatus;
+
+        //                    // 👇 This is already perfectly written!
+        //                    ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
+        //                    ws.ThreadId = threadId;
+
+        //                    //if (dto.ParentThreadId.HasValue && ws.ParentThreadId == null)
+        //                    //    ws.ParentThreadId = dto.ParentThreadId;
+
+        //                    if (dto.TargetDate.HasValue)
+        //                        ws.TargetDate = dto.TargetDate;
+        //                }
+        //            );
+
+        //            workStreamId = existingRow.StreamId;
+        //            parentThreadId = existingRow.ParentThreadId ?? dto.ParentThreadId;
+        //        }
+        //        else
+        //        {
+        //            var newRow = new WorkStream
+        //            {
+        //                IssueId = dto.IssueId,
+        //                StreamName = streamName,
+        //                ResourceId = resourceId,
+        //                StreamStatus = dto.StreamStatus,
+        //                CompletionPct = dto.CompletionPct ?? 0,
+        //                TargetDate = dto.TargetDate,
+        //                ThreadId = threadId,
+        //                ParentThreadId = threadId,
+        //            };
+
+        //            await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
+        //            workStreamId = newRow.StreamId;
+        //            parentThreadId = newRow.ParentThreadId;
+        //        }
+
+        //        // ── Step 4: check ticket completion ───────────────────────────
+        //        //var ticketCompleted = await CheckAndCompleteTicketAsync(dto.IssueId);
+        //        var statusResult = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
+        //        var ticketCompleted = statusResult.TicketAutoCompleted;
+
+        //        // ── Step 5: get status name for response ──────────────────────
+        //        //var statusName = await GetStatusNameAsync(dto.StreamStatus); 
+        //        var finalStreamStatus = dto.StreamStatus ?? existingRow?.StreamStatus;
+        //        var statusName = finalStreamStatus.HasValue ? await GetStatusNameAsync(finalStreamStatus.Value) : null;
+
+        //        response = new PostWorkStreamResponse
+        //        {
+        //            WorkStreamId = workStreamId,
+        //            ThreadId = threadId,
+        //            ParentThreadId = parentThreadId,
+        //            StreamName = streamName,
+        //            StreamStatus = finalStreamStatus,
+        //            StatusName = statusName,
+        //            ThreadCreated = threadCreated,
+        //            TicketCompleted = ticketCompleted,
+        //            TicketStatusId = statusResult.ComputedStatusId,
+        //            TicketStatusName = statusResult.ComputedStatusName,
+        //            TicketOverallPct = statusResult.OverallPct,
+        //            TotalSubtasks = statusResult.TotalSubtasks,
+        //            CompletedSubtasks = statusResult.CompletedSubtasks,
+        //            ActiveSubtasks = statusResult.ActiveSubtasks,
+        //        };
+
+        //        return true;
+        //    });
+
+        //    return response!;
+        //}
 
         public async Task<bool> CheckAndCompleteTicketAsync(Guid issueId)
         {
