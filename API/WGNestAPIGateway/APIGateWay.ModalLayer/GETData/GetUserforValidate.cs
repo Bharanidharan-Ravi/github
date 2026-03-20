@@ -14,6 +14,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? UserName { get; set; }
         public string? DBName { get; set; }
         public string? Status { get; set; }
+        public string? Team { get; set; }
         public int? Role { get; set; }
         public string? PasswordHash { get; set; }
         public string? Salt { get; set; }

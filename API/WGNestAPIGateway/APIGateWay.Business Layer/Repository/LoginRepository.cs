@@ -42,7 +42,8 @@ namespace APIGateWay.BusinessLayer.Repository
                 user.UserId,
                 user.UserName,
                 user.Role,
-                user.DBName
+                user.DBName,
+                user.Team
             );
 
             return token;

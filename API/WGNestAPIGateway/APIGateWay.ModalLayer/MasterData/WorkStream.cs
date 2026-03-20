@@ -120,6 +120,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public bool IsTerminal { get; set; }
         public string RepoKey { get; set; }
         public Guid IssueId { get; set; }
+        public decimal? CompletionPct { get; set; }
         public object? BroadcastPayload { get; set; }
         // Tells the UI the block was cleared (dev can now mark DevCompleted)
         public bool DeveloperUnblocked { get; set; }
