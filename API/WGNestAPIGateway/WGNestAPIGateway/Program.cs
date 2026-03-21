@@ -146,16 +146,23 @@ builder.Services.AddScoped<IAuthorizationHandler, RepoScopeHandler>();
 // ─────────────────────────────────────────────────────────────
 // CORS
 // ─────────────────────────────────────────────────────────────
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("FrontendPolicy", policy =>
+//        policy.WithOrigins("http://localhost:5173",
+//    "http://localhost:4173")
+//              .AllowAnyHeader()
+//              .AllowAnyMethod()
+//              .AllowCredentials());
+//});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
-        policy.WithOrigins("http://localhost:5173",
-    "http://localhost:4173")
+        policy.SetIsOriginAllowed(origin => true) // Evaluates origin at runtime
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
 });
-
 // ─────────────────────────────────────────────────────────────
 // Build App
 // ─────────────────────────────────────────────────────────────

@@ -103,9 +103,10 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
 
                     // ── TYPE 2 / 3: Progress update ───────────────────────────
-                    var resolvedStreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-                        ? await GetDepartmentNameAsync(posterId)
-                        : dto.StreamName;
+                    //var resolvedStreamName = string.IsNullOrWhiteSpace(dto.StreamName)
+                    //    ? await GetDepartmentNameAsync(posterId)
+                    //    : dto.StreamName;
+                    var resolvedStreamName = await ResolveStreamNameAsync(dto, posterId);
                     // Auto-resolve StreamStatus from StreamName + CompletionPct
                     // UI sends StreamName ("Web Development", "QA Testing" etc.)
                     // Service computes which StatusId that maps to
@@ -181,6 +182,29 @@ namespace APIGateWay.BusinessLayer.Repository
             }
         }
 
+        private async Task<string> ResolveStreamNameAsync(PostWorkStreamDto dto, Guid posterId)
+        {
+            // 1. UI explicitly sent a StreamName → use it directly
+            if (!string.IsNullOrWhiteSpace(dto.StreamName))
+                return dto.StreamName;
+
+            // 2. UI sent a StreamStatus → resolve the stage label from Status_Master
+            //    e.g. 5 → "In Development", 7 → "Unit Testing", 8 → "Functional Testing"
+            //    This makes each stage uniquely identifiable — critical for multi-row tracking
+            if (dto.StreamStatus.HasValue)
+            {
+                var statusName = await _db.StatusMasters
+                    .Where(s => s.Status_Id == dto.StreamStatus.Value)
+                    .Select(s => s.Status_Name)
+                    .FirstOrDefaultAsync();
+
+                if (!string.IsNullOrWhiteSpace(statusName))
+                    return statusName;
+            }
+
+            // 3. Nothing provided → fall back to employee's department
+            return await GetDepartmentNameAsync(posterId);
+        }
         // =====================================================================
         // AUTO-RESOLVE StreamStatus from StreamName + CompletionPct
         //
@@ -420,7 +444,7 @@ namespace APIGateWay.BusinessLayer.Repository
         int threadId,
         string resolvedStreamName)
         {
-            // ── Step 1: find active (non-completed) row for this stage ────────────
+            // ── Step 1: find ACTIVE row for this exact stage ──────────────────────
             var stageRow = await _db.WorkStreams
                 .FirstOrDefaultAsync(ws =>
                     ws.IssueId == dto.IssueId &&
@@ -433,7 +457,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (stageRow != null)
             {
-                // Active row exists — normal update
+                // Same stage, active row — normal update
                 await _domainService.UpdateTrackedEntityAsync<WorkStream>(
                     ws => ws.StreamId == stageRow.StreamId,
                     ws =>
@@ -455,9 +479,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 return stageRow;
             }
 
-            // ── Step 2: no active row — check for existing COMPLETED row ─────────
-            // This covers the case: User A already at 100% DevCompleted, posts again
-            // Do NOT create a new row — just update the existing completed row
+            // ── Step 2: check for existing COMPLETED row for this stage ──────────
             var completedRow = await _db.WorkStreams
                 .FirstOrDefaultAsync(ws =>
                     ws.IssueId == dto.IssueId &&
@@ -470,36 +492,57 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (completedRow != null)
             {
-                // ── Already completed — only update thread/time, block status downgrade
-                // If they post a NEW completed/same status → update thread link only
-                // If they try to go BACK to active status → block it
+                // Cannot downgrade a completed row back to active
                 bool isDowngrade = !StatusId.CompletedStatuses.Contains(resolvedStatus);
 
                 if (isDowngrade)
                     throw new InvalidOperationException(
                         $"Your {resolvedStreamName} task is already completed. " +
-                        "You cannot move it back to an active status. " +
                         "Contact the owner if this stage needs to be reopened.");
 
-                // Update thread link and time fields only — keep status/% as completed
+                // Only update thread link — keep status/% as completed
                 await _domainService.UpdateTrackedEntityAsync<WorkStream>(
                     ws => ws.StreamId == completedRow.StreamId,
                     ws =>
                     {
-                        // Only update thread — never downgrade status or %
-                        if (threadId > 0)
-                            ws.ThreadId = threadId;
-
-                        if (dto.TargetDate.HasValue)
-                            ws.TargetDate = dto.TargetDate;
-
-                        // Status and CompletionPct are NOT touched — row stays completed
+                        if (threadId > 0) ws.ThreadId = threadId;
+                        if (dto.TargetDate.HasValue) ws.TargetDate = dto.TargetDate;
                     }
                 );
                 return completedRow;
             }
 
-            // ── Step 3: truly no row exists — INSERT new row ──────────────────────
+            // ── Step 3: no row for this stage — check for self-move ──────────────
+            // Self-move: person has an ACTIVE row for a DIFFERENT stage
+            // e.g. active "In Development" row exists, but now posting as "Unit Testing"
+            // → auto-complete the old stage, create new row for new stage
+            var currentActiveRow = await _db.WorkStreams
+                .FirstOrDefaultAsync(ws =>
+                    ws.IssueId == dto.IssueId &&
+                    ws.ResourceId == posterId &&
+                    ws.StreamStatus != null &&
+                    ws.StreamStatus != StatusId.Inactive &&
+                    ws.StreamStatus != StatusId.Cancelled &&
+                    !StatusId.CompletedStatuses.Contains(ws.StreamStatus!.Value));
+
+            if (currentActiveRow != null && currentActiveRow.StreamName != resolvedStreamName)
+            {
+                // Self-move detected — auto-complete the old stage
+                await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+                    ws => ws.StreamId == currentActiveRow.StreamId,
+                    ws =>
+                    {
+                        // Mark their old stage as completed based on its type
+                        var oldName = (ws.StreamName ?? string.Empty).ToUpperInvariant();
+                        ws.StreamStatus = oldName.Contains("DEV") || oldName.Contains("DEVELOP")
+                            ? StatusId.DevelopmentCompleted    // 6
+                            : StatusId.FunctionalFixCompleted; // 11
+                        ws.CompletionPct = 100;
+                    }
+                );
+            }
+
+            // ── Step 4: INSERT new row for the new stage ──────────────────────────
             var newRow = new WorkStream
             {
                 IssueId = dto.IssueId,
@@ -516,6 +559,7 @@ namespace APIGateWay.BusinessLayer.Repository
             await EnsureTicketAssignedAsync(dto.IssueId);
             return newRow;
         }
+    
         //private async Task<WorkStream> UpsertStreamAsync(
         //    PostWorkStreamDto dto,
         //    Guid posterId,

@@ -202,3 +202,31 @@ vite.config.ts.timestamp-*
 /API/API/WGAPP.ModelLayer/obj/Debug/net7.0/WGAPP.ModelLayer.pdb
 /API/WGNestAPIGateway/WGNestAPIGateway/appsettings.json
 /API/WGNestAPIGateway/WGNestAPIGateway/appsettings.json
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.BusinessLayer.deps.json
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.BusinessLayer.dll
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.BusinessLayer.pdb
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.DomainLayer.dll
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.DomainLayer.pdb
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.ModalLayer.dll
+/API/WGNestAPIGateway/APIGateWay.Business Layer/bin/Release/net8.0/APIGateWay.ModalLayer.pdb
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Release/net8.0/APIGateWay.DomainLayer.deps.json
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Release/net8.0/APIGateWay.DomainLayer.dll
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Release/net8.0/APIGateWay.DomainLayer.pdb
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Release/net8.0/APIGateWay.ModalLayer.dll
+/API/WGNestAPIGateway/APIGateWay.DomainLayer/bin/Release/net8.0/APIGateWay.ModalLayer.pdb
+/API/WGNestAPIGateway/APIGateWay.ModalLayer/bin/Release/net8.0/APIGateWay.ModalLayer.deps.json
+/API/WGNestAPIGateway/APIGateWay.ModalLayer/bin/Release/net8.0/APIGateWay.ModalLayer.dll
+/API/WGNestAPIGateway/APIGateWay.ModalLayer/bin/Release/net8.0/APIGateWay.ModalLayer.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.BusinessLayer.dll
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.BusinessLayer.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateway.deps.json
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateway.dll
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.DomainLayer.dll
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.DomainLayer.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateway.exe
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.ModalLayer.dll
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateWay.ModalLayer.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/APIGateway.pdb
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0/appsettings.json
+/API/WGNestAPIGateway/WGNestAPIGateway/bin/Release/net8.0
+/API/WGNestAPIGateway/WGNestAPIGateway/Properties/PublishProfiles/FolderProfile.pubxml

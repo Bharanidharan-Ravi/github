@@ -1,4 +1,5 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Interface;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -73,6 +74,8 @@ namespace APIGateWay.BusinessLayer.Repository
 
             // ── Step 3: ticket status broadcast (always fires) ────────────────
             await BroadcastTicketStatusAsync(response);
+
+            await BroadcastTicketDetailAsync(dto.IssueId, response.RepoKey);
 
             return response;
         }
@@ -193,6 +196,56 @@ namespace APIGateWay.BusinessLayer.Repository
                 // SignalR failure must never break the API response
                 Console.WriteLine(
                     $"[WorkStreamRepo] TicketsList broadcast failed: {ex.Message}");
+            }
+        }
+
+        private async Task BroadcastTicketDetailAsync(Guid issueId, string repoKey)
+        {
+            if (string.IsNullOrEmpty(repoKey)) return;
+
+            GetTickets? richTicketData = null;
+
+            try
+            {
+                richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
+                    configKey: "TicketsList",
+                    syncParams: new Dictionary<string, string>
+                    {
+                { "IssueId", issueId.ToString() }
+                    },
+                    matchPredicate: p => p.Issue_Id == issueId,
+                    fallbackData: null,  // null = don't broadcast if SP fails
+                    lastSync: null
+                );
+            }
+            catch (Exception ex)
+            {
+                // SP fetch failure must never break the response
+                // Ticket is already updated in DB — just log and skip broadcast
+                Console.WriteLine(
+                    $"[WorkStreamRepo] FetchRichDataAsync failed for ticket {issueId}: {ex.Message}");
+                return;
+            }
+
+            if (richTicketData == null) return;
+
+            try
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "Ticket",          // ticket DETAIL screen listens to this
+                    Action = "Update",          // same action as TicketRepo.UpdateTicketAsync
+                    Payload = richTicketData,    // full rich data — workstreams, labels, assignees
+                    KeyField = "Issue_Id",
+                    IssueId = issueId,
+                    RepoKey = richTicketData.RepoKey ?? repoKey,
+                    Timestamp = DateTime.UtcNow,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[WorkStreamRepo] Ticket detail broadcast failed for {issueId}: {ex.Message}");
             }
         }
         //public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
