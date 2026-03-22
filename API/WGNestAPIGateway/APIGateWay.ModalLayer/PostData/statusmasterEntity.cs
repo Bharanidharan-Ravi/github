@@ -60,5 +60,51 @@ namespace APIGateWay.ModalLayer.PostData
         public static bool IsActive(int statusId) => ActiveStatuses.Contains(statusId);
         public static bool IsCompleted(int statusId) => CompletedStatuses.Contains(statusId);
         public static bool IsInactive(int statusId) => InactiveStatuses.Contains(statusId);
+
+        // Dev family: InDevelopment and its completion state
+        public static readonly HashSet<int> DevFamily = new()
+        {
+            InDevelopment,        // 5
+            DevelopmentCompleted, // 6
+        };
+
+                // Testing family: all testing stages and their completion states
+        public static readonly HashSet<int> TestingFamily = new()
+        {
+            UnitTesting,           // 7
+            FunctionalTesting,     // 8
+            UATTesting,            // 9
+            AwaitingClientResponse,// 10
+            FunctionalFixCompleted,// 11
+        };
+
+                // Production family
+         public static readonly HashSet<int> ProductionFamily = new()
+        {
+            MovedToProduction,     // 12
+        };
+
+                // Terminal family
+        public static readonly HashSet<int> TerminalFamily = new()
+        {
+            Closed,     // 14
+            Cancelled,  // 15
+        };
+
+        // Helper: get which family a status belongs to
+        public static HashSet<int>? GetFamily(int statusId)
+        {
+            if (DevFamily.Contains(statusId)) return DevFamily;
+            if (TestingFamily.Contains(statusId)) return TestingFamily;
+            if (ProductionFamily.Contains(statusId)) return ProductionFamily;
+            return null;
+        }
+
+        // Helper: are two statuses in the same family?
+        public static bool SameFamily(int a, int b)
+        {
+            var family = GetFamily(a);
+            return family != null && family.Contains(b);
+        }
     }
 }
