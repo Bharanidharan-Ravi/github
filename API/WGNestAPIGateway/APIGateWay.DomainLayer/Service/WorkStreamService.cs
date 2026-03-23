@@ -5,6 +5,7 @@ using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -47,140 +48,6 @@ namespace APIGateWay.BusinessLayer.Repository
             _attachmentService = attachmentService;
         }
 
-        // =====================================================================
-        // PUBLIC ENTRY POINT — reads like a table of contents
-        // =====================================================================
-        //public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
-        //{
-        //    ProcessedAttachmentResult attachmentResult = null;
-
-        //    try
-        //    {
-        //        return await _domainService.ExecuteInTransactionAsync(async () =>
-        //        {
-        //            // Poster is always the logged-in user
-        //            var posterId = dto.ResourceId ?? _loginContext.userId;
-
-        //            // ── TYPE 1: Pure assignment — no thread, no % update ──────
-        //            if (dto.AssignOnly)
-        //            {
-        //                if (!dto.NextAssigneeId.HasValue)
-        //                    throw new InvalidOperationException(
-        //                        "NextAssigneeId is required when AssignOnly is true.");
-
-        //                var assigned = await AssignWorkStreamAsync(
-        //                    issueId: dto.IssueId,
-        //                    assigneeId: dto.NextAssigneeId.Value,
-        //                    streamStatusId: dto.NextAssigneeStreamId,
-        //                    targetDate: dto.TargetDate
-        //                );
-
-        //                var ticketStatusForAssign =
-        //                    await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
-
-        //                return new PostWorkStreamResponse
-        //                {
-        //                    WorkStreamId = assigned.StreamId,
-        //                    ResourceId = assigned.ResourceId ?? Guid.Empty,
-        //                    StreamName = assigned.StreamName ?? string.Empty,
-        //                    StreamStatus = assigned.StreamStatus,
-        //                    StatusName = "New",
-        //                    CompletionPct = 0,
-        //                    ThreadCreated = false,
-        //                    ThreadId = null,
-        //                    TicketStatusId = ticketStatusForAssign.ComputedStatusId,
-        //                    TicketStatusName = ticketStatusForAssign.ComputedStatusName,
-        //                    TicketOverallPct = ticketStatusForAssign.OverallPct,
-        //                    TotalSubtasks = ticketStatusForAssign.TotalSubtasks,
-        //                    CompletedSubtasks = ticketStatusForAssign.CompletedSubtasks,
-        //                    ActiveSubtasks = ticketStatusForAssign.ActiveSubtasks,
-        //                    TicketCompleted = ticketStatusForAssign.TicketAutoCompleted,
-        //                    IssueId = dto.IssueId,
-        //                    RepoKey = ticketStatusForAssign.RepoKey,
-        //                    IsTerminal = ticketStatusForAssign.IsTerminal,
-        //                    BroadcastPayload = ticketStatusForAssign.BroadcastPayload,
-        //                };
-        //            }
-
-        //            // ── TYPE 2 / 3: Progress update ───────────────────────────
-        //            //var resolvedStreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-        //            //    ? await GetDepartmentNameAsync(posterId)
-        //            //    : dto.StreamName;
-        //            var resolvedStreamName = await ResolveStreamNameAsync(dto, posterId);
-        //            // Auto-resolve StreamStatus from StreamName + CompletionPct
-        //            // UI sends StreamName ("Web Development", "QA Testing" etc.)
-        //            // Service computes which StatusId that maps to
-        //            var resolvedStatus = dto.StreamStatus.HasValue
-        //                 ? dto.StreamStatus.Value                                           // UI sent explicit status → use it
-        //                 : ResolveStreamStatus(dto.StreamName, dto.CompletionPct ?? 0);
-
-        //            // 1. Thread — optional (null/no comment = no thread)
-        //            var (threadId, threadCreated) =
-        //                await HandleThreadAsync(dto, posterId, attachmentResult);
-
-        //            // 2. Test failure / clear (no SaveChangesAsync inside — EF tracks)
-        //            if (dto.ReportTestFailure)
-        //                await HandleTestFailureAsync(dto, posterId);
-
-        //            if (dto.ClearTestFailure)
-        //                await HandleClearFailureAsync(dto, posterId);
-
-        //            // 3. Validate before upsert (block DevCompleted if test failed)
-        //            await ValidateStatusTransitionAsync(resolvedStatus, posterId, dto.IssueId);
-
-        //            // 4. Upsert poster's own WorkStream row
-        //            // ── Determine whether to create poster's own row or just assign ──────────
-        //            bool isPureAssignment = dto.NextAssigneeId.HasValue &&
-        //                                    dto.CompletionPct == null &&
-        //                                    dto.StreamStatus == null;
-
-        //            WorkStream stream;
-
-        //            if (isPureAssignment)
-        //            {
-        //                // Owner assigning someone — no row for the owner, just create assignee row
-        //                stream = await AssignWorkStreamAsync(
-        //                    issueId: dto.IssueId,
-        //                    assigneeId: dto.NextAssigneeId.Value,
-        //                    streamStatusId: dto.NextAssigneeStreamId,
-        //                    targetDate: dto.TargetDate
-        //                );
-        //            }
-        //            else
-        //            {
-        //                // Normal progress post — update poster's own row
-        //                stream = await UpsertStreamAsync(
-        //                    dto, posterId, resolvedStatus, threadId, resolvedStreamName);
-
-        //                // Also assign next person if provided
-        //                if (dto.NextAssigneeId.HasValue)
-        //                {
-        //                    await AssignWorkStreamAsync(
-        //                        issueId: dto.IssueId,
-        //                        assigneeId: dto.NextAssigneeId.Value,
-        //                        streamStatusId: dto.NextAssigneeStreamId,
-        //                        targetDate: dto.TargetDate
-        //                    );
-        //                }
-        //            }
-
-
-
-        //            // 6. Compute live ticket status (updates DB + builds broadcast payload)
-        //            var ticketStatus = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
-
-        //            return BuildResponse(
-        //                dto, stream, resolvedStatus, threadId, threadCreated, ticketStatus);
-        //        });
-        //    }
-        //    catch
-        //    {
-        //        if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
-        //            _attachmentService.RollbackPhysicalFiles(
-        //                attachmentResult.PermanentFilePathsCreated);
-        //        throw;
-        //    }
-        //}
         public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
         {
             ProcessedAttachmentResult attachmentResult = null;
@@ -206,6 +73,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                 issueId: dto.IssueId,
                                 assigneeId: assignee.Id,
                                 streamStatusId: assignee.StreamId,
+                                threadId: 0,
                                 targetDate: assignee.TargetDate ?? dto.TargetDate
                             );
                         }
@@ -253,49 +121,67 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     await ValidateStatusTransitionAsync(resolvedStatus, posterId, dto.IssueId);
 
-                    // isPureAssignment: no % and no status = posting only to assign others
-                    bool isPureAssignment = dto.NextAssignees != null &&
-                                            dto.NextAssignees.Any() &&
-                                            dto.CompletionPct == null &&
-                                            dto.StreamStatus == null;
+                    var stream = await UpsertStreamAsync(
+                    dto, posterId, resolvedStatus, threadId, resolvedStreamName);
 
-                    WorkStream stream;
-
-                    if (isPureAssignment)
+                    // Assign next people if provided (additive — doesn't replace poster's update)
+                    if (dto.NextAssignees != null && dto.NextAssignees.Any())
                     {
-                        // Assign ALL next people, use first one as the "stream" for response
-                        WorkStream lastAssigned = null;
-                        foreach (var assignee in dto.NextAssignees!)
+                        foreach (var assignee in dto.NextAssignees)
                         {
-                            lastAssigned = await AssignWorkStreamAsync(
+                            await AssignWorkStreamAsync(
                                 issueId: dto.IssueId,
                                 assigneeId: assignee.Id,
+                                threadId: threadId,
                                 streamStatusId: assignee.StreamId,
                                 targetDate: assignee.TargetDate ?? dto.TargetDate
                             );
                         }
-                        stream = lastAssigned!;
                     }
-                    else
-                    {
-                        // Normal progress post — update poster's own row first
-                        stream = await UpsertStreamAsync(
-                            dto, posterId, resolvedStatus, threadId, resolvedStreamName);
 
-                        // Also assign next people if provided
-                        if (dto.NextAssignees != null && dto.NextAssignees.Any())
-                        {
-                            foreach (var assignee in dto.NextAssignees)
-                            {
-                                await AssignWorkStreamAsync(
-                                    issueId: dto.IssueId,
-                                    assigneeId: assignee.Id,
-                                    streamStatusId: assignee.StreamId,
-                                    targetDate: assignee.TargetDate ?? dto.TargetDate
-                                );
-                            }
-                        }
-                    }
+                    //// isPureAssignment: no % and no status = posting only to assign others
+                    //bool isPureAssignment = dto.NextAssignees != null &&
+                    //                        dto.NextAssignees.Any() &&
+                    //                        dto.CompletionPct == null &&
+                    //                        dto.StreamStatus == null;
+
+                    //WorkStream stream;
+
+                    //if (isPureAssignment)
+                    //{
+                    //    // Assign ALL next people, use first one as the "stream" for response
+                    //    WorkStream lastAssigned = null;
+                    //    foreach (var assignee in dto.NextAssignees!)
+                    //    {
+                    //        lastAssigned = await AssignWorkStreamAsync(
+                    //            issueId: dto.IssueId,
+                    //            assigneeId: assignee.Id,
+                    //            streamStatusId: assignee.StreamId,
+                    //            targetDate: assignee.TargetDate ?? dto.TargetDate
+                    //        );
+                    //    }
+                    //    stream = lastAssigned!;
+                    //}
+                    //else
+                    //{
+                    //    // Normal progress post — update poster's own row first
+                    //    stream = await UpsertStreamAsync(
+                    //        dto, posterId, resolvedStatus, threadId, resolvedStreamName);
+
+                    //    // Also assign next people if provided
+                    //    if (dto.NextAssignees != null && dto.NextAssignees.Any())
+                    //    {
+                    //        foreach (var assignee in dto.NextAssignees)
+                    //        {
+                    //            await AssignWorkStreamAsync(
+                    //                issueId: dto.IssueId,
+                    //                assigneeId: assignee.Id,
+                    //                streamStatusId: assignee.StreamId,
+                    //                targetDate: assignee.TargetDate ?? dto.TargetDate
+                    //            );
+                    //        }
+                    //    }
+                    //}
 
                     var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
 
@@ -564,14 +450,12 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         // 4. UPSERT STREAM — insert or update poster's WorkStream row
         // =====================================================================
-
-
         private async Task<WorkStream> UpsertStreamAsync(
-     PostWorkStreamDto dto,
-     Guid posterId,
-     int resolvedStatus,
-     int threadId,
-     string resolvedStreamName)
+         PostWorkStreamDto dto,
+         Guid posterId,
+         int resolvedStatus,
+         int threadId,
+         string resolvedStreamName)
         {
             // ── Priority: WorkStreamId sent → target that exact row ──────────────
             if (dto.WorkStreamId.HasValue)
@@ -767,78 +651,6 @@ namespace APIGateWay.BusinessLayer.Repository
             return newRow;
         }
 
-        //private async Task<WorkStream> UpsertStreamAsync(
-        //    PostWorkStreamDto dto,
-        //    Guid posterId,
-        //    int resolvedStatus,
-        //    int threadId)
-        //{
-        //    var existing = await _db.WorkStreams
-        //        .FirstOrDefaultAsync(ws =>
-        //            ws.IssueId == dto.IssueId &&
-        //            ws.ResourceId == posterId &&
-        //            ws.StreamStatus != null &&
-        //            ws.StreamStatus != StatusId.Inactive &&
-        //            ws.StreamStatus != StatusId.Cancelled);
-
-        //    if (existing != null)
-        //    {
-        //        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-        //            ws => ws.StreamId == existing.StreamId,
-        //            ws =>
-        //            {
-        //                ws.StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-        //                    ? ws.StreamName
-        //                    : dto.StreamName;
-        //                ws.StreamStatus = resolvedStatus;
-        //                ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
-
-        //                if (threadId > 0)
-        //                {
-        //                    ws.ThreadId = threadId;
-        //                    // First thread ever = scope/parent thread — set only once
-        //                    if (ws.ParentThreadId == null)
-        //                        ws.ParentThreadId = threadId;
-        //                }
-
-        //                if (dto.TargetDate.HasValue)
-        //                    ws.TargetDate = dto.TargetDate;
-
-        //                // UpdatedAt, UpdatedBy → DBContext audit
-        //            }
-        //        );
-
-        //        return existing;
-        //    }
-        //    else
-        //    {
-        //        // New row — resolve StreamName from poster's department
-        //        var streamName = await GetDepartmentNameAsync(posterId);
-
-        //        var newRow = new WorkStream
-        //        {
-        //            IssueId = dto.IssueId,
-        //            StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-        //                ? streamName
-        //                : dto.StreamName,
-        //            ResourceId = posterId,
-        //            StreamStatus = resolvedStatus,
-        //            CompletionPct = dto.CompletionPct ?? 0,
-        //            TargetDate = dto.TargetDate,
-        //            ThreadId = threadId > 0 ? threadId : null,
-        //            ParentThreadId = threadId > 0 ? threadId : null,
-        //            // CreatedAt, CreatedBy, UpdatedAt, UpdatedBy → DBContext audit
-        //        };
-
-        //        await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
-
-        //        // New subtask → move ticket New(1) → Assigned(2)
-        //        await EnsureTicketAssignedAsync(dto.IssueId);
-
-        //        return newRow;
-        //    }
-        //}
-
         // =====================================================================
         // ASSIGN WORK STREAM — create row for a person without any thread
         // Used for:
@@ -846,13 +658,12 @@ namespace APIGateWay.BusinessLayer.Repository
         //   - Developer 100% → pass to tester (NextAssigneeId)
         //   - Reassigning after tester removed
         // =====================================================================
-
-
         public async Task<WorkStream> AssignWorkStreamAsync(
-     Guid issueId,
-     Guid assigneeId,
-     int? streamStatusId,
-     DateTime? targetDate)
+         Guid issueId,
+         Guid assigneeId,
+         int? streamStatusId,
+         int? threadId,
+         DateTime? targetDate)
         {
             // Resolve StreamName from Status_Master — MUST be uncommented
             string finalStreamName;
@@ -863,7 +674,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 .FirstOrDefaultAsync(ws =>
                     ws.IssueId == issueId &&
                     ws.ResourceId == assigneeId &&
-                    ws.StreamName == finalStreamName &&
+                    ws.StreamStatus == streamStatusId &&
                     ws.StreamStatus != StatusId.Inactive &&
                     ws.StreamStatus != StatusId.Cancelled &&
                     !StatusId.CompletedStatuses.Contains(ws.StreamStatus ?? 0));
@@ -879,66 +690,14 @@ namespace APIGateWay.BusinessLayer.Repository
                 StreamStatus = streamStatusId,
                 CompletionPct = 0,
                 TargetDate = targetDate,
-                ThreadId = null,
-                ParentThreadId = null,
+                ThreadId = threadId > 0 ? threadId : null,
+                ParentThreadId = threadId > 0 ? threadId : null,
             };
 
             await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
             await EnsureTicketAssignedAsync(issueId);
             return newRow;
         }
-
-
-        //public async Task<WorkStream> AssignWorkStreamAsync(
-        //    Guid issueId,
-        //    Guid assigneeId,
-        //    int? streamName,
-        //    DateTime? targetDate)
-        //{
-
-        //    // Idempotent — return existing active row if already assigned
-        //    var existing = await _db.WorkStreams
-        //       .FirstOrDefaultAsync(ws =>
-        //           ws.IssueId == issueId &&
-        //           ws.ResourceId == assigneeId &&
-        //           ws.StreamStatus != StatusId.Inactive &&
-        //           ws.StreamStatus != StatusId.Cancelled);
-
-        //    // Resolve StreamName from assignee's department if not provided
-        //    var deptName = await GetDepartmentNameAsync(assigneeId);
-        //    var finalStreamName = deptName;
-
-        //    if (existing != null)
-        //    {
-        //        // Already assigned — update StreamName if changed, leave % and status
-        //        if (existing.StreamName != finalStreamName)
-        //        {
-        //            await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-        //                ws => ws.StreamId == existing.StreamId,
-        //                ws => { ws.StreamName = finalStreamName; }
-        //            );
-        //        }
-        //        return existing;
-        //    }
-
-        //    // INSERT new row — Status=New(1), %=0, no thread
-        //    var newRow = new WorkStream
-        //    {
-        //        IssueId = issueId,
-        //        StreamName = finalStreamName,
-        //        ResourceId = assigneeId,
-        //        StreamStatus = StatusId.New,   // 1
-        //        CompletionPct = 0,
-        //        TargetDate = targetDate,
-        //        ThreadId = null,           // no thread — assignment only
-        //        ParentThreadId = null,           // set when they post first thread
-        //    };
-
-        //    await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
-        //    await EnsureTicketAssignedAsync(issueId);
-
-        //    return newRow;
-        //}
 
         // =====================================================================
         // COMPUTE AND UPDATE TICKET STATUS
@@ -949,26 +708,6 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(Guid? issueId)
         {
-            // Load all non-inactive subtasks joined with Status_Master for Sort_Order
-            //var subtasks = await _db.WorkStreams
-            //    .Where(ws =>
-            //        ws.IssueId == issueId &&
-            //        ws.StreamStatus != null &&
-            //        ws.StreamStatus != StatusId.Inactive &&
-            //        ws.StreamStatus != StatusId.Cancelled)
-            //    .Join(_db.StatusMasters,
-            //        ws => ws.StreamStatus,
-            //        sm => sm.Status_Id,
-            //        (ws, sm) => new
-            //        {
-            //            ws.StreamStatus,
-            //            ws.CompletionPct,
-            //            sm.Sort_Order,
-            //            sm.Status_Name,
-            //            IsCompleted = StatusId.CompletedStatuses.Contains(ws.StreamStatus!.Value),
-            //        })
-            //    .ToListAsync();
-
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
                     ws.IssueId == issueId &&
@@ -1175,96 +914,6 @@ namespace APIGateWay.BusinessLayer.Repository
         }
 
         // =====================================================================
-        // BULK UPSERT — TicketRepo (multiple assignees)
-        // =====================================================================
-        public async Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
-            Guid? issueId,
-            List<Guid> resourceIds,
-            int? streamStatus,
-            decimal? completionPct,
-            DateTime? targetDate)
-        {
-            var results = new List<WorkStreamResult>();
-            foreach (var resourceId in resourceIds)
-            {
-                results.Add(await UpsertWorkStreamAsync(new WorkStreamContext
-                {
-                    IssueId = issueId,
-                    ResourceId = resourceId,
-                    StreamStatus = streamStatus,
-                    CompletionPct = completionPct,
-                    TargetDate = targetDate,
-                }));
-            }
-            return results;
-        }
-
-        // =====================================================================
-        // MARK INACTIVE — specific people removed from ticket
-        // =====================================================================
-        public async Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds)
-        {
-            if (!removedResourceIds.Any()) return;
-
-            var rows = await _db.WorkStreams
-                .Where(ws =>
-                    ws.IssueId == issueId &&
-                    ws.StreamStatus != null &&
-                    ws.StreamStatus != StatusId.Inactive &&
-                    removedResourceIds.Contains(ws.ResourceId!.Value))
-                .ToListAsync();
-
-            if (!rows.Any()) return;
-
-            foreach (var row in rows)
-                row.StreamStatus = StatusId.Inactive;
-
-            await _db.SaveChangesAsync();
-
-            // Auto-clear blocks that were set by any removed tester
-            // Prevents permanent block if tester was removed before clearing
-            var devBlocksToRelease = await _db.WorkStreams
-                .Where(ws =>
-                    ws.IssueId == issueId &&
-                    ws.BlockedByTestFailure == true &&
-                    ws.BlockedByResourceId != null &&
-                    removedResourceIds.Contains(ws.BlockedByResourceId!.Value))
-                .ToListAsync();
-
-            foreach (var row in devBlocksToRelease)
-            {
-                row.BlockedByTestFailure = false;
-                row.BlockedReason = null;
-                row.BlockedAt = null;
-                row.BlockedByResourceId = null;
-            }
-
-            if (devBlocksToRelease.Any())
-                await _db.SaveChangesAsync();
-        }
-
-        // =====================================================================
-        // CLEAR ALL — ResourceIds = [] on ticket update
-        // =====================================================================
-        public async Task ClearWorkStreamsAsync(Guid issueId)
-        {
-            var rows = await _db.WorkStreams
-                .Where(ws =>
-                    ws.IssueId == issueId &&
-                    ws.StreamStatus != null &&
-                    ws.StreamStatus != StatusId.Inactive &&
-                    ws.StreamStatus != StatusId.Cancelled)
-                .ToListAsync();
-
-            if (!rows.Any()) return;
-
-            foreach (var row in rows)
-                row.StreamStatus = StatusId.Inactive;
-
-            await _db.SaveChangesAsync();
-        }
-
-        // =====================================================================
         // PRIVATE HELPERS
         // =====================================================================
         private async Task EnsureTicketAssignedAsync(Guid? issueId)
@@ -1334,5 +983,359 @@ namespace APIGateWay.BusinessLayer.Repository
                 BroadcastPayload = ticketStatus.BroadcastPayload,
             };
         }
+
+        #region BULK UPSERT — TicketRepo (multiple assignees)
+        // =====================================================================
+        public async Task<List<WorkStreamResult>> UpsertWorkStreamsAsync(
+            Guid? issueId,
+            List<Guid> resourceIds,
+            int? streamStatus,
+            decimal? completionPct,
+            DateTime? targetDate)
+        {
+            var results = new List<WorkStreamResult>();
+            foreach (var resourceId in resourceIds)
+            {
+                results.Add(await UpsertWorkStreamAsync(new WorkStreamContext
+                {
+                    IssueId = issueId,
+                    ResourceId = resourceId,
+                    StreamStatus = streamStatus,
+                    CompletionPct = completionPct,
+                    TargetDate = targetDate,
+                }));
+            }
+            return results;
+        }
+        #endregion
+        #region CLEAR ALL — ResourceIds = [] on ticket update
+        // =====================================================================
+        public async Task ClearWorkStreamsAsync(Guid issueId)
+        {
+            var rows = await _db.WorkStreams
+                .Where(ws =>
+                    ws.IssueId == issueId &&
+                    ws.StreamStatus != null &&
+                    ws.StreamStatus != StatusId.Inactive &&
+                    ws.StreamStatus != StatusId.Cancelled)
+                .ToListAsync();
+
+            if (!rows.Any()) return;
+
+            foreach (var row in rows)
+                row.StreamStatus = StatusId.Inactive;
+
+            await _db.SaveChangesAsync();
+        }
+        #endregion
+
+        #region MARK INACTIVE — specific people removed from ticket
+        // =====================================================================
+        public async Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds)
+        {
+            if (!removedResourceIds.Any()) return;
+
+            var rows = await _db.WorkStreams
+                .Where(ws =>
+                    ws.IssueId == issueId &&
+                    ws.StreamStatus != null &&
+                    ws.StreamStatus != StatusId.Inactive &&
+                    removedResourceIds.Contains(ws.ResourceId!.Value))
+                .ToListAsync();
+
+            if (!rows.Any()) return;
+
+            foreach (var row in rows)
+                row.StreamStatus = StatusId.Inactive;
+
+            await _db.SaveChangesAsync();
+
+            // Auto-clear blocks that were set by any removed tester
+            // Prevents permanent block if tester was removed before clearing
+            var devBlocksToRelease = await _db.WorkStreams
+                .Where(ws =>
+                    ws.IssueId == issueId &&
+                    ws.BlockedByTestFailure == true &&
+                    ws.BlockedByResourceId != null &&
+                    removedResourceIds.Contains(ws.BlockedByResourceId!.Value))
+                .ToListAsync();
+
+            foreach (var row in devBlocksToRelease)
+            {
+                row.BlockedByTestFailure = false;
+                row.BlockedReason = null;
+                row.BlockedAt = null;
+                row.BlockedByResourceId = null;
+            }
+
+            if (devBlocksToRelease.Any())
+                await _db.SaveChangesAsync();
+        }
+        #endregion
     }
 }
+
+#region PUBLIC ENTRY POINT — reads like a table of contents
+// =====================================================================
+//public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
+//{
+//    ProcessedAttachmentResult attachmentResult = null;
+
+//    try
+//    {
+//        return await _domainService.ExecuteInTransactionAsync(async () =>
+//        {
+//            // Poster is always the logged-in user
+//            var posterId = dto.ResourceId ?? _loginContext.userId;
+
+//            // ── TYPE 1: Pure assignment — no thread, no % update ──────
+//            if (dto.AssignOnly)
+//            {
+//                if (!dto.NextAssigneeId.HasValue)
+//                    throw new InvalidOperationException(
+//                        "NextAssigneeId is required when AssignOnly is true.");
+
+//                var assigned = await AssignWorkStreamAsync(
+//                    issueId: dto.IssueId,
+//                    assigneeId: dto.NextAssigneeId.Value,
+//                    streamStatusId: dto.NextAssigneeStreamId,
+//                    targetDate: dto.TargetDate
+//                );
+
+//                var ticketStatusForAssign =
+//                    await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
+
+//                return new PostWorkStreamResponse
+//                {
+//                    WorkStreamId = assigned.StreamId,
+//                    ResourceId = assigned.ResourceId ?? Guid.Empty,
+//                    StreamName = assigned.StreamName ?? string.Empty,
+//                    StreamStatus = assigned.StreamStatus,
+//                    StatusName = "New",
+//                    CompletionPct = 0,
+//                    ThreadCreated = false,
+//                    ThreadId = null,
+//                    TicketStatusId = ticketStatusForAssign.ComputedStatusId,
+//                    TicketStatusName = ticketStatusForAssign.ComputedStatusName,
+//                    TicketOverallPct = ticketStatusForAssign.OverallPct,
+//                    TotalSubtasks = ticketStatusForAssign.TotalSubtasks,
+//                    CompletedSubtasks = ticketStatusForAssign.CompletedSubtasks,
+//                    ActiveSubtasks = ticketStatusForAssign.ActiveSubtasks,
+//                    TicketCompleted = ticketStatusForAssign.TicketAutoCompleted,
+//                    IssueId = dto.IssueId,
+//                    RepoKey = ticketStatusForAssign.RepoKey,
+//                    IsTerminal = ticketStatusForAssign.IsTerminal,
+//                    BroadcastPayload = ticketStatusForAssign.BroadcastPayload,
+//                };
+//            }
+
+//            // ── TYPE 2 / 3: Progress update ───────────────────────────
+//            //var resolvedStreamName = string.IsNullOrWhiteSpace(dto.StreamName)
+//            //    ? await GetDepartmentNameAsync(posterId)
+//            //    : dto.StreamName;
+//            var resolvedStreamName = await ResolveStreamNameAsync(dto, posterId);
+//            // Auto-resolve StreamStatus from StreamName + CompletionPct
+//            // UI sends StreamName ("Web Development", "QA Testing" etc.)
+//            // Service computes which StatusId that maps to
+//            var resolvedStatus = dto.StreamStatus.HasValue
+//                 ? dto.StreamStatus.Value                                           // UI sent explicit status → use it
+//                 : ResolveStreamStatus(dto.StreamName, dto.CompletionPct ?? 0);
+
+//            // 1. Thread — optional (null/no comment = no thread)
+//            var (threadId, threadCreated) =
+//                await HandleThreadAsync(dto, posterId, attachmentResult);
+
+//            // 2. Test failure / clear (no SaveChangesAsync inside — EF tracks)
+//            if (dto.ReportTestFailure)
+//                await HandleTestFailureAsync(dto, posterId);
+
+//            if (dto.ClearTestFailure)
+//                await HandleClearFailureAsync(dto, posterId);
+
+//            // 3. Validate before upsert (block DevCompleted if test failed)
+//            await ValidateStatusTransitionAsync(resolvedStatus, posterId, dto.IssueId);
+
+//            // 4. Upsert poster's own WorkStream row
+//            // ── Determine whether to create poster's own row or just assign ──────────
+//            bool isPureAssignment = dto.NextAssigneeId.HasValue &&
+//                                    dto.CompletionPct == null &&
+//                                    dto.StreamStatus == null;
+
+//            WorkStream stream;
+
+//            if (isPureAssignment)
+//            {
+//                // Owner assigning someone — no row for the owner, just create assignee row
+//                stream = await AssignWorkStreamAsync(
+//                    issueId: dto.IssueId,
+//                    assigneeId: dto.NextAssigneeId.Value,
+//                    streamStatusId: dto.NextAssigneeStreamId,
+//                    targetDate: dto.TargetDate
+//                );
+//            }
+//            else
+//            {
+//                // Normal progress post — update poster's own row
+//                stream = await UpsertStreamAsync(
+//                    dto, posterId, resolvedStatus, threadId, resolvedStreamName);
+
+//                // Also assign next person if provided
+//                if (dto.NextAssigneeId.HasValue)
+//                {
+//                    await AssignWorkStreamAsync(
+//                        issueId: dto.IssueId,
+//                        assigneeId: dto.NextAssigneeId.Value,
+//                        streamStatusId: dto.NextAssigneeStreamId,
+//                        targetDate: dto.TargetDate
+//                    );
+//                }
+//            }
+
+
+
+//            // 6. Compute live ticket status (updates DB + builds broadcast payload)
+//            var ticketStatus = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
+
+//            return BuildResponse(
+//                dto, stream, resolvedStatus, threadId, threadCreated, ticketStatus);
+//        });
+//    }
+//    catch
+//    {
+//        if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
+//            _attachmentService.RollbackPhysicalFiles(
+//                attachmentResult.PermanentFilePathsCreated);
+//        throw;
+//    }
+//}
+#endregion
+
+#region OLD UpsertStreamAsync
+//private async Task<WorkStream> UpsertStreamAsync(
+//    PostWorkStreamDto dto,
+//    Guid posterId,
+//    int resolvedStatus,
+//    int threadId)
+//{
+//    var existing = await _db.WorkStreams
+//        .FirstOrDefaultAsync(ws =>
+//            ws.IssueId == dto.IssueId &&
+//            ws.ResourceId == posterId &&
+//            ws.StreamStatus != null &&
+//            ws.StreamStatus != StatusId.Inactive &&
+//            ws.StreamStatus != StatusId.Cancelled);
+
+//    if (existing != null)
+//    {
+//        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+//            ws => ws.StreamId == existing.StreamId,
+//            ws =>
+//            {
+//                ws.StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
+//                    ? ws.StreamName
+//                    : dto.StreamName;
+//                ws.StreamStatus = resolvedStatus;
+//                ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
+
+//                if (threadId > 0)
+//                {
+//                    ws.ThreadId = threadId;
+//                    // First thread ever = scope/parent thread — set only once
+//                    if (ws.ParentThreadId == null)
+//                        ws.ParentThreadId = threadId;
+//                }
+
+//                if (dto.TargetDate.HasValue)
+//                    ws.TargetDate = dto.TargetDate;
+
+//                // UpdatedAt, UpdatedBy → DBContext audit
+//            }
+//        );
+
+//        return existing;
+//    }
+//    else
+//    {
+//        // New row — resolve StreamName from poster's department
+//        var streamName = await GetDepartmentNameAsync(posterId);
+
+//        var newRow = new WorkStream
+//        {
+//            IssueId = dto.IssueId,
+//            StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
+//                ? streamName
+//                : dto.StreamName,
+//            ResourceId = posterId,
+//            StreamStatus = resolvedStatus,
+//            CompletionPct = dto.CompletionPct ?? 0,
+//            TargetDate = dto.TargetDate,
+//            ThreadId = threadId > 0 ? threadId : null,
+//            ParentThreadId = threadId > 0 ? threadId : null,
+//            // CreatedAt, CreatedBy, UpdatedAt, UpdatedBy → DBContext audit
+//        };
+
+//        await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
+
+//        // New subtask → move ticket New(1) → Assigned(2)
+//        await EnsureTicketAssignedAsync(dto.IssueId);
+
+//        return newRow;
+//    }
+//}
+#endregion
+
+#region AssignWorkStreamAsync 
+//public async Task<WorkStream> AssignWorkStreamAsync(
+//    Guid issueId,
+//    Guid assigneeId,
+//    int? streamName,
+//    DateTime? targetDate)
+//{
+
+//    // Idempotent — return existing active row if already assigned
+//    var existing = await _db.WorkStreams
+//       .FirstOrDefaultAsync(ws =>
+//           ws.IssueId == issueId &&
+//           ws.ResourceId == assigneeId &&
+//           ws.StreamStatus != StatusId.Inactive &&
+//           ws.StreamStatus != StatusId.Cancelled);
+
+//    // Resolve StreamName from assignee's department if not provided
+//    var deptName = await GetDepartmentNameAsync(assigneeId);
+//    var finalStreamName = deptName;
+
+//    if (existing != null)
+//    {
+//        // Already assigned — update StreamName if changed, leave % and status
+//        if (existing.StreamName != finalStreamName)
+//        {
+//            await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+//                ws => ws.StreamId == existing.StreamId,
+//                ws => { ws.StreamName = finalStreamName; }
+//            );
+//        }
+//        return existing;
+//    }
+
+//    // INSERT new row — Status=New(1), %=0, no thread
+//    var newRow = new WorkStream
+//    {
+//        IssueId = issueId,
+//        StreamName = finalStreamName,
+//        ResourceId = assigneeId,
+//        StreamStatus = StatusId.New,   // 1
+//        CompletionPct = 0,
+//        TargetDate = targetDate,
+//        ThreadId = null,           // no thread — assignment only
+//        ParentThreadId = null,           // set when they post first thread
+//    };
+
+//    await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
+//    await EnsureTicketAssignedAsync(issueId);
+
+//    return newRow;
+//}
+#endregion
+
+
+
