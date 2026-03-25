@@ -57,6 +57,7 @@ namespace APIGateWay.ModalLayer.PostData
 
         public string StreamName { get; set; } = string.Empty;
         public int? StreamStatus { get; set; }
+        public List<int>? ResolvedHandoffIds { get; set; }
         public bool? UseLastThread { get; set; } = null;
         public string? Comment { get; set; }
         public TempReturn? temp { get; set; }

@@ -36,7 +36,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         // FK → ThreadMaster.ThreadId (BIGINT from sequence)
         // The current/latest progress thread for this subtask
-        public int? ThreadId { get; set; }
+        public long? ThreadId { get; set; }
 
         // FK → ThreadMaster.ThreadId
         // The scope/planning thread that defines what this subtask covers
@@ -72,7 +72,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
-        public int? ParentThreadId { get; set; }
+        public long? ParentThreadId { get; set; }
     }
 
     // Returned by UpsertWorkStreamAsync to callers

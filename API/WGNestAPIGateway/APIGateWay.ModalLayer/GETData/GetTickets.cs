@@ -58,10 +58,11 @@ namespace APIGateWay.ModalLayer.GETData
     public class ThreadList
     {
         [Key]
-        public int? ThreadId { get; set; }
+        public long? ThreadId { get; set; }
         public string? CommentText { get; set; }
         public string? HtmlDesc { get; set; }
         public Guid Issue_Id { get; set; }
+        public Guid CreatedId { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
