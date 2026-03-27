@@ -20,15 +20,16 @@ namespace APIGateWay.ModalLayer.PostData
         //public const int QATesting = 9;   // QA
         public const int UATTesting = 9;  // UAT
         public const int AwaitingClientResponse = 10;  // ACR
-        public const int FunctionalFixCompleted = 11;  // FUNC-C
+        public const int FunctionalSupport = 11;  // ACR
+        public const int FunctionalFixCompleted = 12;  // FUNC-C
         //public const int TransportCreated = 13;  // TR-C
         //public const int TransportReleased = 14;  // TR-R
         //public const int MovedToQA = 15;  // QA-M
-        public const int MovedToProduction = 12;  // PRD-M
-        public const int OnHold = 13;  // HLD
-        public const int Closed = 14;  // CLS
-        public const int Cancelled = 15;  // CAN
-        public const int Inactive = 16;  // INA
+        public const int MovedToProduction = 13;  // PRD-M
+        public const int OnHold = 14;  // HLD
+        public const int Closed = 15;  // CLS
+        public const int Cancelled = 16;  // CAN
+        public const int Inactive = 17;  // INA
 
         // ── Helpers ───────────────────────────────────────────────────────────
 

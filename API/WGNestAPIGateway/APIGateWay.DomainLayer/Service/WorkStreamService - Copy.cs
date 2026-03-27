@@ -26,7 +26,7 @@ namespace APIGateWay.BusinessLayer.Repository
     //   OnHold=13, Closed=14, Cancelled=15, Inactive=16
     // =========================================================================
 
-    public class WorkStreamService : IWorkStreamService
+    public class WorkStreamServiceCopy : IWorkStreamService
     {
         private readonly APIGatewayDBContext _db;
         private readonly IDomainService _domainService;
@@ -34,7 +34,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly APIGateWayCommonService _commonService;
         private readonly IAttachmentService _attachmentService;
 
-        public WorkStreamService(
+        public WorkStreamServiceCopy(
             APIGatewayDBContext db,
             IDomainService domainService,
             ILoginContextService loginContext,
@@ -105,198 +105,143 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     // ── TYPE 2 / 3: Progress update ───────────────────────────────────
 
-                    var finalStreamName = await GetDepartmentNameAsync(posterId);
-                    int targetStatusId = dto.StreamStatus ?? 0; // Handle nulls safely
-
-                    if (targetStatusId == 0)
-                    {
-                        // If the department is "1" (or contains "1" / "Functional")
-                        if (!string.IsNullOrWhiteSpace(finalStreamName) &&
-                           (finalStreamName.Contains("1") || finalStreamName.Contains("Functional", StringComparison.OrdinalIgnoreCase)))
-                        {
-                            targetStatusId = StatusId.FunctionalSupport; // 11
-                        }
-                        else
-                        {
-                            // Fallback if it's 0 but the department is NOT 1 (Default to New/Assigned)
-                            targetStatusId = StatusId.InDevelopment; // 1
-                        }
-                    }
-
                     var resolvedStreamName = await ResolveStreamNameAsync(dto, posterId);
-                    //var resolvedStatus = dto.StreamStatus.HasValue
-                    //    ? dto.StreamStatus.Value
-                    //    : ResolveStreamStatus(dto.StreamName, dto.CompletionPct ?? 0);
-                    WorkStreamHandoff handoffToUpdate = null;
+                    var resolvedStatus = dto.StreamStatus.HasValue
+                        ? dto.StreamStatus.Value
+                        : ResolveStreamStatus(dto.StreamName, dto.CompletionPct ?? 0);
 
-                    // 1. If the frontend passed a specific handoffId, use it!
-                    if (dto.handsoffId.HasValue && dto.handsoffId.Value > 0)
+                    // 1. Create the Thread
+                    var (threadId, threadCreated) =
+                        await HandleThreadAsync(dto, posterId, attachmentResult);
+
+                    // 2. Validate Transition
+                    await ValidateStatusTransitionAsync(resolvedStatus, posterId, dto.IssueId);
+
+                    // 3. Upsert the CURRENT USER's stream row first.
+                    //    We need stream.StreamId before the handoff logic below.
+                    var stream = await UpsertStreamAsync(
+                        dto, posterId, resolvedStatus, threadId, resolvedStreamName);
+
+                    // ================================================================
+                    // [HANDOFF LOGIC A] TESTER REPORTS A BUG
+                    // ================================================================
+                    if (dto.ReportTestFailure)
                     {
-                        handoffToUpdate = await _db.Set<WorkStreamHandoff>()
-                            .FirstOrDefaultAsync(h => h.HandsOffId == dto.handsoffId.Value);
-                    }
-                    else
-                    {
-                        // 2. FALLBACK: Automatically find their most recent Pending handoff!
-                        handoffToUpdate = await _db.Set<WorkStreamHandoff>()
+                        // Block the developer (existing logic — mutates tracked entities)
+                        await HandleTestFailureAsync(dto, posterId);
+
+                        // Find the Pending handoff where THIS tester is the target
+                        var pendingHandoff = await _db.Set<WorkStreamHandoff>()
                             .Where(h => h.IssueId == dto.IssueId
-                                     && h.TargetStreamId == dto.WorkStreamId
+                                     && h.TargetStreamId == stream.StreamId
                                      && h.Status == HandoffStatus.Pending)
                             .OrderByDescending(h => h.CreatedAt)
                             .FirstOrDefaultAsync();
-                    }
-                    // 1. Create the Thread
-                    var (threadId, threadCreated) =
-                        await HandleThreadAsync(dto,  posterId, handoffToUpdate?.HandsOffId, attachmentResult);
 
-                    // 2. Validate Transition
-                    await ValidateStatusTransitionAsync(targetStatusId, posterId, dto.IssueId);
-                    // 3. Upsert the CURRENT USER's stream row first.
-                    //    We need stream.StreamId before the handoff logic below.
-                    WorkStream stream = null;
-                    bool isTerminalAction = (targetStatusId == 14 || targetStatusId == 15);
+                        if (pendingHandoff != null)
+                        {
+                            pendingHandoff.Status = HandoffStatus.Failed;
 
-                    if (!isTerminalAction)
-                    {
-                        // ================================================================
-                        // NORMAL FLOW (Developers & Testers)
-                        // ================================================================
-                        stream = await UpsertStreamAsync(
-                            dto, posterId, targetStatusId, threadId, resolvedStreamName);
-
-                        //if (dto.handsoffId.HasValue && dto.handsoffId.Value > 0)
-                        //{
-                        //    var handoffToUpdate = await _db.Set<WorkStreamHandoff>()
-                        //        .FirstOrDefaultAsync(h => h.HandsOffId == dto.handsoffId.Value);
-
-                            if (handoffToUpdate != null)
+                            // Link the bug thread to this failed handoff so the
+                            // developer can see exactly which thread reported the bug
+                            if (threadId > 0)
                             {
-                                // 1. Save the percentage to this specific Handoff
-                                handoffToUpdate.CompletionPct = dto.CompletionPct;
-                                handoffToUpdate.UpdatedAt = DateTime.UtcNow;
-                                handoffToUpdate.UpdatedBy = posterId;
+                                var bugThread = await _db.Set<ThreadMaster>()
+                                    .FirstOrDefaultAsync(t => t.ThreadId == threadId);
 
-                                // Force 100% if they explicitly clicked the "Pass" button
-                                if (dto.ClearTestFailure)
+                                if (bugThread != null)
+                                    bugThread.FailedHandoffId = pendingHandoff.HandsOffId;
+                            }
+
+                            await _db.SaveChangesAsync();
+                        }
+                    }
+
+                    // ================================================================
+                    // [HANDOFF LOGIC B] TESTER PASSES THE CODE
+                    // ================================================================
+                    if (dto.ClearTestFailure)
+                    {
+                        // Unblock the developer + run count check (existing logic)
+                        await HandleClearFailureAsync(dto, posterId);
+
+                        // Mark the Pending handoff as Passed
+                        var pendingHandoff = await _db.Set<WorkStreamHandoff>()
+                            .Where(h => h.IssueId == dto.IssueId
+                                     && h.TargetStreamId == stream.StreamId
+                                     && h.Status == HandoffStatus.Pending)
+                            .OrderByDescending(h => h.CreatedAt)
+                            .FirstOrDefaultAsync();
+
+                        if (pendingHandoff != null)
+                        {
+                            pendingHandoff.Status = HandoffStatus.Passed;
+                            pendingHandoff.UpdatedAt = DateTime.UtcNow;
+                            pendingHandoff.UpdatedBy = posterId;
+                            await _db.SaveChangesAsync();
+                        }
+                    }
+
+                    // ================================================================
+                    // [HANDOFF LOGIC C] DEVELOPER PUSHES CODE → assigns next person
+                    // ================================================================
+                    if (dto.NextAssignees != null && dto.NextAssignees.Any())
+                    {
+                        foreach (var assignee in dto.NextAssignees)
+                        {
+                            // 1. Assign the target (e.g. the Tester)
+                            var targetStream = await AssignWorkStreamAsync(
+                                issueId: dto.IssueId,
+                                assigneeId: assignee.Id,
+                                streamStatusId: assignee.StreamId,
+                                threadId: threadId,
+                                targetDate: assignee.TargetDate ?? dto.TargetDate
+                            );
+                            var seq = await _commonService.GetNextSequenceAsync("WorkStreamsHandsoff");
+                            int SiNo = seq.CurrentValue;
+                            // 2. Create the Handoff record
+                            var newHandoff = new WorkStreamHandoff
+                            {
+                                HandsOffId = SiNo,
+                                IssueId = dto.IssueId,
+                                SourceStreamId = stream.StreamId,       // current user (Dev)
+                                TargetStreamId = targetStream.StreamId, // next person (Tester)
+                                InitiatingThreadId = threadId > 0 ? threadId : 0,
+                                //HandoffType = $"{stream.StreamName}→{targetStream.StreamName}",
+                                Status = HandoffStatus.Pending,
+                                //SourceCompletionPctAtHandoff = (int?)(dto.CompletionPct ?? stream.CompletionPct ?? 0),
+                                //SourceStreamStatusAtHandoff = resolvedStatus,
+                                //CreatedAt = DateTime.UtcNow,
+                                //CreatedBy = posterId,
+                            };
+
+                            _db.Set<WorkStreamHandoff>().Add(newHandoff);
+                            await _db.SaveChangesAsync(); // must save now to get HandoffId
+
+                            // 3. Map previously-failed handoffs that this push resolves
+                            //    UI sends the HandoffIds it wants to close off
+                            if (dto.ResolvedHandoffIds != null && dto.ResolvedHandoffIds.Any())
+                            {
+                                var bugsToResolve = await _db.Set<WorkStreamHandoff>()
+                                    .Where(h => dto.ResolvedHandoffIds.Contains(h.HandsOffId))
+                                    .ToListAsync();
+
+                                foreach (var bug in bugsToResolve)
                                 {
-                                    handoffToUpdate.Status = HandoffStatus.Passed;
-                                    handoffToUpdate.CompletionPct = 100;
-                                }
-                                // Mark as failed if they clicked "Report Bug"
-                                else if (dto.ReportTestFailure)
-                                {
-                                    handoffToUpdate.Status = HandoffStatus.Failed;
+                                    bug.ResolvedByHandoffId = newHandoff.HandsOffId;
+                                    bug.UpdatedAt = DateTime.UtcNow;
+                                    bug.UpdatedBy = posterId;
                                 }
 
                                 await _db.SaveChangesAsync();
-
-                                // 2. 🔥 RECALCULATE THE PARENT WORKSTREAM PERCENTAGE 🔥
-                                // Grab ALL handoffs assigned to this Tester to find the true average
-                                var allMyHandoffs = await _db.Set<WorkStreamHandoff>()
-                                    .Where(h => h.TargetStreamId == stream.StreamId)
-                                    .ToListAsync();
-
-                                if (allMyHandoffs.Any())
-                                {
-                                    // Calculate the average! (e.g., 50 + 0 / 2 = 25%)
-                                    var avgPct = allMyHandoffs.Average(h => h.CompletionPct ?? 0);
-                                    stream.CompletionPct = Math.Round((decimal)avgPct, 2);
-
-                                    // Update the Tester's main progress bar with the new average
-                                    await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-                                        ws => ws.StreamId == stream.StreamId,
-                                        ws => { ws.CompletionPct = stream.CompletionPct ; }
-                                    );
-                                }
-                            }
-                        //}
-
-                        if (dto.NextAssignees != null && dto.NextAssignees.Any())
-                        {
-                            foreach (var assignee in dto.NextAssignees)
-                            {
-                                // 1. Assign the target (e.g. the Tester)
-                                var targetStream = await AssignWorkStreamAsync(
-                                    issueId: dto.IssueId,
-                                    assigneeId: assignee.Id,
-                                    streamStatusId: assignee.StreamId,
-                                    threadId: threadId,
-                                    targetDate: assignee.TargetDate ?? dto.TargetDate
-                                );
-
-                                var seq = await _commonService.GetNextSequenceAsync("WorkStreamsHandsoff");
-                                int SiNo = seq.CurrentValue;
-
-                                // 2. Create the Handoff record
-                                var newHandoff = new WorkStreamHandoff
-                                {
-                                    HandsOffId = SiNo,
-                                    IssueId = dto.IssueId,
-                                    SourceStreamId = stream.StreamId,
-                                    TargetStreamId = targetStream.StreamId,
-                                    InitiatingThreadId = threadId > 0 ? threadId : 0,
-                                    Status = HandoffStatus.Pending,
-                                };
-
-                                _db.Set<WorkStreamHandoff>().Add(newHandoff);
-                                await _db.SaveChangesAsync(); // must save now to get HandoffId
-
-                                // 3. Map previously-failed handoffs that this push resolves
-                                if (dto.ResolvedHandoffIds != null && dto.ResolvedHandoffIds.Any())
-                                {
-                                    var bugsToResolve = await _db.Set<WorkStreamHandoff>()
-                                        .Where(h => dto.ResolvedHandoffIds.Contains(h.HandsOffId))
-                                        .ToListAsync();
-
-                                    foreach (var bug in bugsToResolve)
-                                    {
-                                        bug.ResolvedByHandoffId = newHandoff.HandsOffId;
-                                        bug.UpdatedAt = DateTime.UtcNow;
-                                        bug.UpdatedBy = posterId;
-                                    }
-                                    await _db.SaveChangesAsync();
-                                }
                             }
                         }
                     }
-                    else
-                    {
-                        // ================================================================
-                        // TERMINAL FLOW (Owner Closes or Cancels Ticket)
-                        // ================================================================
 
-                        // 1. Create a "Dummy" stream so BuildResponse doesn't crash!
-                        stream = new WorkStream
-                        {
-                            StreamId = Guid.Empty, // Empty Guid because this isn't going into the DB
-                            ResourceId = posterId,
-                            StreamName = targetStatusId == 14 ? "Ticket Closed" : "Ticket Cancelled",
-                            StreamStatus = targetStatusId,
-                            CompletionPct = targetStatusId == 14 ? 100 : 0
-                        };
-
-                        // 2. CRITICAL: We MUST force all active subtasks to close/cancel.
-                        // If we don't, ComputeAndUpdateTicketStatusAsync will see active 
-                        // developers and instantly reopen the ticket.
-                        var activeSubtasks = await _db.WorkStreams
-                            .Where(ws => ws.IssueId == dto.IssueId && ws.StreamStatus != StatusId.Inactive)
-                            .ToListAsync();
-
-                        foreach (var subtask in activeSubtasks)
-                        {
-                            subtask.StreamStatus = targetStatusId; // Force to 14 or 15
-                            if (targetStatusId == 14) subtask.CompletionPct = 100;
-                        }
-
-                        await _db.SaveChangesAsync(); // Save the forced closures
-                    }
                     // Finally, compute the overall ticket status (unchanged)
-                    var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(
-                         dto.IssueId,
-                         isTerminalAction ? targetStatusId : null
-                     );
+                    var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
 
-                    return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
+                    return BuildResponse(dto, stream, resolvedStatus, threadId, threadCreated, ticketStatus2);
                 });
             }
             catch (Exception ex) 
@@ -369,7 +314,6 @@ namespace APIGateWay.BusinessLayer.Repository
         private async Task<(long threadId, bool threadCreated)> HandleThreadAsync(
             PostWorkStreamDto dto,
             Guid posterId,
-            int? HandsoffId,
             ProcessedAttachmentResult? attachmentResult)
         {
             // Toggle ON: link the last thread this user posted
@@ -414,7 +358,6 @@ namespace APIGateWay.BusinessLayer.Repository
                     ThreadId = threadId,
                     Issue_Id = dto.IssueId,
                     HtmlDesc = finalHtml,
-                    HandsOffId = HandsoffId,
                     CommentText = HtmlUtilities.ConvertToPlainText(finalHtml),
                     From_Time = dto.From_Time,   // null = not logged
                     To_Time = dto.To_Time,
@@ -432,6 +375,107 @@ namespace APIGateWay.BusinessLayer.Repository
 
             // Neither: pure % update — no thread at all
             return (0, false);
+        }
+
+        // =====================================================================
+        // 2a. HANDLE TEST FAILURE
+        // Mutates tracked entities only — NO SaveChangesAsync
+        // EF batches these with the next SaveChangesAsync inside UpsertStreamAsync
+        // =====================================================================
+        private async Task HandleTestFailureAsync(PostWorkStreamDto dto, Guid testerResourceId)
+        {
+            var query = _db.WorkStreams
+                .Where(ws =>
+                    ws.IssueId == dto.IssueId &&
+                    ws.StreamStatus != null &&
+                    ws.StreamStatus != StatusId.Inactive &&
+                    ws.StreamStatus != StatusId.Cancelled &&
+                    ws.ResourceId != testerResourceId); // exclude tester's own row
+
+            if (dto.TargetDeveloperResourceId.HasValue)
+                query = query.Where(ws =>
+                    ws.ResourceId == dto.TargetDeveloperResourceId.Value);
+
+            var rows = await query.ToListAsync();
+
+            // Soft fail — if no dev rows yet, skip silently
+            // Block will apply when developers post their first thread
+            if (!rows.Any()) return;
+
+            foreach (var row in rows)
+            {
+                row.CompletionPct = Math.Max(0,
+                    (row.CompletionPct ?? 0) - Math.Max(1, dto.PercentageDrop ?? 30));
+                row.BlockedByTestFailure = true;
+                row.BlockedReason = dto.TestFailureComment;
+                row.BlockedAt = DateTime.UtcNow;
+                row.BlockedByResourceId = testerResourceId;
+
+                // Revert DevCompleted → InDevelopment (cannot stay completed while blocked)
+                //if (row.StreamStatus == StatusId.DevelopmentCompleted)
+                row.StreamStatus = StatusId.InDevelopment;
+
+                // NO SaveChangesAsync — EF change tracker holds these
+            }
+        }
+
+        // =====================================================================
+        // 2b. HANDLE CLEAR FAILURE
+        // Validates who can clear, then mutates — NO SaveChangesAsync
+        // =====================================================================
+        private async Task HandleClearFailureAsync(PostWorkStreamDto dto, Guid clearingResourceId)
+        {
+            // Check 1: is this person the original blocker?
+            var isBlocker = await _db.WorkStreams
+                .AnyAsync(ws =>
+                    ws.IssueId == dto.IssueId &&
+                    ws.BlockedByResourceId == clearingResourceId);
+
+            // Check 2: is this person an active tester on this ticket?
+            var isActiveTester = await _db.WorkStreams
+            .AnyAsync(ws =>
+                ws.IssueId == dto.IssueId &&
+                ws.ResourceId == clearingResourceId &&
+                ws.StreamStatus != null &&
+                ws.StreamStatus != StatusId.Inactive &&
+                ws.StreamStatus != StatusId.Cancelled &&
+                (ws.StreamStatus == StatusId.FunctionalTesting ||
+                 ws.StreamStatus == StatusId.UATTesting ||
+                 ws.StreamStatus == StatusId.FunctionalFixCompleted ||
+                 ws.StreamStatus == StatusId.UnitTesting));
+
+            // Check 3: is this person the ticket owner?
+            var isOwner = await _db.Set<TicketMaster>()
+                .AnyAsync(t =>
+                    t.Issue_Id == dto.IssueId &&
+                    t.CreatedBy == clearingResourceId);
+
+            if (!isBlocker && !isActiveTester && !isOwner)
+                throw new InvalidOperationException(
+                    "You are not authorised to clear this test failure. " +
+                    "Only the tester who reported the failure, another active " +
+                    "tester on this ticket, or the ticket owner can unblock a developer.");
+
+            var query = _db.WorkStreams
+                .Where(ws =>
+                    ws.IssueId == dto.IssueId &&
+                    ws.BlockedByTestFailure == true);
+
+            if (dto.TargetDeveloperResourceId.HasValue)
+                query = query.Where(ws =>
+                    ws.ResourceId == dto.TargetDeveloperResourceId.Value);
+
+            var rows = await query.ToListAsync();
+            if (!rows.Any()) return;
+
+            foreach (var row in rows)
+            {
+                row.BlockedByTestFailure = false;
+                row.BlockedReason = null;
+                row.BlockedAt = null;
+                row.BlockedByResourceId = null;
+                // NO SaveChangesAsync — EF tracks
+            }
         }
 
         // =====================================================================
@@ -575,6 +619,62 @@ namespace APIGateWay.BusinessLayer.Repository
                 return completedFamilyRow;
             }
 
+            // ── Step 3: self-move — moving to a DIFFERENT family ──────────────────
+            // e.g. Dev (family: 5/6) → UnitTesting (family: 7/8/9/11)
+            // Find their most advanced active row from a DIFFERENT family
+            // and auto-complete it IF the new stage is more advanced
+            //var allActiveRows = await _db.WorkStreams
+            //    .Where(ws =>
+            //        ws.IssueId == dto.IssueId &&
+            //        ws.ResourceId == posterId &&
+            //        ws.StreamStatus != null &&
+            //        ws.StreamStatus != StatusId.Inactive &&
+            //        ws.StreamStatus != StatusId.Cancelled &&
+            //        !StatusId.CompletedStatuses.Contains(ws.StreamStatus!.Value))
+            //    .Join(_db.StatusMasters,
+            //        ws => ws.StreamStatus,
+            //        sm => sm.Status_Id,
+            //        (ws, sm) => new { ws, sm.Sort_Order })
+            //    .ToListAsync();
+
+            //// Only consider rows NOT in the same family as resolvedStatus
+            //var differentFamilyActiveRow = allActiveRows
+            //    .Where(x => !StatusId.SameFamily(x.ws.StreamStatus!.Value, resolvedStatus))
+            //    .OrderByDescending(x => x.Sort_Order)
+            //    .Select(x => x.ws)
+            //    .FirstOrDefault();
+
+            //if (differentFamilyActiveRow != null)
+            //{
+            //    var prevSortOrder = allActiveRows
+            //        .FirstOrDefault(x => x.ws.StreamId == differentFamilyActiveRow.StreamId)
+            //        ?.Sort_Order ?? 0;
+
+            //    var newSortOrder = await _db.StatusMasters
+            //        .Where(s => s.Status_Id == resolvedStatus)
+            //        .Select(s => s.Sort_Order)
+            //        .FirstOrDefaultAsync();
+
+            //    // Only auto-complete if genuinely moving forward
+            //    if (newSortOrder > prevSortOrder)
+            //    {
+            //        // Determine correct completion status based on FAMILY, not StreamName
+            //        var prevFamily = StatusId.GetFamily(differentFamilyActiveRow.StreamStatus!.Value);
+            //        int completionStatus = prevFamily != null && prevFamily.Contains(StatusId.DevelopmentCompleted)
+            //            ? StatusId.DevelopmentCompleted    // Dev family → DevCompleted
+            //            : StatusId.FunctionalFixCompleted; // Test/other family → FuncFixCompleted
+
+            //        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+            //            ws => ws.StreamId == differentFamilyActiveRow.StreamId,
+            //            ws =>
+            //            {
+            //                ws.StreamStatus = completionStatus;
+            //                ws.CompletionPct = 100;
+            //            }
+            //        );
+            //    }
+            //}
+
             // ── Step 4: INSERT new row for the new stage ──────────────────────────
             var newRow = new WorkStream
             {
@@ -610,29 +710,13 @@ namespace APIGateWay.BusinessLayer.Repository
             // Resolve StreamName from Status_Master — MUST be uncommented
             string finalStreamName;
             finalStreamName = await GetDepartmentNameAsync(assigneeId);
-            int? targetStatusId = streamStatusId; // Handle nulls safely
-
-            if (targetStatusId == 0)
-            {
-                // If the department is "1" (or contains "1" / "Functional")
-                if (!string.IsNullOrWhiteSpace(finalStreamName) &&
-                   (finalStreamName.Contains("1") || finalStreamName.Contains("Functional", StringComparison.OrdinalIgnoreCase)))
-                {
-                    targetStatusId = StatusId.FunctionalSupport; // 11
-                }
-                else
-                {
-                    // Fallback if it's 0 but the department is NOT 1 (Default to New/Assigned)
-                    targetStatusId = StatusId.InDevelopment; // 1
-                }
-            }
 
             // Idempotent: same person + same stage + not completed = return existing
             var existing = await _db.WorkStreams
                 .FirstOrDefaultAsync(ws =>
                     ws.IssueId == issueId &&
                     ws.ResourceId == assigneeId &&
-                    ws.StreamStatus == targetStatusId &&
+                    ws.StreamStatus == streamStatusId &&
                     ws.StreamStatus != StatusId.Inactive &&
                     ws.StreamStatus != StatusId.Cancelled &&
                     !StatusId.CompletedStatuses.Contains(ws.StreamStatus ?? 0));
@@ -645,7 +729,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 IssueId = issueId,
                 StreamName = finalStreamName,
                 ResourceId = assigneeId,
-                StreamStatus = targetStatusId,
+                StreamStatus = streamStatusId,
                 CompletionPct = 0,
                 TargetDate = targetDate,
                 ThreadId = threadId > 0 ? threadId : null,
@@ -664,15 +748,15 @@ namespace APIGateWay.BusinessLayer.Repository
         // Returns TicketStatusResult with RepoKey + BroadcastPayload
         // The CALLER (WorkStreamRepo) does the actual SignalR broadcast
         // =====================================================================
-        // 🔥 Added the optional parameter here
-        public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(Guid? issueId, int? forceTerminalStatusId = null)
+        public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(Guid? issueId)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
                     ws.IssueId == issueId &&
-                    ws.StreamStatus != StatusId.Inactive)
+                    ws.StreamStatus != StatusId.Inactive &&   // only exclude explicitly removed
+                    ws.StreamStatus != StatusId.Cancelled)
                 .Join(_db.StatusMasters,
-                    ws => ws.StreamStatus ?? StatusId.New,
+                    ws => ws.StreamStatus ?? StatusId.New,   // ← NULL → New(1) for join
                     sm => sm.Status_Id,
                     (ws, sm) => new
                     {
@@ -681,13 +765,11 @@ namespace APIGateWay.BusinessLayer.Repository
                         sm.Sort_Order,
                         sm.Status_Name,
                         IsCompleted = ws.StreamStatus.HasValue &&
-                                      StatusId.CompletedStatuses.Contains(ws.StreamStatus.Value)
+                                      StatusId.CompletedStatuses.Contains(ws.StreamStatus.Value),
+                        // NULL StreamStatus = not completed, always active
                     })
                 .ToListAsync();
-
-            // 🔥 If there are no subtasks AND the owner isn't trying to force it closed, return New.
-            if (!subtasks.Any() && forceTerminalStatusId == null)
-            {
+            if (!subtasks.Any())
                 return new TicketStatusResult
                 {
                     ComputedStatusId = StatusId.New,
@@ -698,77 +780,74 @@ namespace APIGateWay.BusinessLayer.Repository
                     ActiveSubtasks = 0,
                     TicketAutoCompleted = false,
                 };
-            }
 
-            // 🔥 Safely handle the math! Only run Average() if the list actually has items.
-            var overallPct = subtasks.Any()
-                ? Math.Round(subtasks.Average(s => (double)(s.CompletionPct ?? 0)), 2)
-                : 0;
-
+            var overallPct = Math.Round(subtasks.Average(s => (double)(s.CompletionPct ?? 0)), 2);
             var totalSubtasks = subtasks.Count;
             var completedSubtasks = subtasks.Count(s => s.IsCompleted);
             var activeSubtasks = subtasks.Count(s => !s.IsCompleted);
+            //var allCompleted = completedSubtasks == totalSubtasks;
 
             int computedStatusId;
             string computedStatusName;
 
-            // 🔥 Check both the database rows AND the new explicit parameter
-            bool isExplicitlyClosed = forceTerminalStatusId == StatusId.Closed || subtasks.Any(s => s.StreamStatus == StatusId.Closed);
-            bool isExplicitlyCancelled = forceTerminalStatusId == StatusId.Cancelled || subtasks.Any(s => s.StreamStatus == StatusId.Cancelled);
+            bool ownerExplicitlyClosed = subtasks.Any(s => s.StreamStatus == StatusId.Closed);
+            bool allCompleted = false; // Default to false to prevent auto-completion flags
 
-            if (isExplicitlyClosed)
+            if (ownerExplicitlyClosed)
             {
                 computedStatusId = StatusId.Closed;  // 14
                 computedStatusName = "Closed";
-                overallPct = 100; // Force to 100% on close
+                overallPct = 100;
+                allCompleted = true;
             }
-            else if (isExplicitlyCancelled)
-            {
-                computedStatusId = StatusId.Cancelled; // 15
-                computedStatusName = "Cancelled";
-            }
+
+            //if (allCompleted)
+            //{
+            //    computedStatusId = StatusId.Closed;  // 14
+            //    computedStatusName = "Closed";
+            //}
             else
             {
                 if (overallPct > 90) overallPct = 90;
-
+                // Most advanced ACTIVE stage = highest Sort_Order among non-completed
                 var mostAdvanced = subtasks
                     .Where(s => !s.IsCompleted)
                     .OrderByDescending(s => s.Sort_Order)
                     .FirstOrDefault();
-
-                if (mostAdvanced == null && subtasks.Any())
+                if (mostAdvanced == null)
                 {
                     mostAdvanced = subtasks.OrderByDescending(s => s.Sort_Order).First();
                 }
-
-                // Fallback safely just in case MostAdvanced is null
-                computedStatusId = mostAdvanced?.StreamStatus ?? StatusId.New;
-                computedStatusName = mostAdvanced?.Status_Name ?? "New";
+                computedStatusId = mostAdvanced.StreamStatus!.Value;
+                computedStatusName = mostAdvanced.Status_Name;
             }
 
+            // Load ticket — update Status + CompletionPct
             var ticket = await _db.Set<TicketMaster>()
                 .FirstOrDefaultAsync(t => t.Issue_Id == issueId);
+            bool isTerminal =
+                ticket?.Status == StatusId.Closed ||
+                ticket?.Status == StatusId.Cancelled;
 
-            bool isTerminal = computedStatusId == StatusId.Closed || computedStatusId == StatusId.Cancelled;
+            // If ticket was closed but now has active subtasks → reopen it
+            bool shouldReopen = isTerminal && activeSubtasks > 0 && !ownerExplicitlyClosed;
 
-            bool shouldReopen = isTerminal && activeSubtasks > 0;
-
-            if (ticket != null)
+            if (ticket != null && (!isTerminal || shouldReopen))
             {
                 await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
                     t => t.Issue_Id == issueId,
                     t =>
                     {
-                        t.Status = computedStatusId;
-                        t.CompletionPct = (decimal?)overallPct;
+                        t.Status = computedStatusId;   // new computed status
+                        t.CompletionPct = (decimal?)overallPct; // new average %
                         t.StatusName = computedStatusName;
                     }
                 );
             }
-
             if (shouldReopen)
                 isTerminal = false;
 
+            // Resolve RepoKey for broadcast — done here so Repo doesn't need extra DB call
             string repoKey = string.Empty;
             try
             {
@@ -782,9 +861,11 @@ namespace APIGateWay.BusinessLayer.Repository
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[WorkStreamService] RepoKey lookup failed for {issueId}: {ex.Message}");
+                Console.WriteLine(
+                    $"[WorkStreamService] RepoKey lookup failed for {issueId}: {ex.Message}");
             }
 
+            // Pre-build broadcast payload — Repo passes this directly to BroadcastAsync
             var broadcastPayload = isTerminal ? null : (object)new
             {
                 Issue_Id = issueId,
@@ -794,7 +875,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 TotalSubtasks = totalSubtasks,
                 CompletedSubtasks = completedSubtasks,
                 ActiveSubtasks = activeSubtasks,
-                AutoClosed = false,
+                AutoClosed = allCompleted,
                 UpdatedAt = DateTime.UtcNow,
             };
 
@@ -806,7 +887,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 TotalSubtasks = totalSubtasks,
                 CompletedSubtasks = completedSubtasks,
                 ActiveSubtasks = activeSubtasks,
-                TicketAutoCompleted = false,
+                TicketAutoCompleted = allCompleted,
                 RepoKey = repoKey,
                 IsTerminal = isTerminal,
                 BroadcastPayload = broadcastPayload,
@@ -912,7 +993,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
         private static PostWorkStreamResponse BuildResponse(
             PostWorkStreamDto dto,
-            WorkStream? stream,
+            WorkStream stream,
             int resolvedStatus,
             long threadId,
             bool threadCreated,
@@ -1142,268 +1223,5 @@ namespace APIGateWay.BusinessLayer.Repository
         #endregion
     }
 }
-
-#region PUBLIC ENTRY POINT — reads like a table of contents
-// =====================================================================
-//public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
-//{
-//    ProcessedAttachmentResult attachmentResult = null;
-
-//    try
-//    {
-//        return await _domainService.ExecuteInTransactionAsync(async () =>
-//        {
-//            // Poster is always the logged-in user
-//            var posterId = dto.ResourceId ?? _loginContext.userId;
-
-//            // ── TYPE 1: Pure assignment — no thread, no % update ──────
-//            if (dto.AssignOnly)
-//            {
-//                if (!dto.NextAssigneeId.HasValue)
-//                    throw new InvalidOperationException(
-//                        "NextAssigneeId is required when AssignOnly is true.");
-
-//                var assigned = await AssignWorkStreamAsync(
-//                    issueId: dto.IssueId,
-//                    assigneeId: dto.NextAssigneeId.Value,
-//                    streamStatusId: dto.NextAssigneeStreamId,
-//                    targetDate: dto.TargetDate
-//                );
-
-//                var ticketStatusForAssign =
-//                    await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
-
-//                return new PostWorkStreamResponse
-//                {
-//                    WorkStreamId = assigned.StreamId,
-//                    ResourceId = assigned.ResourceId ?? Guid.Empty,
-//                    StreamName = assigned.StreamName ?? string.Empty,
-//                    StreamStatus = assigned.StreamStatus,
-//                    StatusName = "New",
-//                    CompletionPct = 0,
-//                    ThreadCreated = false,
-//                    ThreadId = null,
-//                    TicketStatusId = ticketStatusForAssign.ComputedStatusId,
-//                    TicketStatusName = ticketStatusForAssign.ComputedStatusName,
-//                    TicketOverallPct = ticketStatusForAssign.OverallPct,
-//                    TotalSubtasks = ticketStatusForAssign.TotalSubtasks,
-//                    CompletedSubtasks = ticketStatusForAssign.CompletedSubtasks,
-//                    ActiveSubtasks = ticketStatusForAssign.ActiveSubtasks,
-//                    TicketCompleted = ticketStatusForAssign.TicketAutoCompleted,
-//                    IssueId = dto.IssueId,
-//                    RepoKey = ticketStatusForAssign.RepoKey,
-//                    IsTerminal = ticketStatusForAssign.IsTerminal,
-//                    BroadcastPayload = ticketStatusForAssign.BroadcastPayload,
-//                };
-//            }
-
-//            // ── TYPE 2 / 3: Progress update ───────────────────────────
-//            //var resolvedStreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-//            //    ? await GetDepartmentNameAsync(posterId)
-//            //    : dto.StreamName;
-//            var resolvedStreamName = await ResolveStreamNameAsync(dto, posterId);
-//            // Auto-resolve StreamStatus from StreamName + CompletionPct
-//            // UI sends StreamName ("Web Development", "QA Testing" etc.)
-//            // Service computes which StatusId that maps to
-//            var resolvedStatus = dto.StreamStatus.HasValue
-//                 ? dto.StreamStatus.Value                                           // UI sent explicit status → use it
-//                 : ResolveStreamStatus(dto.StreamName, dto.CompletionPct ?? 0);
-
-//            // 1. Thread — optional (null/no comment = no thread)
-//            var (threadId, threadCreated) =
-//                await HandleThreadAsync(dto, posterId, attachmentResult);
-
-//            // 2. Test failure / clear (no SaveChangesAsync inside — EF tracks)
-//            if (dto.ReportTestFailure)
-//                await HandleTestFailureAsync(dto, posterId);
-
-//            if (dto.ClearTestFailure)
-//                await HandleClearFailureAsync(dto, posterId);
-
-//            // 3. Validate before upsert (block DevCompleted if test failed)
-//            await ValidateStatusTransitionAsync(resolvedStatus, posterId, dto.IssueId);
-
-//            // 4. Upsert poster's own WorkStream row
-//            // ── Determine whether to create poster's own row or just assign ──────────
-//            bool isPureAssignment = dto.NextAssigneeId.HasValue &&
-//                                    dto.CompletionPct == null &&
-//                                    dto.StreamStatus == null;
-
-//            WorkStream stream;
-
-//            if (isPureAssignment)
-//            {
-//                // Owner assigning someone — no row for the owner, just create assignee row
-//                stream = await AssignWorkStreamAsync(
-//                    issueId: dto.IssueId,
-//                    assigneeId: dto.NextAssigneeId.Value,
-//                    streamStatusId: dto.NextAssigneeStreamId,
-//                    targetDate: dto.TargetDate
-//                );
-//            }
-//            else
-//            {
-//                // Normal progress post — update poster's own row
-//                stream = await UpsertStreamAsync(
-//                    dto, posterId, resolvedStatus, threadId, resolvedStreamName);
-
-//                // Also assign next person if provided
-//                if (dto.NextAssigneeId.HasValue)
-//                {
-//                    await AssignWorkStreamAsync(
-//                        issueId: dto.IssueId,
-//                        assigneeId: dto.NextAssigneeId.Value,
-//                        streamStatusId: dto.NextAssigneeStreamId,
-//                        targetDate: dto.TargetDate
-//                    );
-//                }
-//            }
-
-
-
-//            // 6. Compute live ticket status (updates DB + builds broadcast payload)
-//            var ticketStatus = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
-
-//            return BuildResponse(
-//                dto, stream, resolvedStatus, threadId, threadCreated, ticketStatus);
-//        });
-//    }
-//    catch
-//    {
-//        if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
-//            _attachmentService.RollbackPhysicalFiles(
-//                attachmentResult.PermanentFilePathsCreated);
-//        throw;
-//    }
-//}
-#endregion
-
-#region OLD UpsertStreamAsync
-//private async Task<WorkStream> UpsertStreamAsync(
-//    PostWorkStreamDto dto,
-//    Guid posterId,
-//    int resolvedStatus,
-//    int threadId)
-//{
-//    var existing = await _db.WorkStreams
-//        .FirstOrDefaultAsync(ws =>
-//            ws.IssueId == dto.IssueId &&
-//            ws.ResourceId == posterId &&
-//            ws.StreamStatus != null &&
-//            ws.StreamStatus != StatusId.Inactive &&
-//            ws.StreamStatus != StatusId.Cancelled);
-
-//    if (existing != null)
-//    {
-//        await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-//            ws => ws.StreamId == existing.StreamId,
-//            ws =>
-//            {
-//                ws.StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-//                    ? ws.StreamName
-//                    : dto.StreamName;
-//                ws.StreamStatus = resolvedStatus;
-//                ws.CompletionPct = dto.CompletionPct ?? ws.CompletionPct;
-
-//                if (threadId > 0)
-//                {
-//                    ws.ThreadId = threadId;
-//                    // First thread ever = scope/parent thread — set only once
-//                    if (ws.ParentThreadId == null)
-//                        ws.ParentThreadId = threadId;
-//                }
-
-//                if (dto.TargetDate.HasValue)
-//                    ws.TargetDate = dto.TargetDate;
-
-//                // UpdatedAt, UpdatedBy → DBContext audit
-//            }
-//        );
-
-//        return existing;
-//    }
-//    else
-//    {
-//        // New row — resolve StreamName from poster's department
-//        var streamName = await GetDepartmentNameAsync(posterId);
-
-//        var newRow = new WorkStream
-//        {
-//            IssueId = dto.IssueId,
-//            StreamName = string.IsNullOrWhiteSpace(dto.StreamName)
-//                ? streamName
-//                : dto.StreamName,
-//            ResourceId = posterId,
-//            StreamStatus = resolvedStatus,
-//            CompletionPct = dto.CompletionPct ?? 0,
-//            TargetDate = dto.TargetDate,
-//            ThreadId = threadId > 0 ? threadId : null,
-//            ParentThreadId = threadId > 0 ? threadId : null,
-//            // CreatedAt, CreatedBy, UpdatedAt, UpdatedBy → DBContext audit
-//        };
-
-//        await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
-
-//        // New subtask → move ticket New(1) → Assigned(2)
-//        await EnsureTicketAssignedAsync(dto.IssueId);
-
-//        return newRow;
-//    }
-//}
-#endregion
-
-#region AssignWorkStreamAsync 
-//public async Task<WorkStream> AssignWorkStreamAsync(
-//    Guid issueId,
-//    Guid assigneeId,
-//    int? streamName,
-//    DateTime? targetDate)
-//{
-
-//    // Idempotent — return existing active row if already assigned
-//    var existing = await _db.WorkStreams
-//       .FirstOrDefaultAsync(ws =>
-//           ws.IssueId == issueId &&
-//           ws.ResourceId == assigneeId &&
-//           ws.StreamStatus != StatusId.Inactive &&
-//           ws.StreamStatus != StatusId.Cancelled);
-
-//    // Resolve StreamName from assignee's department if not provided
-//    var deptName = await GetDepartmentNameAsync(assigneeId);
-//    var finalStreamName = deptName;
-
-//    if (existing != null)
-//    {
-//        // Already assigned — update StreamName if changed, leave % and status
-//        if (existing.StreamName != finalStreamName)
-//        {
-//            await _domainService.UpdateTrackedEntityAsync<WorkStream>(
-//                ws => ws.StreamId == existing.StreamId,
-//                ws => { ws.StreamName = finalStreamName; }
-//            );
-//        }
-//        return existing;
-//    }
-
-//    // INSERT new row — Status=New(1), %=0, no thread
-//    var newRow = new WorkStream
-//    {
-//        IssueId = issueId,
-//        StreamName = finalStreamName,
-//        ResourceId = assigneeId,
-//        StreamStatus = StatusId.New,   // 1
-//        CompletionPct = 0,
-//        TargetDate = targetDate,
-//        ThreadId = null,           // no thread — assignment only
-//        ParentThreadId = null,           // set when they post first thread
-//    };
-
-//    await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
-//    await EnsureTicketAssignedAsync(issueId);
-
-//    return newRow;
-//}
-#endregion
-
 
 

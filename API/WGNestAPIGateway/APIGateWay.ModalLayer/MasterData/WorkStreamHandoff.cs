@@ -26,6 +26,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         // The thread/comment the developer posted when moving it to QA
         public long InitiatingThreadId { get; set; }
+        public decimal? CompletionPct { get; set; }
 
         // Status: "Pending", "Passed", "Failed"
         [MaxLength(20)]

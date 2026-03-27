@@ -32,7 +32,7 @@ namespace APIGateWay.ModalLayer.MasterData
      
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
-
+        public int? HandsOffId { get; set; }
 
         // --------------------------------------------------------
         // 🛡️ AUDIT FIELDS (Handled dynamically)

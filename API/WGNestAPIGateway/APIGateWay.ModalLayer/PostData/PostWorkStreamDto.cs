@@ -44,6 +44,7 @@ namespace APIGateWay.ModalLayer.PostData
     {
         public Guid IssueId { get; set; }
         public Guid? ResourceId { get; set; }
+        public int? handsoffId { get; set; }
         public bool AssignOnly { get; set; } = false;
 
         // ── BEFORE (single assignee) ───────────────────────────────────────

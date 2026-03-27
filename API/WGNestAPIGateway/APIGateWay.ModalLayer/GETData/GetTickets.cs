@@ -26,6 +26,7 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid? Assignee_Id { get; set; }
         public string? Assignee_Name { get; set; }
         public string? All_Assignees { get; set; }
+        //public string? HandOffs { get; set; }
         public string? Priority { get; set; }
         public DateTime? Due_Date { get; set; }
         public int? StatusId { get; set; }
@@ -62,6 +63,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? CommentText { get; set; }
         public string? HtmlDesc { get; set; }
         public Guid Issue_Id { get; set; }
+        public int? HandsOffId  { get; set; }
         public Guid CreatedId { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? CreatedAt { get; set; }
