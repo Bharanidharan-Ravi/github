@@ -46,7 +46,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "GetNextNumber",
                     "DashBoardTimesheetData",
                     "GETTHREADLIST",
-                    "GetStatusMaster"
+                    "GetStatusMaster",
+                    "getdailyplan"
                 };
 
                 if (!validProcedureNames.Contains(storedProcedure))

@@ -10,7 +10,7 @@ namespace APIGateWay.ModalLayer.GETData
     public class DashBoardTimeSheetData
     {
         [Key]
-        public int ThreadId { get; set; }
+        public long ThreadId { get; set; }
         public Guid Issue_Id { get; set; }
 
         public string? EmployeeName { get; set; }

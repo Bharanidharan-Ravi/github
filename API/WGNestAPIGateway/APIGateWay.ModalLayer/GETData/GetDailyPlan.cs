@@ -14,17 +14,17 @@ namespace APIGateWay.ModalLayer.GETData
         public string? RepoKey { get; set; }
         public DateTime PlannedDate { get; set; }
         public int Status { get; set; }
-        public string StatusLabel { get; set; } = string.Empty;
+        //public string StatusLabel { get; set; } = string.Empty;
 
         // true when Status=2 — UI disables the checkbox
-        public bool IsLocked { get; set; }
+        //public bool IsLocked { get; set; }
 
         public string? UncheckComment { get; set; }
 
         // Joined from TicketMaster for display
-        public string? TicketTitle { get; set; }
-        public string? IssueCode { get; set; }
-        public string? ProjectName { get; set; }
+        public string? Title { get; set; }
+        public string? Issue_Code { get; set; }
+        //public string? ProjectName { get; set; }
 
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

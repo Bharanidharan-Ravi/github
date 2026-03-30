@@ -129,6 +129,20 @@ namespace APIGateWay.BusinessLayer.Helper
                 Strategy = "merge",
                 IdKey = "IssuesId",
                 DeltaEnabled = true
+            },
+            ["CheckedTickets"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "getdailyplan",
+                EntityType = typeof(GetDailyPlan),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "IssuesId",
+                DeltaEnabled = true
             }
         };
     }

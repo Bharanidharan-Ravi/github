@@ -42,45 +42,46 @@ namespace APIGateWay.DomainLayer.Service
                 var userDtos = repo.userLists;
 
                 #region Create LOGIN_MASTER Users
-
-                foreach (var userDto in userDtos)
+                if (userDtos != null && userDtos.Any() )
                 {
-                    var existingUser =
-                        await _context.LOGIN_MASTER
-                            .FirstOrDefaultAsync(x =>
-                                x.UserName == userDto.UserName);
-
-                    if (existingUser != null)
+                    foreach (var userDto in userDtos)
                     {
-                        throw new Exception(
-                            $"{userDto.UserName} already exists"
-                        );
+                        var existingUser =
+                            await _context.LOGIN_MASTER
+                                .FirstOrDefaultAsync(x =>
+                                    x.UserName == userDto.UserName);
+
+                        if (existingUser != null)
+                        {
+                            throw new Exception(
+                                $"{userDto.UserName} already exists"
+                            );
+                        }
+
+                        var (hash, salt) =
+                            _loginService.HashPasswordAgron(
+                                userDto.Password
+                            );
+
+                        var newUser = new LOGIN_MASTER
+                        {
+                            UserName = userDto.UserName,
+                            PasswordHash = hash,
+                            Salt = salt,
+                            DBName = _loginContext.databaseName,
+                            Password = userDto.Password,
+                            Status = "Active",
+                            Role = userDto.Role,
+                            ClientId = null,
+                        };
+
+                        _context.LOGIN_MASTER.Add(newUser);
+                        await _context.SaveChangesAsync();
+
+                        // Send UserId back to repo mapping
+                        userDto.UserId = newUser.UserID;
                     }
-
-                    var (hash, salt) =
-                        _loginService.HashPasswordAgron(
-                            userDto.Password
-                        );
-
-                    var newUser = new LOGIN_MASTER
-                    {
-                        UserName = userDto.UserName,
-                        PasswordHash = hash,
-                        Salt = salt,
-                        DBName = _loginContext.databaseName,
-                        Password = userDto.Password,
-                        Status = "Active",
-                        Role = userDto.Role,
-                        ClientId = null,
-                    };
-
-                    _context.LOGIN_MASTER.Add(newUser);
-                    await _context.SaveChangesAsync();
-
-                    // Send UserId back to repo mapping
-                    userDto.UserId = newUser.UserID;
                 }
-
                 #endregion
 
                 #region Create Repository
@@ -189,33 +190,37 @@ namespace APIGateWay.DomainLayer.Service
 
             var insertedUsers = new List<RepoUserList>();
 
-            foreach (var mail in data.userLists)
+            if (data.userLists != null && data.userLists.Any()) 
             {
-                string usersSeries = "RepositoryUserList";
-
-                var pUserSeries = new SqlParameter("@SeriesName", usersSeries);
-
-                var nextUserSeq = await _commonService
-                    .ExecuteGetItemAsyc<SequenceResult>(
-                        "GetNextNumber",
-                        pUserSeries
-                    );
-
-                var userEntity = new RepoUserList
+                foreach (var mail in data.userLists)
                 {
-                    SiNo = nextUserSeq[0].CurrentValue,
-                    UserName = mail.UserName,
-                    MailId = mail.MailId,
-                    UserId = mail.UserId,
-                    PhoneNumber = mail.PhoneNumber,
-                    RepoKey = repoKey,
-                    Status = "Active"
-                };
+                    string usersSeries = "RepositoryUserList";
 
-                _context.RepoUsers.Add(userEntity);
-              
-                insertedUsers.Add(userEntity);
+                    var pUserSeries = new SqlParameter("@SeriesName", usersSeries);
+
+                    var nextUserSeq = await _commonService
+                        .ExecuteGetItemAsyc<SequenceResult>(
+                            "GetNextNumber",
+                            pUserSeries
+                        );
+
+                    var userEntity = new RepoUserList
+                    {
+                        SiNo = nextUserSeq[0].CurrentValue,
+                        UserName = mail.UserName,
+                        MailId = mail.MailId,
+                        UserId = mail.UserId,
+                        PhoneNumber = mail.PhoneNumber,
+                        RepoKey = repoKey,
+                        Status = "Active"
+                    };
+
+                    _context.RepoUsers.Add(userEntity);
+
+                    insertedUsers.Add(userEntity);
+                }
             }
+
             if (attachmentResult != null && attachmentResult.Attachments != null && attachmentResult.Attachments.Any())
             {
                 _context.AttachmentMaster.AddRange(attachmentResult.Attachments);

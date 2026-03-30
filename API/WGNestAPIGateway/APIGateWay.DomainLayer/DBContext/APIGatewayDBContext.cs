@@ -80,6 +80,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ThreadList> threadLists { get; set; }
         public DbSet<GetLabel> getLabels { get; set; }
         public DbSet<DailyPlan> DailyPlans { get; set; }
+        public DbSet<GetDailyPlan> getDailyPlan { get; set; }
         public DbSet<WorkStream> WorkStreams { get; set; }
         public DbSet<WorkStreamHandoff> WorkStreamHandoff { get; set; }
         public DbSet<StatusMaster> StatusMasters { get; set; }
