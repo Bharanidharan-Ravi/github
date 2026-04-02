@@ -18,6 +18,8 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Repository_Name { get; set; }
 
         public string? Project_Name { get; set; }
+        public Guid? Project_Id { get; set; }
+        public Guid? UpdatedBy { get; set; }
 
         public string? TicketNo { get; set; }
 
@@ -28,15 +30,15 @@ namespace APIGateWay.ModalLayer.GETData
         public string? ConsumeTime { get; set; }
 
         public string? Comment { get; set; }
+        public string? Labels_JSON { get; set; }
+        public DateTime? StartTime { get; set; }
 
-
-        public string? StartTime { get; set; }
-
-        public string? EndTime { get; set; }
+        public DateTime? EndTime { get; set; }
 
 
         public string? total { get; set; }
 
         public DateTime UpdatedAt { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

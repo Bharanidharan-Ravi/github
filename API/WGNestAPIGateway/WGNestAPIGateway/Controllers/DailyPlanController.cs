@@ -25,10 +25,16 @@ namespace APIGateway.Controllers
         // Body: { TicketId, ProjectId? }
         // Idempotent — safe to call multiple times for same ticket today
         [HttpPost]
-        public async Task<IActionResult> CheckTicket([FromBody] CreateDailyPlanDto dto)
+        public async Task<IActionResult> CheckTicket([FromBody] List<CreateDailyPlanDto> dto)
         {
-            if (dto.TicketId == Guid.Empty)
+            if (dto == null || dto.Count == 0)
+            {
+                return BadRequest(new { code = "VALIDATION_ERROR", ErrorMessage = "At least one ticket is required" });
+            }
+            if (dto.Any(dto => dto.TicketId == Guid.Empty))
+            {
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "TicketId is required." });
+            }
 
             var result = await _planRepo.CheckTicketAsync(dto);
             return Ok(result);
@@ -37,8 +43,8 @@ namespace APIGateway.Controllers
         // PATCH /api/dailyplan/{id}/uncheck
         // Body: { UncheckComment: "reason..." }
         // Returns 400 with code PLAN_LOCKED if ticket was marked Success
-        [HttpPatch("{id:guid}/uncheck")]
-        public async Task<IActionResult> UncheckTicket(Guid id, [FromBody] UncheckPlanDto dto)
+        [HttpPatch("{id:int}/uncheck")]
+        public async Task<IActionResult> UncheckTicket(int id, [FromBody] UncheckPlanDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto?.UncheckComment))
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "A comment is required when unchecking." });

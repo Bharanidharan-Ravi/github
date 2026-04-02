@@ -70,43 +70,53 @@ namespace APIGateWay.Business_Layer.Repository
             return plans;
         }
         // ── CHECK ticket (add to plan) ────────────────────────────────────────
-        public async Task<GetDailyPlan> CheckTicketAsync(CreateDailyPlanDto dto)
+        public async Task<List<GetDailyPlan>> CheckTicketAsync(List<CreateDailyPlanDto> dtos)
         {
             var userId = _loginContext.userId;
             var today = DateTime.UtcNow.Date;
+            var result = new List<GetDailyPlan>();
 
-            // Idempotent — return existing Active or Success row if found
-            var existing = await _db.DailyPlans.FirstOrDefaultAsync(p =>
-                p.UserId == userId &&
-                p.TicketId == dto.TicketId &&
-                p.PlannedDate.Date == today &&
-                (p.Status == DailyPlanStatus.Active || p.Status == DailyPlanStatus.Success));
-
-            if (existing != null)
-                return await BuildResponse(existing);
-            var seq = await _commonService.GetNextSequenceAsync("DailyPlanner");
-            var plan = new DailyPlan
+            foreach (var dto in dtos)
             {
-                Id = seq.CurrentValue,
-                UserId = userId,
-                TicketId = dto.TicketId,
-                ProjKey = dto.ProjKey,
-                PlannedDate = today,
-                Status = DailyPlanStatus.Active,
-                CreatedAt = DateTime.UtcNow,
-            };
+                // Idempotent — return existing Active or Success row if found
+                var existing = await _db.DailyPlans.FirstOrDefaultAsync(p =>
+                    p.UserId == userId &&
+                    p.TicketId == dto.TicketId &&
+                    p.PlannedDate.Date == today &&
+                    (p.Status == DailyPlanStatus.Active || p.Status == DailyPlanStatus.Success));
 
-            await _domainService.ExecuteInTransactionAsync(async () =>
-            {
-                await _domainService.SaveEntityWithAttachmentsAsync(plan, null);
-                return true;
-            });
+                if (existing != null)
+                {
+                    result.Add(await BuildResponse(existing));
+                    continue;
+                }
 
-            return await BuildResponse(plan);
+                var seq = await _commonService.GetNextSequenceAsync("DailyPlanner");
+                var plan = new DailyPlan
+                {
+                    Id = seq.CurrentValue,
+                    UserId = userId,
+                    TicketId = dto.TicketId,
+                    ProjKey = dto.ProjKey,
+                    PlannedDate = today,
+                    Status = DailyPlanStatus.Active,
+                    CreatedAt = DateTime.UtcNow,
+                };
+
+                await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    await _domainService.SaveEntityWithAttachmentsAsync(plan, null);
+                    return true;
+                });
+
+                result.Add(await BuildResponse(plan));
+            }
+
+            return result;
         }
 
         // ── UNCHECK ticket ────────────────────────────────────────────────────
-        public async Task<GetDailyPlan> UncheckTicketAsync(Guid planId, UncheckPlanDto dto)
+        public async Task<GetDailyPlan> UncheckTicketAsync(int planId, UncheckPlanDto dto)
         {
             var plan = await _db.DailyPlans.FindAsync(planId)
                 ?? throw new Exceptionlist.DataNotFoundException($"Plan '{planId}' not found.");

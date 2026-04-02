@@ -11,7 +11,7 @@ namespace APIGateWay.Business_Layer.Interface
     public interface IDailyPlanRepo
     {
         Task<List<GetDailyPlan>> GetTodayPlanAsync(DateTime date);
-        Task<GetDailyPlan> CheckTicketAsync(CreateDailyPlanDto dto);
-        Task<GetDailyPlan> UncheckTicketAsync(Guid planId, UncheckPlanDto dto);
+        Task<List<GetDailyPlan>> CheckTicketAsync(List<CreateDailyPlanDto> dto);
+        Task<GetDailyPlan> UncheckTicketAsync(int planId, UncheckPlanDto dto);
     }
 }
