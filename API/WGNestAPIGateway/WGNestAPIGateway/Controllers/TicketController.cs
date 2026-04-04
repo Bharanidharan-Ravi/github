@@ -1,4 +1,5 @@
-﻿using APIGateWay.BusinessLayer.Interface;
+﻿using APIGateWay.BusinessLayer.Helpers;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,7 +30,7 @@ namespace APIGateway.Controllers
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "RepoId is required." });
 
             var result = await _ticketRepo.CreateTicketAsync(dto);
-            return Ok(result);
+            return Ok(ApiResponseHelper.Success(result, "Ticket Created Successfully."));
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ namespace APIGateway.Controllers
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Title is required." });
 
             var result = await _ticketRepo.UpdateTicketAsync(id, dto);
-            return Ok(result);
+            return Ok(ApiResponseHelper.Success(result, "Ticket Updated Successfully."));
         }
 
         // ─────────────────────────────────────────────────────────────────────

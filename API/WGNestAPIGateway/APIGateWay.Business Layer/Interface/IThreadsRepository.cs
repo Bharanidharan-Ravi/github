@@ -11,5 +11,6 @@ namespace APIGateWay.BusinessLayer.Interface
     public interface IThreadsRepository
     {
         Task<ThreadList> CreateThreadAsync(PostThreadsDto threadDto);
+        Task<ThreadList> UpdateThreadAsync(long threadId, UpdateThreadDto dto);
     }
 }

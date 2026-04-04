@@ -1,4 +1,5 @@
 ﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Interface;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -33,6 +34,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly ISyncExecutionService _syncExecutionService;
         private readonly IWorkStreamService _workStreamService;
         private readonly APIGatewayDBContext _db;
+        private readonly ITicketHistoryRepository _historyRepository;
 
         public TicketRepo(
             IDomainService domainService,
@@ -44,7 +46,8 @@ namespace APIGateWay.BusinessLayer.Repository
             IRealtimeNotifier realtimeNotifier,
             ISyncExecutionService syncExecutionService,
             IWorkStreamService workStreamService,
-            APIGatewayDBContext dBContext)
+            APIGatewayDBContext dBContext,
+            ITicketHistoryRepository historyRepository)
         {
             _domainService = domainService;
             _commonService = service;
@@ -56,6 +59,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _syncExecutionService = syncExecutionService;  
             _workStreamService = workStreamService;
             _db = dBContext;
+            _historyRepository = historyRepository;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -106,7 +110,12 @@ namespace APIGateWay.BusinessLayer.Repository
                     ticketMaster.Description = HtmlUtilities.ConvertToPlainText(finalHtmlDescription);
 
                     await _domainService.SaveEntityWithAttachmentsAsync(ticketMaster, attachmentResult?.Attachments);
-
+                    await _historyRepository.LogAsync(TicketHistoryHelper.TicketCreated(issueId: ticketMaster?.Issue_Id,
+                                        issueCode: ticketMaster.Issue_Code,
+                                      actorId: _loginContext.userId,
+                                       actorName: _loginContext.userName
+                        )
+                    );
                     if (ticketDto.labelId != null && ticketDto.labelId.Any())
                     {
                         var issueLabels = ticketDto.labelId.Select(l => new IssueLabel
@@ -115,8 +124,20 @@ namespace APIGateWay.BusinessLayer.Repository
                             Label_Id = l.Id
                         }).ToList();
                         await _domainService.SaveLabelAsync(issueLabels);
-                    }
 
+                        foreach (var label in issueLabels)
+                        {
+                            await _historyRepository.LogAsync(
+                                TicketHistoryHelper.LabelAdded(
+                                    issueId: ticketMaster?.Issue_Id,
+                                    // look up from label cache or DB
+                                    labelId: label.Label_Id ?? 0,
+                                    actorId: _loginContext.userId,
+                                    actorName: _loginContext.userName
+                                )
+                            );
+                        }
+                    }
 
                     // ── Save WorkStreams — one row per assignee ────────────────
                     // Mirrors the labels pattern: loop + insert per resource
@@ -144,6 +165,39 @@ namespace APIGateWay.BusinessLayer.Repository
                                     TargetDate = ticketDto.TargetDate
                                 }
                             );
+                            var assigneeName = await _db.eMPLOYEEMASTERs
+                                  .Where(e => e.EmployeeID == resourceId)
+                                  .Select(e => new { Name = e.EmployeeName ?? "Unknown" })
+                                  .FirstOrDefaultAsync();
+
+                            var newStream = await _db.WorkStreams
+                            .Where(ws =>
+                            ws.IssueId == ticketMaster.Issue_Id &&
+                            ws.ResourceId == resourceId)
+                            .OrderByDescending(ws => ws.CreatedAt)
+                            .Select(ws => new { ws.StreamId })
+                            .FirstOrDefaultAsync();
+
+                            if (newStream != null)
+                            {
+                                await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
+                                    issueId: ticketMaster.Issue_Id,
+                                    assigneeName: assigneeName?.Name ?? "Unknown",
+                                    streamName: "General",
+                                    statusName: "New",
+                                    workStreamId: newStream.StreamId,
+                                    actorId: _loginContext.userId,
+                                    actorName: _loginContext.userName
+                                    ));
+                            }
+                            //await _historyRepository.LogAsync(
+                            //        TicketHistoryHelper.WorkStreamCreated(
+                            //            issueId: ticketMaster.Issue_Id,
+                            //    workStreamId: ticketDto.resourceIds,
+                            //actorId: _loginContext.userId,
+                            //actorName: _loginContext.userName
+                            //)
+                            //);
                         }
                     }
 
@@ -235,6 +289,30 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
 
                     var capturedHtml = finalHtmlDescription;
+                    var existingTicket = await _db.ISSUEMASTER.FindAsync(ticketId);
+                    if (existingTicket == null)
+                        throw new Exception("Ticket not found");
+
+                    var oldTitle = existingTicket.Title;
+                    var oldDescription = existingTicket.HtmlDesc;
+                    var oldPriority = existingTicket.Priority?.ToString();
+                    var oldDueDate = existingTicket.Due_Date;
+                    var oldStatus = existingTicket.Status?.ToString();
+
+                    var oldLabels = await _db.ISSUE_LABELS
+                    .Where(il => il.Issue_Id == ticketId)
+                    .ToListAsync();
+
+                    var currentlyActiveAssignees = await _db.WorkStreams
+                    .Where(ws =>
+                    ws.IssueId == ticketId &&
+                    ws.StreamStatus != StatusId.Inactive &&
+                    ws.StreamStatus != StatusId.Cancelled)
+                    .Join(_db.eMPLOYEEMASTERs,
+                    ws => ws.ResourceId,
+                    e => e.EmployeeID,
+                    (ws, e) => new { ws.ResourceId, e.EmployeeName })
+                    .ToListAsync();
 
                     var updatedTicket = await _domainService.UpdateEntityWithAttachmentsAsync<TicketMaster>(
                         ticketId,
@@ -257,17 +335,84 @@ namespace APIGateWay.BusinessLayer.Repository
                         attachmentResult?.Attachments
                     );
 
+                    if (oldTitle != dto.Title)
+                    {
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                            issueId: ticketId,
+                            fieldName: "Title",
+                            oldValue: oldTitle,
+                            newValue: dto.Title,
+                            actorId: _loginContext.userId,
+                            actorName: _loginContext.userName
+                            ));
+                    }
+
+                    if (oldDescription != dto.Description)
+                    {
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                            issueId: ticketId,
+                            fieldName: "Description",
+                            oldValue: oldDescription,
+                            newValue: dto.Description,
+                            actorId: _loginContext.userId,
+                            actorName: _loginContext.userName
+                            ));
+                    }
+
+                    if (oldPriority != dto.Priority)
+                    {
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                            issueId: ticketId,
+                            fieldName: "Priority",
+                            oldValue: oldPriority,
+                            newValue: dto.Priority,
+                            actorId: _loginContext.userId,
+                            actorName: _loginContext.userName
+                            ));
+                    }
+
+                    if (dto.Due_Date.HasValue && oldDueDate != dto.Due_Date)
+                    {
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                            issueId: ticketId,
+                            fieldName: "Due Date",
+                            oldValue: oldDueDate?.ToString("yyyy-MM-dd"),
+                            newValue: dto.Due_Date?.ToString("yyyy-MM-dd"),
+                            actorId: _loginContext.userId,
+                            actorName: _loginContext.userName
+                            ));
+                    }
+
+
                     if (dto.labelId != null)
                     {
-                        var newLabels = dto.labelId.Select(l => new IssueLabel
-                        {
-                            Issue_Id = ticketId,
-                            Label_Id = l.Id
-                        }).ToList();
 
-                        await _domainService.UpdateLabelAsync(ticketId, newLabels);
+                        var labelNames = await _db.labelMaster
+                           .Where(lm => oldLabels.Select(ol => ol.Label_Id).Contains(lm.Id) || dto.labelId.Select(d => d.Id).Contains(lm.Id))
+                           .ToDictionaryAsync(lm => lm.Id, lm => lm.Title);
+
+                        var oldLabelNames = string.Join(", ", oldLabels
+                            .Select(ol => labelNames.GetValueOrDefault(ol.Label_Id ?? 0, "Unknown"))
+                            .Where(name => name != "Unknown"));
+
+                        var newLabelNames = string.Join(", ", dto.labelId
+                            .Select(nl => labelNames.GetValueOrDefault(nl.Id ?? 0, "Unknown"))
+                            .Where(name => name != "Unknown"));
+
+                        if (oldLabelNames != newLabelNames)
+                        {
+                            await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                                issueId: ticketId,
+                                fieldName: "Label",
+                                oldValue: string.IsNullOrEmpty(oldLabelNames) ? "None" : oldLabelNames,
+                                newValue: string.IsNullOrEmpty(newLabelNames) ? "None" : newLabelNames,
+                                actorId: _loginContext.userId,
+                                actorName: _loginContext.userName
+                                ));
+                        }
                     }
-                        if (dto.resourceIds != null)
+
+                    if (dto.resourceIds != null)
                         {
                             var updateResourceIds = dto.resourceIds
                                 .Where(r => r.Id.HasValue)
@@ -369,6 +514,8 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return richTicketData;
         }
+        
+        
         //public async Task<GetTickets> UpdateTicketAsync(Guid ticketId, UpdateTicketDto dto)
         //{
         //    ProcessedAttachmentResult attachmentResult = null;

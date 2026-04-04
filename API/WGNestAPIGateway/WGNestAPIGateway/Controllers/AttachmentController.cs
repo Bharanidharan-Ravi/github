@@ -3,6 +3,7 @@ using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.PostData;
 using Azure;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace APIGateway.Controllers
 {
@@ -27,6 +28,39 @@ namespace APIGateway.Controllers
         {
             var res = _attachmentRepo.CleanupTempFiles(filePaths);
             return Ok(ApiResponseHelper.Success(res, "Repository create successfully."));
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> Upload(IFormFile file)
+        {
+            // 1. Await the method, but don't assign it to a variable since it returns nothing
+            await _attachmentRepo.Upload(file);
+
+            // 2. Return a simple success message manually
+            return Ok("File uploaded successfully!");
+        }
+        [HttpGet("download/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Download(int id)
+        {
+            var attachment = await _attachmentRepo.GetAttachmentAsync(id);
+
+            if (attachment == null)
+                return NotFound("File not found");
+
+            // Convert the binary byte array into a Base64 string
+            var base64String = Convert.ToBase64String(attachment.FileData);
+
+            // Return the data as a normal object. 
+            // Your global wrapper will intercept this and put it inside "Message"
+            var fileDataResponse = new
+            {
+                FileName = attachment.FileName,
+                ContentType = attachment.ContentType ?? "application/octet-stream",
+                FileData = base64String
+            };
+
+            return Ok(fileDataResponse);
         }
     }
 }

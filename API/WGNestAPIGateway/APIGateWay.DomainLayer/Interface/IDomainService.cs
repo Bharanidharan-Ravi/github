@@ -19,7 +19,7 @@ namespace APIGateWay.DomainLayer.Interface
         Action<TEntity> mutator)
         where TEntity : class;
         Task<TEntity> UpdateEntityWithAttachmentsAsync<TEntity>(
-            Guid id,
+            object id,
             Action<TEntity> mutator,
             List<AttachmentMaster>? newAttachments = null)
             where TEntity : class;

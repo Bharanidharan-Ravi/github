@@ -77,7 +77,7 @@ namespace APIGateWay.DomainLayer.Service
         //   Status update → mutator sets ONLY Status, nothing else
         //
         public async Task<TEntity> UpdateEntityWithAttachmentsAsync<TEntity>(
-              Guid id,
+               object id,
               Action<TEntity> mutator,
               List<AttachmentMaster>? newAttachments = null)
               where TEntity : class

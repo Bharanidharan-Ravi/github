@@ -24,4 +24,25 @@ namespace APIGateWay.ModalLayer.PostData
         public string? HtmlDesc { get; set; }
         public TempReturn? temp { get; set; }
     }
+
+    public class UpdateThreadDto
+    {
+        // Text Content
+        public string? CommentText { get; set; }
+
+        // Time Tracking
+        public DateTime? From_Time { get; set; }
+        public DateTime? To_Time { get; set; }
+        public string? Hours { get; set; }
+
+        // Workstream / Assignee Tracking
+        // Note: Adjust Guid? to string? if your ResourceId is string-based
+        public Guid? ResourceId { get; set; }
+        public int? StreamStatus { get; set; } // Assumes StatusId maps to an int
+        public int? CompletionPct { get; set; }
+        public DateTime? TargetDate { get; set; }
+
+        // Attachments
+        public TempReturn? temp { get; set; }
+    }
 }

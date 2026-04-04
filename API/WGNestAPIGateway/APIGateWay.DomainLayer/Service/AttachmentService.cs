@@ -1,11 +1,14 @@
 ﻿using APIGateWay.DomainLayer.CommonSevice;
+using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
 
@@ -17,13 +20,14 @@ namespace APIGateWay.DomainLayer.Service
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly APIGateWayCommonService _commonService;
-
-        public AttachmentService (ILoginContextService loginContextService,IConfiguration configuration, IHttpContextAccessor httpContextAccessor, APIGateWayCommonService aPIGateWay)
+        private readonly APIGatewayDBContext _db;
+        public AttachmentService (ILoginContextService loginContextService,IConfiguration configuration, IHttpContextAccessor httpContextAccessor, APIGateWayCommonService aPIGateWay, APIGatewayDBContext db)
         {
             _loginContextService = loginContextService;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
             _commonService = aPIGateWay;
+            _db = db;
         }
 
         #region Post a attachment file
@@ -232,6 +236,33 @@ namespace APIGateWay.DomainLayer.Service
             }
 
             return Task.CompletedTask;
+        }
+        public async Task Upload(DBAttachment file)
+        {
+            try
+            {
+                _db.DBAttachment.Add(file);
+
+                // IF THIS LINE IS MISSING, THE TABLE WILL BE EMPTY!
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving to DB: {ex.Message}");
+            }
+        }
+        public async Task<DBAttachment> GetAttachmentAsync(int id)
+        {
+            try
+            {
+                // FindAsync is the fastest way to look up a record by its Primary Key
+                var attachment = await _db.DBAttachment.FindAsync(id);
+                return attachment;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error retrieving file from DB: {ex.Message}");
+            }
         }
     }
 }

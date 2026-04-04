@@ -68,6 +68,7 @@ builder.Services.AddScoped<ITicketRepo, TicketRepo>();
 builder.Services.AddScoped<ILabelRepo, LabelRepo>();
 builder.Services.AddScoped<IDailyPlanRepo, DailyPlanRepo>();
 builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
+builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
@@ -220,6 +221,18 @@ app.UseSwaggerUI(c =>
 app.MapHub<RealtimeHub>("/realtime").RequireAuthorization();
 app.MapReverseProxy();
 app.MapControllers().RequireAuthorization("RepoScopePolicy");
+app.MapGet("/api/direct-download/{id}", async (int id, APIGatewayDBContext _db, HttpContext context) =>
+{
+    var attachment = await _db.DBAttachment.FindAsync(id);
+
+    if (attachment == null)
+    {
+        return Results.NotFound("File not found");
+    }
+
+    // This returns the file purely, completely bypassing all Controller filters!
+    return Results.File(attachment.FileData, attachment.ContentType ?? "application/octet-stream", attachment.FileName);
+});
 
 // ─────────────────────────────────────────────────────────────
 builder.WebHost.UseUrls("https://*:8008");

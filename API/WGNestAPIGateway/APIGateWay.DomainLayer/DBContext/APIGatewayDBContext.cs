@@ -84,6 +84,8 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<WorkStream> WorkStreams { get; set; }
         public DbSet<WorkStreamHandoff> WorkStreamHandoff { get; set; }
         public DbSet<StatusMaster> StatusMasters { get; set; }
+        public DbSet<DBAttachment> DBAttachment { get; set; }
+        public DbSet<TicketHistory> TicketHistories { get; set; }
 
         #region SaveChanges Override (Audit)
 

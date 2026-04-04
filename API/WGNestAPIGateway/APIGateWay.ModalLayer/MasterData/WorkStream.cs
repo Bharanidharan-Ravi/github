@@ -65,7 +65,7 @@ namespace APIGateWay.ModalLayer.MasterData
     public class WorkStreamContext
     {
         public Guid? IssueId { get; set; }
-        public Guid ResourceId { get; set; }
+        public Guid? ResourceId { get; set; }
 
         // Pass StatusId constant — e.g. StatusId.InDevelopment (5)
         public int? StreamStatus { get; set; }
