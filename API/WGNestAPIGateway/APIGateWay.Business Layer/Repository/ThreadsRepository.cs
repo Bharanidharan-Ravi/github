@@ -256,7 +256,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                         if (daysOld > 1)
                         {
-                            throw new InvalidOperationException("Time entries (From Time, To Time, Hours) can only be edited for threads created today or yesterday.");
+                            throw new InvalidOperationException("Cannot change the Assignee because this thread's work is already marked as 100% complete.");
                         }
                     }
 

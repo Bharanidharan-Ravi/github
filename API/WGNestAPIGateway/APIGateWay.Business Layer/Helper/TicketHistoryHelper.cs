@@ -209,7 +209,8 @@ namespace APIGateWay.Business_Layer.Helper
             string statusName,
             Guid workStreamId,
             Guid actorId,
-            string actorName)
+            string actorName,
+            long? threadId = null)
         {
             return new TicketHistoryEntry
             {
@@ -221,6 +222,7 @@ namespace APIGateWay.Business_Layer.Helper
                 WorkStreamId = workStreamId,
                 ActorId = actorId,
                 ActorName = actorName,
+                ThreadId = threadId,
                 Meta = new
                 {
                     AssigneeName = assigneeName,
@@ -264,7 +266,8 @@ namespace APIGateWay.Business_Layer.Helper
             string streamName,
             Guid workStreamId,
             Guid actorId,
-            string actorName)
+            string actorName,
+            long? threadId)
         {
             return new TicketHistoryEntry
             {
@@ -274,7 +277,8 @@ namespace APIGateWay.Business_Layer.Helper
                 Summary = $"{assigneeName} completed this ticket",
                 WorkStreamId = workStreamId,
                 ActorId = actorId,
-                ActorName = actorName
+                ActorName = actorName,
+                ThreadId = threadId,                
             };
         }
 
