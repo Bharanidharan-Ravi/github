@@ -44,7 +44,7 @@ namespace APIGateWay.ModalLayer.PostData
         public DateTime? Due_Date { get; set; }
         public TempReturn? temp { get; set; }   // new file uploads if any
         public List<ResourceIds>? resourceIds { get; set; }
-
+        public string? Hours { get; set; }
         public int? StreamStatus { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }

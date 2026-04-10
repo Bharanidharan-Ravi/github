@@ -15,7 +15,7 @@ namespace APIGateWay.BusinessLayer.Helpers.token
         {
             _configuration = configuration;
         }
-        public string GenerateJwtToken(Guid userId, string userName, int? role, string dbName, string? Team)
+        public string GenerateJwtToken(Guid userId, string userName, int? role, string dbName, string? Team, string? PreviewUrl)
         {
             var securityKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
@@ -33,6 +33,7 @@ namespace APIGateWay.BusinessLayer.Helpers.token
                 new Claim(ClaimTypes.Role, role.ToString()),
                 new Claim("Team", Team.ToString()),
                 new Claim("DbName", dbName ?? ""),
+                new Claim("PreviewUrl", PreviewUrl ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

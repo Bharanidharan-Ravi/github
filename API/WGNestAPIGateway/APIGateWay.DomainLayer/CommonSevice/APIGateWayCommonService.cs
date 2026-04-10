@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 
 namespace APIGateWay.DomainLayer.CommonSevice
 {
@@ -15,12 +16,15 @@ namespace APIGateWay.DomainLayer.CommonSevice
         private readonly IConfiguration _configuration;
         private readonly APIGatewayDBContext _dbContext;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory)
+        public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory
+            , IHttpContextAccessor httpContext)
         {
             _dbContext = dbContext;
             _configuration = configuration;
             _scopeFactory = serviceScopeFactory;
+            _httpContextAccessor = httpContext;
         }
 
         public async Task<List<T>> ExecuteGetItemAsyc<T>(
@@ -48,7 +52,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "GETTHREADLIST",
                     "GetStatusMaster",
                     "getdailyplan",
-                    "GetTicketHistory"
+                    "GetTicketHistory",
+                    "GetTeamMaster"
                 };
 
                 if (!validProcedureNames.Contains(storedProcedure))
@@ -175,6 +180,19 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     await command.ExecuteNonQueryAsync();
                 }
             }
+        }
+
+        public string GeneratePreviewUrl(string filePath)
+        {
+            // Define the base URL that corresponds to where your images are publicly accessible
+            var request = _httpContextAccessor.HttpContext.Request;
+            string baseUrl = $"{request.Scheme}://{request.Host}";
+            string fileName = Path.GetFileName(filePath);
+
+            var publicUrl = $"{baseUrl}/Uploads/{filePath}";
+
+            // Return both URL and MIME type as a tuple
+            return publicUrl;
         }
     }
 }

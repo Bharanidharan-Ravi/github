@@ -68,6 +68,7 @@ builder.Services.AddScoped<ITicketRepo, TicketRepo>();
 builder.Services.AddScoped<ILabelRepo, LabelRepo>();
 builder.Services.AddScoped<IDailyPlanRepo, DailyPlanRepo>();
 builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
+builder.Services.AddScoped<IEmployeeRepo, EmployeeRepo>();
 builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
 
 // ─────────────────────────────────────────────────────────────

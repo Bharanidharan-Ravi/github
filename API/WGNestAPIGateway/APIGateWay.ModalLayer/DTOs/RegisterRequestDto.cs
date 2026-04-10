@@ -1,4 +1,5 @@
-﻿using System;
+﻿using APIGateWay.ModalLayer.PostData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,8 @@ namespace APIGateWay.ModalLayer.DTOs
         // Optional — only one will be used based on CreatedFor
         public ClientMasterDto? Client { get; set; }
         public EmployeeMasterDto? Employee { get; set; }
+
+        public TempReturn? temp { get; set; }
     }
 
 }

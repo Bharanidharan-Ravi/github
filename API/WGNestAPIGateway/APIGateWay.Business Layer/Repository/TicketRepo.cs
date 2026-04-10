@@ -322,6 +322,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             entity.HtmlDesc = capturedHtml;
                             entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
                             entity.Priority = dto.Priority;
+                            entity.Hours = dto.Hours;
 
                             if (dto.Assignee_Id.HasValue)
                                 entity.Assignee_Id = dto.Assignee_Id.Value;
@@ -410,6 +411,14 @@ namespace APIGateWay.BusinessLayer.Repository
                                 actorName: _loginContext.userName
                                 ));
                         }
+                        // 🔥 ADD THIS: Actually save the new labels to the database!
+                        var newLabels = dto.labelId.Select(l => new IssueLabel
+                        {
+                            Issue_Id = ticketId,
+                            Label_Id = l.Id
+                        }).ToList();
+
+                        await _domainService.UpdateLabelAsync(ticketId, newLabels);
                     }
 
                     if (dto.resourceIds != null)

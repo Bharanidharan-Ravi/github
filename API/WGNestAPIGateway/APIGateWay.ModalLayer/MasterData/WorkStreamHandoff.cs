@@ -64,6 +64,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public const string Pending = "Pending";   // Pushed, awaiting review
         public const string Failed = "Failed";    // Bug reported by tester
         public const string Passed = "Passed";    // Test cleared
+        public const string Inactive = "Inactive";    
         public const string Recalled = "Recalled";  // Source retracted before test
     }
 }

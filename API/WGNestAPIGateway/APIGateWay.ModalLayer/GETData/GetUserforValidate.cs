@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,9 +15,13 @@ namespace APIGateWay.ModalLayer.GETData
         public string? UserName { get; set; }
         public string? DBName { get; set; }
         public string? Status { get; set; }
-        public string? Team { get; set; }
+        public int? Team { get; set; }
         public int? Role { get; set; }
+        public string? Attachment_JSON {  get; set; }
         public string? PasswordHash { get; set; }
         public string? Salt { get; set; }
+
+        [NotMapped]
+        public string? PreviewUrl {  get; set; }    
     }
 }

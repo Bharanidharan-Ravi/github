@@ -85,6 +85,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<WorkStreamHandoff> WorkStreamHandoff { get; set; }
         public DbSet<StatusMaster> StatusMasters { get; set; }
         public DbSet<DBAttachment> DBAttachment { get; set; }
+        public DbSet<TeamMaster> teamMasters { get; set; }
         public DbSet<TicketHistory> TicketHistories { get; set; }
 
         #region SaveChanges Override (Audit)
@@ -164,7 +165,13 @@ namespace APIGateWay.DomainLayer.DBContext
             // Tell EF Core that Issue_Id AND Label_Id together make the Primary Key
             modelBuilder.Entity<IssueLabel>()
                 .HasKey(il => new { il.Issue_Id, il.Label_Id });
+            //modelBuilder.Entity<LOGIN_MASTER>()
+            //    .Property(e => e.UserID)
+            //    .HasConversion<string>();
 
+            //modelBuilder.Entity<EMPLOYEEMASTER>()
+            //    .Property(e => e.EmployeeID)
+            //    .HasConversion<string>();
             modelBuilder.Entity<LOGIN_MASTER>(entity =>
             {
                 entity.Property(e => e.Status).HasDefaultValue("Active");
@@ -175,14 +182,18 @@ namespace APIGateWay.DomainLayer.DBContext
                 .HasForeignKey<EMPLOYEEMASTER>(e => e.EmployeeID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+
             modelBuilder.Entity<EMPLOYEEMASTER>(entity =>
             {
                 entity.Property(e => e.Status).HasDefaultValue("Active");
-                entity.Property(e => e.CreatedOn).HasDefaultValueSql("GETDATE()");
             });
             //modelBuilder.Entity<CLIENTSMAILIDS>()
             //    .HasNoKey();
             modelBuilder.Entity<TicketMaster>()
+                .Property(t => t.CompletionPct)
+                .HasColumnType("decimal(5, 2)");
+            
+            modelBuilder.Entity<ThreadMaster>()
                 .Property(t => t.CompletionPct)
                 .HasColumnType("decimal(5, 2)");
 

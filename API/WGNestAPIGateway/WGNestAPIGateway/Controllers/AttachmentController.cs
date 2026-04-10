@@ -21,16 +21,17 @@ namespace APIGateway.Controllers
         public async Task<IActionResult>UploadFilesToTempAsync(IFormFile files)
         {
             var res = await _attachmentRepo.UploadFilesToTempAsync(files);
-            return Ok(ApiResponseHelper.Success(res, "Repository create successfully."));
+            return Ok(ApiResponseHelper.Success(res, "File added successfully!"));
         }
         [HttpPost("tempCleanUp")]
         public async Task<IActionResult> CleanupTempFiles(TempReturn filePaths)
         {
             var res = _attachmentRepo.CleanupTempFiles(filePaths);
-            return Ok(ApiResponseHelper.Success(res, "Repository create successfully."));
+            return Ok(ApiResponseHelper.Success(res, "File removed successfully!"));
         }
 
         [HttpPost("upload")]
+        [AllowAnonymous]
         public async Task<IActionResult> Upload(IFormFile file)
         {
             // 1. Await the method, but don't assign it to a variable since it returns nothing

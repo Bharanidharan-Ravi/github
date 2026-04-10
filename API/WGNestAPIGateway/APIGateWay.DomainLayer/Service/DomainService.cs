@@ -42,6 +42,16 @@ namespace APIGateWay.DomainLayer.Service
             }
 
             await _dBContext.SaveChangesAsync(); // Commit the changes to the database
+        } 
+        public async Task SaveAttachmentsAsync(List<AttachmentMaster> attachments)
+        {
+            if (attachments != null && attachments.Any())
+            {
+
+                await _dBContext.AttachmentMaster.AddRangeAsync(attachments);
+            }
+
+            await _dBContext.SaveChangesAsync(); // Commit the changes to the database
         }
 
         // 2. The ✨ GENERIC ✨ Save Method
@@ -105,6 +115,28 @@ namespace APIGateWay.DomainLayer.Service
             return entity;
         }
 
+
+        public async Task<TEntity> UpdateEntityByPredicateWithAttachmentsAsync<TEntity>(
+              Expression<Func<TEntity, bool>> predicate,
+              Action<TEntity> mutator,
+              List<AttachmentMaster>? newAttachments = null)
+              where TEntity : class
+        {
+            // Uses FirstOrDefaultAsync instead of FindAsync to avoid Primary Key confusion
+            var entity = await _dBContext.Set<TEntity>().FirstOrDefaultAsync(predicate);
+
+            if (entity == null)
+                throw new Exceptionlist.DataNotFoundException($"{typeof(TEntity).Name} not found.");
+
+            mutator(entity);
+
+            if (newAttachments != null && newAttachments.Any())
+                _dBContext.AttachmentMaster.AddRange(newAttachments);
+
+            await _dBContext.SaveChangesAsync();
+
+            return entity;
+        }
         public async Task UpdateTrackedEntityAsync<TEntity>(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> mutator)

@@ -7,6 +7,7 @@ using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using System;
 using System.Text.Json;
+using APIGateWay.DomainLayer.CommonSevice;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -15,14 +16,16 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly ILoginService _loginService;
         private readonly TokenGeneration _tokenGeneration;
         private readonly DecodeHelpers _decodeHelpers;
+        private readonly APIGateWayCommonService _service;
 
         public static readonly Dictionary<Guid, string> _activeJwtTokens = new Dictionary<Guid, string>();
 
-        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers)
+        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service)
         {
             _loginService = loginService;
             _tokenGeneration = tokenGeneration;
             _decodeHelpers = decodeHelpers;
+            _service = service;
         }
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
@@ -37,13 +40,31 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Invalid username or password");
 
             var user = userList.First();
+            var attachmentJSON = user.Attachment_JSON;
+            if(!string.IsNullOrEmpty(attachmentJSON))
+            {
+                using var doc=JsonDocument.Parse(attachmentJSON);
+                var root=doc.RootElement;
+                var first=root.EnumerateArray().FirstOrDefault();
+                if (first.ValueKind == JsonValueKind.Object &&
+                    first.TryGetProperty("relativepath", out var relPathEl) &&
+                    relPathEl.ValueKind == JsonValueKind.String)
+                {
+                    var relativePath = relPathEl.GetString();
+                    if (!string.IsNullOrEmpty(relativePath))
+                    {
+                        user.PreviewUrl = _service.GeneratePreviewUrl(relativePath);
+                    }
+                }
+            }
 
             var token = _tokenGeneration.GenerateJwtToken(
                 user.UserId,
                 user.UserName,
                 user.Role,
                 user.DBName,
-                user.Team
+                user.Team.ToString(),
+                user?.PreviewUrl
             );
 
             return token;

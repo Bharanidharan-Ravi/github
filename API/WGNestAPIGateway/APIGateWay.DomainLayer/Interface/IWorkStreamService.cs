@@ -11,7 +11,7 @@ namespace APIGateWay.DomainLayer.Interface
     public interface IWorkStreamService
     {
         Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto);
-        Task<string> GetDepartmentNameAsync(Guid? resourceId);
+        Task<int?> GetDepartmentNameAsync(Guid? resourceId);
 
         /// <summary>
         /// DELETE THIS LATER

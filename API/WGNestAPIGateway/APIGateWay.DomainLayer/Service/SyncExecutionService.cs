@@ -6,6 +6,7 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using APIGateWay.ModalLayer.GETData;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -156,6 +157,46 @@ namespace APIGateWay.DomainLayer.Service
                     storedProcedure,
                     sqlParams.ToArray()
                 );
+
+                if (data != null && typeof(T) == typeof(GetEmployee))
+                {
+                    var employees = data as List<GetEmployee>;
+                    if (employees is not null)
+                    {
+                        foreach (var emp in employees)
+                        {
+                            if (!string.IsNullOrWhiteSpace(emp.Attachment_JSON))
+                            {
+                                try
+                                {
+                                    using var doc = JsonDocument.Parse(emp.Attachment_JSON);
+                                    var root = doc.RootElement;
+
+                                    if (root.ValueKind == JsonValueKind.Array)
+                                    {
+                                        var first = root.EnumerateArray().FirstOrDefault();
+
+                                        if (first.ValueKind == JsonValueKind.Object &&
+                                            first.TryGetProperty("relativepath", out var relPathEl) &&
+                                            relPathEl.ValueKind == JsonValueKind.String)
+                                        {
+                                            var relativePath = relPathEl.GetString();
+
+                                            if (!string.IsNullOrEmpty(relativePath))
+                                            {
+                                                emp.PreviewUrl = _Service.GeneratePreviewUrl(relativePath);
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (JsonException)
+                                {
+                                    emp.PreviewUrl = null;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 return new RawSyncResult
                 {

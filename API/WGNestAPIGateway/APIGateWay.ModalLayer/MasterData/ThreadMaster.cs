@@ -29,7 +29,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? HtmlDesc { get; set; }
         public string? CommentText { get; set; }
         public string? Hours { get; set; }
-     
+        public decimal? CompletionPct { get; set; }     
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
         public int? HandsOffId { get; set; }
@@ -40,7 +40,7 @@ namespace APIGateWay.ModalLayer.MasterData
         // 💡 Notice: No [IgnoreMapping] is needed here! 
         // Because your class uses IAuditableEntity & IAuditableUser, 
         // our dynamic AutoMapper extension automatically ignores these 4 fields!
-
+        public Guid? WorkStreamId { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }

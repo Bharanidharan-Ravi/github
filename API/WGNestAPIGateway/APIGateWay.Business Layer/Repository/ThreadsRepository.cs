@@ -237,45 +237,66 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 finalThreadData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    // 1. Fetch existing Thread and Workstream
-                    var existingThread = await _dBContext.ISSUETHREADS.FindAsync(threadId); // Adjust DbSet name if different
+                    // 1. Fetch existing Thread
+                    var existingThread = await _dBContext.ISSUETHREADS.FindAsync(threadId);
                     if (existingThread == null)
                         throw new Exception("Thread not found");
 
-                    var existingWorkStream = await _dBContext.WorkStreams
-                        .FirstOrDefaultAsync(ws => ws.ParentThreadId == threadId);
+                    // ====================================================================
+                    // 2. 🔥 FETCH THE EXACT BASE WORKSTREAM (using WorkStreamId or ResourceId)
+                    // ====================================================================
+                    WorkStream existingWorkStream = null;
 
-                    // ====================================================================
-                    // 🔥 BUSINESS RULE 1: Time Editing Validation (Today or Yesterday ONLY)
-                    // ====================================================================
-                    bool isTimeUpdateRequested = dto.From_Time.HasValue || dto.To_Time.HasValue || !string.IsNullOrEmpty(dto.Hours);
-                    if (isTimeUpdateRequested)
+                    if (dto.WorkStreamId.HasValue && dto.WorkStreamId.Value != Guid.Empty)
                     {
-                        // Calculate difference in days (ignoring time of day)
-                        var daysOld = (DateTime.UtcNow.Date - existingThread.CreatedAt.Value).TotalDays;
+                        // Strict match if WorkStreamId is provided
+                        existingWorkStream = await _dBContext.WorkStreams
+                            .FirstOrDefaultAsync(ws => ws.StreamId == dto.WorkStreamId.Value);
+                    }
+                    else if (dto.ResourceId.HasValue)
+                    {
+                        // Fallback to ResourceId if WorkStreamId is missing
+                        existingWorkStream = await _dBContext.WorkStreams
+                            .FirstOrDefaultAsync(ws => ws.ParentThreadId == threadId && ws.ResourceId == dto.ResourceId.Value);
 
-                        if (daysOld > 1)
+                        if (existingWorkStream == null)
                         {
-                            throw new InvalidOperationException("Cannot change the Assignee because this thread's work is already marked as 100% complete.");
+                            existingWorkStream = await _dBContext.WorkStreams
+                                .FirstOrDefaultAsync(ws => ws.IssueId == existingThread.Issue_Id &&
+                                                           ws.ResourceId == dto.ResourceId.Value &&
+                                                           ws.StreamStatus != StatusId.Inactive);
                         }
                     }
 
                     // ====================================================================
-                    // 🔥 BUSINESS RULE 2: Assignee Lock if 100% Completed
+                    // 3. 🔥 UPDATE THE BASE WORKSTREAM (Status & Completion Pct)
                     // ====================================================================
-                    bool isAssigneeChangeRequested = dto.ResourceId.HasValue &&
-                                                     existingWorkStream != null &&
-                                                     dto.ResourceId.Value != existingWorkStream.ResourceId;
-
-                    if (isAssigneeChangeRequested)
+                    if (existingWorkStream != null)
                     {
-                        if (existingWorkStream.CompletionPct == 100)
+                        bool wsChanged = false;
+
+                        // Update Status ONLY if it's a new value
+                        if (dto.StreamStatus.HasValue && dto.StreamStatus.Value != existingWorkStream.StreamStatus)
                         {
-                            throw new InvalidOperationException("Cannot change the Assignee because this thread's work is already marked as 100% complete.");
+                            existingWorkStream.StreamStatus = dto.StreamStatus.Value;
+                            wsChanged = true;
+                        }
+
+                        // Update Completion Pct
+                        if (dto.CompletionPct.HasValue && dto.CompletionPct.Value != existingWorkStream.CompletionPct)
+                        {
+                            existingWorkStream.CompletionPct = dto.CompletionPct.Value;
+                            wsChanged = true;
+                        }
+
+                        if (wsChanged)
+                        {
+                            _dBContext.WorkStreams.Update(existingWorkStream);
+                            await _dBContext.SaveChangesAsync(); // Commit the WorkStream changes
                         }
                     }
 
-                    // 2. Process Attachments
+                    // 4. Process Attachments
                     string finalHtmlDescription = dto.CommentText ?? existingThread.HtmlDesc;
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                     {
@@ -289,65 +310,119 @@ namespace APIGateWay.BusinessLayer.Repository
                         finalHtmlDescription = attachmentResult.UpdatedHtml;
                     }
 
-                    // 3. Update ThreadMaster Entity
+                    // 5. Update ThreadMaster Entity
                     var updatedThread = await _domainService.UpdateEntityWithAttachmentsAsync<ThreadMaster>(
                         threadId,
                         entity =>
                         {
-                            // Update Description
                             if (!string.IsNullOrEmpty(dto.CommentText))
                             {
                                 entity.HtmlDesc = finalHtmlDescription;
                                 entity.CommentText = HtmlUtilities.ConvertToPlainText(finalHtmlDescription);
                             }
 
-                            // Update Times (only if validation passed above)
-                            if (isTimeUpdateRequested)
-                            {
-                                if (dto.From_Time.HasValue) entity.From_Time = dto.From_Time.Value;
-                                if (dto.To_Time.HasValue) entity.To_Time = dto.To_Time.Value;
-                                if (!string.IsNullOrEmpty(dto.Hours)) entity.Hours = dto.Hours;
-                            }
+                            if (dto.From_Time.HasValue) entity.From_Time = dto.From_Time.Value;
+                            if (dto.To_Time.HasValue) entity.To_Time = dto.To_Time.Value;
+                            if (dto.CompletionPct.HasValue) entity.CompletionPct = dto.CompletionPct.Value;
+                            if (!string.IsNullOrEmpty(dto.Hours)) entity.Hours = dto.Hours;
+
+                            // 🔥 "Update this completion pct to thread"
+                            // NOTE: Make sure `CompletionPct` actually exists in your ThreadMaster entity!
+                            // if (dto.CompletionPct.HasValue) entity.CompletionPct = dto.CompletionPct.Value; 
                         },
                         attachmentResult?.Attachments
                     );
 
-                    // 4. Update WorkStream (Assignee and Percentage)
-                    if (existingWorkStream != null && (isAssigneeChangeRequested || dto.CompletionPct.HasValue || dto.StreamStatus.HasValue))
-                    {
-                        // If Assignee is changing, mark the old assignee as Inactive for this thread
-                        if (isAssigneeChangeRequested)
-                        {
-                            await _workStreamService.UpsertWorkStreamAsync(new WorkStreamContext
-                            {
-                                IssueId = existingThread.Issue_Id,
-                                ResourceId = existingWorkStream.ResourceId,
-                                StreamStatus = StatusId.Inactive, // 🔥 Force old assignee to Inactive
-                                ParentThreadId = threadId
-                            });
-                        }
+                    // ====================================================================
+                    // 6. 🔥 MULTIPLE ASSIGNEES / HANDOFF SYNC LOGIC
+                    // ====================================================================
+                    //if (existingWorkStream != null && dto.NextAssignees != null)
+                    //{
+                    //    // 1. 🔥 DEDUPLICATE THE INCOMING UI LIST 
+                    //    // (This prevents the bug where the UI sends multiple identical assignees)
+                    //    var distinctIncomingAssignees = dto.NextAssignees
+                    //        .GroupBy(a => a.Id)
+                    //        .Select(g => g.First())
+                    //        .ToList();
 
-                        // Upsert the new (or existing) assignee with updated percentage/status
-                        var targetResourceId = isAssigneeChangeRequested ? dto.ResourceId.Value : existingWorkStream.ResourceId;
+                    //    var incomingResourceIds = distinctIncomingAssignees.Select(na => na.Id).ToList();
 
-                        await _workStreamService.UpsertWorkStreamAsync(new WorkStreamContext
-                        {
-                            IssueId = existingThread.Issue_Id,
-                            ResourceId = targetResourceId,
-                            StreamStatus = dto.StreamStatus ?? existingWorkStream.StreamStatus,
-                            CompletionPct = dto.CompletionPct ?? existingWorkStream.CompletionPct,
-                            TargetDate = dto.TargetDate ?? existingWorkStream.TargetDate,
-                            ParentThreadId = threadId
-                        });
-                    }
+                    //    // 2. Find existing handoffs for THIS Thread and THIS Issue
+                    //    var existingHandoffs = await _dBContext.Set<WorkStreamHandoff>()
+                    //        .Where(h => h.InitiatingThreadId == threadId &&
+                    //                    h.IssueId == existingThread.Issue_Id &&
+                    //                    h.Status != HandoffStatus.Inactive)
+                    //        .ToListAsync();
 
-                    // 5. Cleanup temporary files
+                    //    // 3. Map Handoffs to their Target ResourceIds
+                    //    var existingTargetStreamIds = existingHandoffs.Select(h => h.TargetStreamId).ToList();
+                    //    var existingTargetStreams = await _dBContext.WorkStreams
+                    //        .Where(ws => existingTargetStreamIds.Contains(ws.StreamId))
+                    //        .ToListAsync();
+
+                    //    var existingHandoffAssignees = existingHandoffs
+                    //        .Select(h => new
+                    //        {
+                    //            Handoff = h,
+                    //            ResourceId = existingTargetStreams.FirstOrDefault(ws => ws.StreamId == h.TargetStreamId)?.ResourceId ?? Guid.Empty
+                    //        })
+                    //        .Where(x => x.ResourceId != Guid.Empty)
+                    //        .ToList();
+
+                    //    var existingResourceIds = existingHandoffAssignees.Select(e => e.ResourceId).ToList();
+
+                    //    // 🔴 REMOVE MISSING: In DB but removed from UI -> Mark Inactive
+                    //    foreach (var existing in existingHandoffAssignees)
+                    //    {
+                    //        if (!incomingResourceIds.Contains(existing.ResourceId))
+                    //        {
+                    //            existing.Handoff.Status = HandoffStatus.Inactive;
+                    //            existing.Handoff.UpdatedAt = DateTime.UtcNow;
+                    //            _dBContext.Set<WorkStreamHandoff>().Update(existing.Handoff);
+                    //        }
+                    //    }
+
+                    //    // 🟢 ADD NEW: In UI but not in DB -> Create WorkStream & Handoff
+                    //    foreach (var incomingAssignee in distinctIncomingAssignees)
+                    //    {
+                    //        if (!existingResourceIds.Contains(incomingAssignee.Id))
+                    //        {
+                    //            // 1. Ensure they have an active WorkStream across the issue
+                    //            // NOTE: We DO NOT pass dto.CompletionPct here, because that belongs to the thread editor!
+                    //            // Passing null ensures the target assignee keeps their existing percentage.
+                    //            var targetStreamResult = await _workStreamService.UpsertWorkStreamAsync(new WorkStreamContext
+                    //            {
+                    //                IssueId = existingThread.Issue_Id,
+                    //                ResourceId = incomingAssignee.Id,
+                    //                StreamStatus = incomingAssignee.StreamId > 0 ? incomingAssignee.StreamId : null,
+                    //                ParentThreadId = threadId
+                    //            });
+
+                    //            // 2. Create the Handoff link
+                    //            var seq = await _commonService.GetNextSequenceAsync("WorkStreamsHandsoff");
+                    //            var newHandoff = new WorkStreamHandoff
+                    //            {
+                    //                HandsOffId = seq.CurrentValue,
+                    //                IssueId = existingThread.Issue_Id,
+                    //                SourceStreamId = existingWorkStream.StreamId,
+                    //                TargetStreamId = targetStreamResult.StreamId,
+                    //                InitiatingThreadId = threadId,
+                    //                Status = HandoffStatus.Pending
+                    //            };
+
+                    //            _dBContext.Set<WorkStreamHandoff>().Add(newHandoff);
+                    //        }
+                    //        // If they already exist in existingResourceIds, do nothing!
+                    //    }
+
+                    //    await _dBContext.SaveChangesAsync(); // Commit all handoff changes
+                    //}
+                    // 7. Cleanup temporary files
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                     {
                         await _attachmentService.CleanupTempFiles(dto.temp);
                     }
 
-                    // Return basic mapped data to escape the transaction block
                     return _mapper.Map<ThreadList>(updatedThread);
                 });
             }

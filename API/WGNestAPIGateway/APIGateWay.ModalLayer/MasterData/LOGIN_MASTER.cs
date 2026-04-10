@@ -21,6 +21,6 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? ClientId { get; set; }
         public string? Status { get; set; }
         public string? Key { get; set; }
-        public int Role { get; set; }
+        public int? Role { get; set; }
     }
 }

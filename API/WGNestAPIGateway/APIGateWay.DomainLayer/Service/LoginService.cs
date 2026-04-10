@@ -11,6 +11,7 @@ using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
 using Microsoft.EntityFrameworkCore;
 using Konscious.Security.Cryptography;
+using APIGateWay.ModalLayer.PostData;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -20,18 +21,22 @@ namespace APIGateWay.DomainLayer.Service
         private readonly APIGateWayCommonService _commonService;
         private readonly IConfiguration _configuration;
         private readonly ILoginContextService _loginContext;
+        private readonly IDomainService _domainService;
+        private readonly IAttachmentService _attachmentService;
         private const int SaltSize = 16;
         private const int HashSize = 32;
         private const int DegreeofParallelism = 8;
         private const int Iterations = 4;
         private const int MemorySize = 1024 * 64;
 
-        public LoginService(APIGatewayDBContext context, APIGateWayCommonService commonService, IConfiguration configuration, ILoginContextService loginContextService)
+        public LoginService(APIGatewayDBContext context, APIGateWayCommonService commonService, IConfiguration configuration, ILoginContextService loginContextService, IDomainService domainService, IAttachmentService attachmentService)
         {
             _context = context;
             _commonService = commonService;
             _configuration = configuration;
             _loginContext = loginContextService;
+            _domainService = domainService;
+            _attachmentService = attachmentService;
             /*_connectionHelper = new ConnectionHelper(configuration);*/
         }
 
@@ -110,7 +115,9 @@ namespace APIGateWay.DomainLayer.Service
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
-
+            ProcessedAttachmentResult attachmentResult = null;
+            Guid? createdUserId = null;
+            
             try
             {
                 // Validate CreatedFor
@@ -121,14 +128,17 @@ namespace APIGateWay.DomainLayer.Service
                 var existingUser = await _context.LOGIN_MASTER
                     .FirstOrDefaultAsync(x => x.UserName == request.Login.UserName);
 
+                //if (existingUser != null)
+                //    throw new Exceptionlist.UserAlreadyExistsException($"{request.Login.UserName} already exists.");
                 if (existingUser != null)
                     throw new Exceptionlist.UserAlreadyExistsException($"{request.Login.UserName} already exists.");
-
                 // Hash password
                 var (hash, salt) = HashPasswordAgron(request.Login.Password);
 
                 LOGIN_MASTER newUser = null;
                 ClientMaster client = null;
+
+                
 
                 // ✅ CASE 1: Register for CLIENT
                 if (request.CreatedFor.Equals("Client", StringComparison.OrdinalIgnoreCase))
@@ -165,6 +175,8 @@ namespace APIGateWay.DomainLayer.Service
 
                     _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
+                    createdUserId = newUser.ClientId;
+                   
                 }
 
                 // ✅ CASE 2: Register for EMPLOYEE
@@ -181,9 +193,10 @@ namespace APIGateWay.DomainLayer.Service
                         Salt = salt,
                         ClientId = null,
                         Password = request.Login.Password,
-                        DBName = request.Login.DBName,
+                        DBName = "WG_APP",
                         Status = "Active",
                         Role = request.Login.Role
+
                     };
 
                     _context.LOGIN_MASTER.Add(newUser);
@@ -193,18 +206,19 @@ namespace APIGateWay.DomainLayer.Service
                     var employee = new EMPLOYEEMASTER
                     {
                         EmployeeName = request.Employee.EmployeeName,
-                        Team = request.Employee.Team,
+                        //Team = request.Employee.Team,
                         Role = request.Employee.Role,
                         Specialization = request.Employee.Specialization,
                         Email = request.Employee.Email,
                         PhoneNumber = request.Employee.PhoneNumber,
-                        CreatedBy = "System",
                         EmployeeID = newUser.UserID,
                         Status = "Active"
                     };
 
                     _context.eMPLOYEEMASTERs.Add(employee);
                     await _context.SaveChangesAsync();
+                    createdUserId = newUser.UserID;
+                    
                 }
                 else if (request.CreatedFor.Equals("Admin", StringComparison.OrdinalIgnoreCase))
                 {
@@ -226,11 +240,28 @@ namespace APIGateWay.DomainLayer.Service
 
                     _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
+                    createdUserId = newUser.UserID;
+                  
                 }
                 else
                 {
                     throw new ArgumentException("Invalid CreatedFor value. Must be 'Client' or 'Employee'.");
                 }
+                if (request.temp?.temps != null && request.temp.temps.Any())
+                {
+                    var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+                    var permFolder = $"{request.CreatedFor}-{createdUserId}"; // Use created UserID
+                    var relativePath = $"{permUserId}/{permFolder}";
+
+                    attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+                        request.CreatedFor,
+                        request.temp.temps,
+                        relativePath,
+                        createdUserId.ToString(), // Pass UserID as threadId
+                        request.CreatedFor
+                    );
+                }
+                await _domainService.SaveAttachmentsAsync(attachmentResult?.Attachments);
 
                 // ✅ Commit transaction
                 await transaction.CommitAsync();

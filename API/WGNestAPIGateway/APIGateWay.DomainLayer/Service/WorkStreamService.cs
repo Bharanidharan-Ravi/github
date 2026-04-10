@@ -105,14 +105,15 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     // ── TYPE 2 / 3: Progress update ───────────────────────────────────
 
-                    var finalStreamName = await GetDepartmentNameAsync(posterId);
+                    int? finalStreamName = await GetDepartmentNameAsync(posterId);
                     int targetStatusId = dto.StreamStatus ?? 0; // Handle nulls safely
 
                     if (targetStatusId == 0)
                     {
+                        var finalStream = finalStreamName.ToString();
                         // If the department is "1" (or contains "1" / "Functional")
-                        if (!string.IsNullOrWhiteSpace(finalStreamName) &&
-                           (finalStreamName.Contains("1") || finalStreamName.Contains("Functional", StringComparison.OrdinalIgnoreCase)))
+                        if (!string.IsNullOrWhiteSpace(finalStream) &&
+                           (finalStream.Contains("1") || finalStream.Contains("Functional", StringComparison.OrdinalIgnoreCase)))
                         {
                             targetStatusId = StatusId.FunctionalSupport; // 11
                         }
@@ -149,6 +150,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var (threadId, threadCreated) =
                         await HandleThreadAsync(dto,  posterId, handoffToUpdate?.HandsOffId, attachmentResult);
 
+                    int? activeHandoffId = handoffToUpdate?.HandsOffId;
                     // 2. Validate Transition
                     await ValidateStatusTransitionAsync(targetStatusId, posterId, dto.IssueId);
                     // 3. Upsert the CURRENT USER's stream row first.
@@ -240,7 +242,10 @@ namespace APIGateWay.BusinessLayer.Repository
 
                                 _db.Set<WorkStreamHandoff>().Add(newHandoff);
                                 await _db.SaveChangesAsync(); // must save now to get HandoffId
-
+                                if (activeHandoffId == null)
+                                {
+                                    activeHandoffId = newHandoff.HandsOffId;
+                                }
                                 // 3. Map previously-failed handoffs that this push resolves
                                 if (dto.ResolvedHandoffIds != null && dto.ResolvedHandoffIds.Any())
                                 {
@@ -257,6 +262,23 @@ namespace APIGateWay.BusinessLayer.Repository
                                     await _db.SaveChangesAsync();
                                 }
                             }
+                        }
+                        // Now that the Stream and Handoffs exist, we link them backwards to the Thread!
+                        // ================================================================
+                        if (threadId > 0 && stream != null && stream.StreamId != Guid.Empty)
+                        {
+                            await _domainService.UpdateTrackedEntityAsync<ThreadMaster>(
+                                t => t.ThreadId == threadId,
+                                t =>
+                                {
+                                    t.WorkStreamId = stream.StreamId; // Must add WorkStreamId property to ThreadMaster model!
+
+                                    if (activeHandoffId.HasValue)
+                                    {
+                                        t.HandsOffId = activeHandoffId.Value;
+                                    }
+                                }
+                            );
                         }
                     }
                     else
@@ -326,9 +348,13 @@ namespace APIGateWay.BusinessLayer.Repository
                 if (!string.IsNullOrWhiteSpace(statusName))
                     return statusName;
             }
+            int? departmentId = await GetDepartmentNameAsync(posterId);
 
+            // 2. Convert the integer ID to a string for the DB column
+            // If departmentId is null, it falls back to "General" (or whatever default you prefer)
+            string finalStreamName = departmentId?.ToString();
             // 3. Nothing provided → fall back to employee's department
-            return await GetDepartmentNameAsync(posterId);
+            return finalStreamName;
         }
         // =====================================================================
         // AUTO-RESOLVE StreamStatus from StreamName + CompletionPct
@@ -390,11 +416,11 @@ namespace APIGateWay.BusinessLayer.Repository
             }
 
             // Comment provided: create new thread with optional attachments
-            if (!string.IsNullOrWhiteSpace(dto.Comment))
+            if (!string.IsNullOrWhiteSpace(dto.CommentText))
             {
                 var seq = await _commonService.GetNextSequenceAsync("ISSUETHREADS");
                 var threadId = seq.CurrentValue;
-                string finalHtml = dto.Comment;
+                string finalHtml = dto.CommentText;
 
                 if (dto.temp?.temps != null && dto.temp.temps.Any())
                 {
@@ -403,7 +429,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var relativePath = $"{permUserId}/{permFolder}";
 
                     attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
-                        dto.Comment, dto.temp.temps, relativePath,
+                        dto.CommentText, dto.temp.temps, relativePath,
                         threadId.ToString(), "ThreadMaster");
 
                     finalHtml = attachmentResult.UpdatedHtml;
@@ -416,6 +442,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     HtmlDesc = finalHtml,
                     HandsOffId = HandsoffId,
                     CommentText = HtmlUtilities.ConvertToPlainText(finalHtml),
+                    CompletionPct = dto.CompletionPct,  
                     From_Time = dto.From_Time,   // null = not logged
                     To_Time = dto.To_Time,
                     Hours = dto.Hours,
@@ -608,8 +635,11 @@ namespace APIGateWay.BusinessLayer.Repository
          DateTime? targetDate)
         {
             // Resolve StreamName from Status_Master — MUST be uncommented
-            string finalStreamName;
-            finalStreamName = await GetDepartmentNameAsync(assigneeId);
+            int? departmentId = await GetDepartmentNameAsync(assigneeId);
+
+            // 2. Convert the integer ID to a string for the DB column
+            // If departmentId is null, it falls back to "General" (or whatever default you prefer)
+            string finalStreamName = departmentId?.ToString();
             int? targetStatusId = streamStatusId; // Handle nulls safely
 
             if (targetStatusId == 0)
@@ -864,7 +894,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 var newRow = new WorkStream
                 {
                     IssueId = ctx.IssueId,
-                    StreamName = streamName,
+                    StreamName = streamName.ToString(),
                     ResourceId = ctx.ResourceId,
                     StreamStatus = ctx.StreamStatus,
                     CompletionPct = ctx.CompletionPct ?? 0,
@@ -900,14 +930,16 @@ namespace APIGateWay.BusinessLayer.Repository
             );
         }
 
-        public async Task<string> GetDepartmentNameAsync(Guid? resourceId)
+        public async Task<int?> GetDepartmentNameAsync(Guid? resourceId)
         {
             var emp = await _db.eMPLOYEEMASTERs
                 .Where(e => e.EmployeeID == resourceId)
-                .Select(e => new { e.Team })
+                .Select(e => new { e.Team }) // e.Team is already an int!
                 .FirstOrDefaultAsync();
 
-            return string.IsNullOrWhiteSpace(emp?.Team) ? "General" : emp.Team.Trim();
+            // Just return it directly. 
+            // The '?.' operator naturally returns null if 'emp' wasn't found.
+            return emp?.Team;
         }
 
         private static PostWorkStreamResponse BuildResponse(
@@ -964,13 +996,13 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         public async Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx)
         {
-            var streamName = await GetDepartmentNameAsync(ctx.ResourceId);
-
+            int? streamName = await GetDepartmentNameAsync(ctx.ResourceId);
+            var stream = streamName.ToString();
             // ── Resolve StreamStatus if caller didn't specify one ─────────────────
             // Called from ticket CREATE or UPDATE where no explicit status is passed
             // → derive initial status from the employee's department
             var resolvedStatus = ctx.StreamStatus
-                ?? ResolveStreamStatusFromDepartment(streamName);
+                ?? ResolveStreamStatusFromDepartment(stream);
             //   ↑ null = use dept logic
             //   set   = use what caller sent (e.g. StatusId.New for fresh assignment)
 
@@ -1018,7 +1050,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 var newRow = new WorkStream
                 {
                     IssueId = ctx.IssueId,
-                    StreamName = streamName,
+                    StreamName = streamName.ToString(),
                     ResourceId = ctx.ResourceId,
                     StreamStatus = resolvedStatus,          // ← was ctx.StreamStatus
                     CompletionPct = ctx.CompletionPct ?? 0,

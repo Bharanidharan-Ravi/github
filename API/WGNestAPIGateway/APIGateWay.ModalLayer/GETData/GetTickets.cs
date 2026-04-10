@@ -65,7 +65,9 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid Issue_Id { get; set; }
         public int? HandsOffId  { get; set; }
         public Guid CreatedId { get; set; }
+        public Guid? WorkStreamId { get; set; }
         public string? CreatedBy { get; set; }
+        public decimal? CompletionPct { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
