@@ -18,11 +18,13 @@
 //   We set them manually from ILoginContextService.userName.
 // ─────────────────────────────────────────────────────────────────────────────
 using APIGateWay.Business_Layer.Interface;
+using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -32,15 +34,19 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IDomainService _domainService;
         private readonly IMapper _mapper;
         private readonly ILoginContextService _loginContext;
+        private readonly APIGatewayDBContext _db;
 
         public LabelRepo(
             IDomainService domainService,
             IMapper mapper,
-            ILoginContextService loginContext)
+            ILoginContextService loginContext,
+            APIGatewayDBContext dBContext
+            )
         {
             _domainService = domainService;
             _mapper = mapper;
             _loginContext = loginContext;
+            _db = dBContext;
         }
 
         // ── CREATE ────────────────────────────────────────────────────────────
@@ -49,6 +55,13 @@ namespace APIGateWay.BusinessLayer.Repository
         // LabelRepo.cs
         public async Task<GetLabel> CreateLabelAsync(CreateLabelDto dto)
         {
+            var existingLabel = await _db.labelMaster
+                .FirstOrDefaultAsync(label => label.Title == dto.Title || label.Color == dto.Color);
+
+            if (existingLabel != null)
+            {
+                throw new Exception("A label with the same title or color already exists");
+            }
             var created = await _domainService.ExecuteInTransactionAsync(async () =>
             {
                 var entity = new LabelMaster
