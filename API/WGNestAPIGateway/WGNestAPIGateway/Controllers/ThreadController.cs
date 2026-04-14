@@ -19,13 +19,13 @@ namespace APIGateway.Controllers
         public async Task<IActionResult> PostThread([FromBody] PostThreadsDto threadDto)
         {
             var response = await _threadsRepository.CreateThreadAsync(threadDto);
-            return Ok(ApiResponseHelper.Success(response, "thread create successfully."));
+            return Ok(ApiResponseHelper.Success(response, "Thread Create Successfully."));
         }   
         [HttpPost("{threadId:long}")]
         public async Task<IActionResult> UpdateThreadAsync(long threadId, UpdateThreadDto dto)
         {
             var response = await _threadsRepository.UpdateThreadAsync(threadId, dto);
-            return Ok(ApiResponseHelper.Success(response, "thread Updated successfully."));
+            return Ok(ApiResponseHelper.Success(response, "Thread Updated Successfully."));
         }
     }
 }

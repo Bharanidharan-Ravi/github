@@ -31,12 +31,20 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IWorkStreamService _workStream;
         private readonly ISyncExecutionService _syncExecutionService;
         private readonly ITicketHistoryRepository _historyRepository;
+        private readonly IApiLoggerService _apiLogger;
 
-        public WorkStreamRepo(IDomainService domainService, ILoginContextService loginContext
-            , APIGateWayCommonService aPIGateWay
-            , APIGatewayDBContext aPIGatewayDB
-            , IHelperGetData helperGet
-            , IRealtimeNotifier realtimeNotifier, IWorkStreamService workStream, ISyncExecutionService syncExecutionService, ITicketHistoryRepository historyRepository)
+        // Update your constructor to include IApiLoggerService
+        public WorkStreamRepo(
+            IDomainService domainService,
+            ILoginContextService loginContext,
+            APIGateWayCommonService aPIGateWay,
+            APIGatewayDBContext aPIGatewayDB,
+            IHelperGetData helperGet,
+            IRealtimeNotifier realtimeNotifier,
+            IWorkStreamService workStream,
+            ISyncExecutionService syncExecutionService,
+            ITicketHistoryRepository historyRepository,
+            IApiLoggerService apiLogger) // <--- ADDED HERE
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -47,8 +55,8 @@ namespace APIGateWay.BusinessLayer.Repository
             _workStream = workStream;
             _syncExecutionService = syncExecutionService;
             _historyRepository = historyRepository;
+            _apiLogger = apiLogger; // <--- ADDED HERE
         }
-
 
 
         // =====================================================================

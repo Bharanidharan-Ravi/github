@@ -7,6 +7,7 @@ using Microsoft.Data.SqlClient;
 using ReverseMarkdown;
 using System;
 using System.Linq;
+using System.Reflection;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
 using static APIGateWay.ModalLayer.Helper.PostHelper;
 
@@ -59,7 +60,8 @@ namespace APIGateWay.DomainLayer.Helpers
             foreach (var property in destType.GetProperties())
             {
                 // Finds properties with [IgnoreMapping] and tells AutoMapper to skip them
-                if (property.GetCustomAttributes(typeof(IgnoreMappingAttribute), true).Any())
+                // FIXED: Changed GetCustomAttributes to Attribute.IsDefined
+                if (Attribute.IsDefined(property, typeof(IgnoreMappingAttribute)))
                 {
                     expression.ForMember(property.Name, opt => opt.Ignore());
                     continue;

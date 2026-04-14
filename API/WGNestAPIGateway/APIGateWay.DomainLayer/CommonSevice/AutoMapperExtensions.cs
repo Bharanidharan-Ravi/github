@@ -3,6 +3,7 @@ using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.PostHelper;
@@ -23,8 +24,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
 
             foreach (var property in destType.GetProperties())
             {
-                // 1. Ignore fields marked with [IgnoreMapping]
-                if (property.GetCustomAttributes(typeof(IgnoreMappingAttribute), true).Any())
+                // 1. Ignore fields marked with [IgnoreMapping] (Optimized using IsDefined)
+                if (Attribute.IsDefined(property, typeof(IgnoreMappingAttribute)))
                 {
                     expression.ForMember(property.Name, opt => opt.Ignore());
                     continue;

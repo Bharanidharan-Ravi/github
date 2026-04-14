@@ -86,6 +86,8 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<StatusMaster> StatusMasters { get; set; }
         public DbSet<DBAttachment> DBAttachment { get; set; }
         public DbSet<TeamMaster> teamMasters { get; set; }
+        public DbSet<ApiLog> ApiLogs { get; set; }
+        public DbSet<ApiLogStep> ApiLogSteps { get; set; }
         public DbSet<TicketHistory> TicketHistories { get; set; }
 
         #region SaveChanges Override (Audit)

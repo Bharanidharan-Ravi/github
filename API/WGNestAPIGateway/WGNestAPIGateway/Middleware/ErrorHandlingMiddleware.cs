@@ -37,6 +37,13 @@ namespace APIGateWay.Middelware
         {
             if (context.Response.HasStarted) return;
 
+            context.Items["CapturedError"] = exception.Message;
+            context.Items["CapturedStackTrace"] = exception.StackTrace;
+            if (exception.InnerException != null)
+            {
+                context.Items["CapturedInnerException"] = exception.InnerException.Message;
+            }
+
             context.Response.Clear();
             context.Response.ContentType = "application/json";
 

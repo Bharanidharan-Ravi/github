@@ -8,11 +8,6 @@ using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Repository
 {
@@ -22,54 +17,62 @@ namespace APIGateWay.Business_Layer.Repository
         private readonly ILoginContextService _loginContext;
         private readonly APIGatewayDBContext _db;
         private readonly APIGateWayCommonService _commonService;
+        private readonly IRequestStepContext _stepContext;            // ← ADDED
 
         public DailyPlanRepo(
             IDomainService domainService,
             ILoginContextService loginContext,
             APIGatewayDBContext db,
-            APIGateWayCommonService aPIGateWay)
+            APIGateWayCommonService aPIGateWay,
+            IRequestStepContext stepContext)                          // ← ADDED
         {
             _domainService = domainService;
             _loginContext = loginContext;
             _db = db;
             _commonService = aPIGateWay;
+            _stepContext = stepContext;                             // ← ADDED
         }
 
-        // ── GET today's plan ─────────────────────────────────────────────────
+        // ── GET today's plan — read only, no step logging needed ─────────────
         public async Task<List<GetDailyPlan>> GetTodayPlanAsync(DateTime date)
         {
             var userId = _loginContext.userId;
             var dateOnly = date.Date;
 
             var plans = await _db.DailyPlans
-         .Where(p => p.UserId == userId && p.PlannedDate.Date == dateOnly)
-         .GroupJoin(
-             _db.ISSUEMASTER,
-             p => p.TicketId,
-             t => t.Issue_Id,
-             (p, tickets) => new { p, tickets })
-         .SelectMany(
-             x => x.tickets.DefaultIfEmpty(),   // LEFT JOIN — null ticket is fine
-             (x, t) => new GetDailyPlan
-             {
-                 Id = x.p.Id,
-                 TicketId = x.p.TicketId,
-                 ProjKey = x.p.ProjKey,
-                 PlannedDate = x.p.PlannedDate,
-                 Status = x.p.Status,
-                 //StatusLabel = ToLabel(x.p.Status),
-                 UncheckComment = x.p.UncheckComment,
-                 Title = t != null ? t.Title : "(ticket not found)",
-                 Issue_Code = t != null ? t.Issue_Code : "-",
-                 CreatedAt = x.p.CreatedAt,
-                 UpdatedAt = x.p.UpdatedAt,
-             })
-         .OrderByDescending(p => p.CreatedAt)
-         .ToListAsync();
+                .Where(p => p.UserId == userId && p.PlannedDate.Date == dateOnly)
+                .GroupJoin(
+                    _db.ISSUEMASTER,
+                    p => p.TicketId,
+                    t => t.Issue_Id,
+                    (p, tickets) => new { p, tickets })
+                .SelectMany(
+                    x => x.tickets.DefaultIfEmpty(),
+                    (x, t) => new GetDailyPlan
+                    {
+                        Id = x.p.Id,
+                        TicketId = x.p.TicketId,
+                        ProjKey = x.p.ProjKey,
+                        PlannedDate = x.p.PlannedDate,
+                        Status = x.p.Status,
+                        UncheckComment = x.p.UncheckComment,
+                        Title = t != null ? t.Title : "(ticket not found)",
+                        Issue_Code = t != null ? t.Issue_Code : "-",
+                        CreatedAt = x.p.CreatedAt,
+                        UpdatedAt = x.p.UpdatedAt,
+                    })
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
 
             return plans;
         }
-        // ── CHECK ticket (add to plan) ────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────────
+        // CHECK TICKET (add to plan)
+        //
+        // Step log order (per dto item):
+        //   1. DailyPlans — INSERT  (skipped if already exists — idempotent)
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<List<GetDailyPlan>> CheckTicketAsync(List<CreateDailyPlanDto> dtos)
         {
             var userId = _loginContext.userId;
@@ -103,11 +106,24 @@ namespace APIGateWay.Business_Layer.Repository
                     CreatedAt = DateTime.UtcNow,
                 };
 
-                await _domainService.ExecuteInTransactionAsync(async () =>
+                // ── Step: DailyPlans INSERT ───────────────────────────────────
+                var timer = _stepContext.StartStep();
+                try
                 {
-                    await _domainService.SaveEntityWithAttachmentsAsync(plan, null);
-                    return true;
-                });
+                    await _domainService.ExecuteInTransactionAsync(async () =>
+                    {
+                        await _domainService.SaveEntityWithAttachmentsAsync(plan, null);
+                        return true;
+                    });
+
+                    _stepContext.Success("DailyPlans", "INSERT", plan.Id.ToString(), timer);
+                }
+                catch (Exception ex)
+                {
+                    _stepContext.Failure("DailyPlans", "INSERT",
+                        ex.Message, ex.InnerException?.Message, timer);
+                    throw;
+                }
 
                 result.Add(await BuildResponse(plan));
             }
@@ -115,13 +131,17 @@ namespace APIGateWay.Business_Layer.Repository
             return result;
         }
 
-        // ── UNCHECK ticket ────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
+        // UNCHECK TICKET
+        //
+        // Step log order:
+        //   1. DailyPlans — UPDATE (status + comment)
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<GetDailyPlan> UncheckTicketAsync(int planId, UncheckPlanDto dto)
         {
             var plan = await _db.DailyPlans.FindAsync(planId)
                 ?? throw new Exceptionlist.DataNotFoundException($"Plan '{planId}' not found.");
 
-            // Success is terminal — background job has confirmed thread exists
             if (plan.Status == DailyPlanStatus.Success)
                 throw new InvalidOperationException(
                     "This ticket was completed successfully and cannot be unchecked.");
@@ -130,19 +150,32 @@ namespace APIGateWay.Business_Layer.Repository
             if (plan.Status == DailyPlanStatus.Unchecked)
                 return await BuildResponse(plan);
 
-            await _domainService.ExecuteInTransactionAsync(async () =>
+            // ── Step: DailyPlans UPDATE ───────────────────────────────────────
+            var timer = _stepContext.StartStep();
+            try
             {
-                plan.Status = DailyPlanStatus.Unchecked;
-                plan.UncheckComment = dto.UncheckComment;
-                plan.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-                return true;
-            });
+                await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    plan.Status = DailyPlanStatus.Unchecked;
+                    plan.UncheckComment = dto.UncheckComment;
+                    plan.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                    return true;
+                });
+
+                _stepContext.Success("DailyPlans", "UPDATE", planId.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("DailyPlans", "UPDATE",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
 
             return await BuildResponse(plan);
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────
         private async Task<GetDailyPlan> BuildResponse(DailyPlan plan)
         {
             var ticket = await _db.ISSUEMASTER.FindAsync(plan.TicketId);
@@ -153,8 +186,6 @@ namespace APIGateWay.Business_Layer.Repository
                 ProjKey = plan.ProjKey,
                 PlannedDate = plan.PlannedDate,
                 Status = plan.Status,
-                //StatusLabel = ToLabel(plan.Status),
-                //IsLocked = plan.Status == DailyPlanStatus.Success,
                 UncheckComment = plan.UncheckComment,
                 Title = ticket?.Title,
                 Issue_Code = ticket?.Issue_Code,
@@ -173,3 +204,185 @@ namespace APIGateWay.Business_Layer.Repository
         };
     }
 }
+
+
+
+
+
+#region Before log dailyrepo
+//using APIGateWay.Business_Layer.Interface;
+//using APIGateWay.DomainLayer.CommonSevice;
+//using APIGateWay.DomainLayer.DBContext;
+//using APIGateWay.DomainLayer.Helpers;
+//using APIGateWay.DomainLayer.Interface;
+//using APIGateWay.ModalLayer.GETData;
+//using APIGateWay.ModalLayer.MasterData;
+//using APIGateWay.ModalLayer.PostData;
+//using APIGateWay.ModelLayer.ErrorException;
+//using Microsoft.EntityFrameworkCore;
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Text;
+//using System.Threading.Tasks;
+
+//namespace APIGateWay.Business_Layer.Repository
+//{
+//    public class DailyPlanRepo : IDailyPlanRepo
+//    {
+//        private readonly IDomainService _domainService;
+//        private readonly ILoginContextService _loginContext;
+//        private readonly APIGatewayDBContext _db;
+//        private readonly APIGateWayCommonService _commonService;
+
+//        public DailyPlanRepo(
+//            IDomainService domainService,
+//            ILoginContextService loginContext,
+//            APIGatewayDBContext db,
+//            APIGateWayCommonService aPIGateWay)
+//        {
+//            _domainService = domainService;
+//            _loginContext = loginContext;
+//            _db = db;
+//            _commonService = aPIGateWay;
+//        }
+
+//        // ── GET today's plan ─────────────────────────────────────────────────
+//        public async Task<List<GetDailyPlan>> GetTodayPlanAsync(DateTime date)
+//        {
+//            var userId = _loginContext.userId;
+//            var dateOnly = date.Date;
+
+//            var plans = await _db.DailyPlans
+//         .Where(p => p.UserId == userId && p.PlannedDate.Date == dateOnly)
+//         .GroupJoin(
+//             _db.ISSUEMASTER,
+//             p => p.TicketId,
+//             t => t.Issue_Id,
+//             (p, tickets) => new { p, tickets })
+//         .SelectMany(
+//             x => x.tickets.DefaultIfEmpty(),   // LEFT JOIN — null ticket is fine
+//             (x, t) => new GetDailyPlan
+//             {
+//                 Id = x.p.Id,
+//                 TicketId = x.p.TicketId,
+//                 ProjKey = x.p.ProjKey,
+//                 PlannedDate = x.p.PlannedDate,
+//                 Status = x.p.Status,
+//                 //StatusLabel = ToLabel(x.p.Status),
+//                 UncheckComment = x.p.UncheckComment,
+//                 Title = t != null ? t.Title : "(ticket not found)",
+//                 Issue_Code = t != null ? t.Issue_Code : "-",
+//                 CreatedAt = x.p.CreatedAt,
+//                 UpdatedAt = x.p.UpdatedAt,
+//             })
+//         .OrderByDescending(p => p.CreatedAt)
+//         .ToListAsync();
+
+//            return plans;
+//        }
+//        // ── CHECK ticket (add to plan) ────────────────────────────────────────
+//        public async Task<List<GetDailyPlan>> CheckTicketAsync(List<CreateDailyPlanDto> dtos)
+//        {
+//            var userId = _loginContext.userId;
+//            var today = DateTime.UtcNow.Date;
+//            var result = new List<GetDailyPlan>();
+
+//            foreach (var dto in dtos)
+//            {
+//                // Idempotent — return existing Active or Success row if found
+//                var existing = await _db.DailyPlans.FirstOrDefaultAsync(p =>
+//                    p.UserId == userId &&
+//                    p.TicketId == dto.TicketId &&
+//                    p.PlannedDate.Date == today &&
+//                    (p.Status == DailyPlanStatus.Active || p.Status == DailyPlanStatus.Success));
+
+//                if (existing != null)
+//                {
+//                    result.Add(await BuildResponse(existing));
+//                    continue;
+//                }
+
+//                var seq = await _commonService.GetNextSequenceAsync("DailyPlanner");
+//                var plan = new DailyPlan
+//                {
+//                    Id = seq.CurrentValue,
+//                    UserId = userId,
+//                    TicketId = dto.TicketId,
+//                    ProjKey = dto.ProjKey,
+//                    PlannedDate = today,
+//                    Status = DailyPlanStatus.Active,
+//                    CreatedAt = DateTime.UtcNow,
+//                };
+
+//                await _domainService.ExecuteInTransactionAsync(async () =>
+//                {
+//                    await _domainService.SaveEntityWithAttachmentsAsync(plan, null);
+//                    return true;
+//                });
+
+//                result.Add(await BuildResponse(plan));
+//            }
+
+//            return result;
+//        }
+
+//        // ── UNCHECK ticket ────────────────────────────────────────────────────
+//        public async Task<GetDailyPlan> UncheckTicketAsync(int planId, UncheckPlanDto dto)
+//        {
+//            var plan = await _db.DailyPlans.FindAsync(planId)
+//                ?? throw new Exceptionlist.DataNotFoundException($"Plan '{planId}' not found.");
+
+//            // Success is terminal — background job has confirmed thread exists
+//            if (plan.Status == DailyPlanStatus.Success)
+//                throw new InvalidOperationException(
+//                    "This ticket was completed successfully and cannot be unchecked.");
+
+//            // Already unchecked — idempotent
+//            if (plan.Status == DailyPlanStatus.Unchecked)
+//                return await BuildResponse(plan);
+
+//            await _domainService.ExecuteInTransactionAsync(async () =>
+//            {
+//                plan.Status = DailyPlanStatus.Unchecked;
+//                plan.UncheckComment = dto.UncheckComment;
+//                plan.UpdatedAt = DateTime.UtcNow;
+//                await _db.SaveChangesAsync();
+//                return true;
+//            });
+
+//            return await BuildResponse(plan);
+//        }
+
+//        // ── Helpers ──────────────────────────────────────────────────────────
+//        private async Task<GetDailyPlan> BuildResponse(DailyPlan plan)
+//        {
+//            var ticket = await _db.ISSUEMASTER.FindAsync(plan.TicketId);
+//            return new GetDailyPlan
+//            {
+//                Id = plan.Id,
+//                TicketId = plan.TicketId,
+//                ProjKey = plan.ProjKey,
+//                PlannedDate = plan.PlannedDate,
+//                Status = plan.Status,
+//                //StatusLabel = ToLabel(plan.Status),
+//                //IsLocked = plan.Status == DailyPlanStatus.Success,
+//                UncheckComment = plan.UncheckComment,
+//                Title = ticket?.Title,
+//                Issue_Code = ticket?.Issue_Code,
+//                CreatedAt = plan.CreatedAt,
+//                UpdatedAt = plan.UpdatedAt,
+//            };
+//        }
+
+//        private static string ToLabel(int status) => status switch
+//        {
+//            DailyPlanStatus.Active => "Active",
+//            DailyPlanStatus.Success => "Success",
+//            DailyPlanStatus.Failed => "Failed",
+//            DailyPlanStatus.Unchecked => "Unchecked",
+//            _ => "Unknown"
+//        };
+//    }
+//}
+#endregion

@@ -1,9 +1,9 @@
-﻿using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace APIGateway.API.Swagger
 {
@@ -11,31 +11,23 @@ namespace APIGateway.API.Swagger
     {
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
-            // Skip if [AllowAnonymous] is applied
+            // ✅ Fix 1: Generic GetCustomAttribute<T>() works directly on MethodInfo
             var allowAnonymous = context.MethodInfo
-                .GetCustomAttributes(true)
-                .OfType<AllowAnonymousAttribute>()
-                .Any();
+                .GetCustomAttribute<AllowAnonymousAttribute>() != null;
 
-            // Also check controller-level [AllowAnonymous]
-            var controllerActionDescriptor = context.ApiDescription.ActionDescriptor as ControllerActionDescriptor;
+            // ✅ Fix 2: Generic GetCustomAttribute<T>() works directly on TypeInfo
+            var controllerActionDescriptor = context.ApiDescription.ActionDescriptor
+                as ControllerActionDescriptor;
+
             var controllerAllowAnonymous = controllerActionDescriptor?.ControllerTypeInfo
-                .GetCustomAttributes(typeof(AllowAnonymousAttribute), true)
-                .Any() ?? false;
-
-            // Skip if route contains "login"
-            var isLoginRoute = context.ApiDescription.RelativePath.ToLower().Contains("login");
+                .GetCustomAttribute<AllowAnonymousAttribute>() != null;
 
             if (allowAnonymous || controllerAllowAnonymous)
             {
-                return; // Skip adding WG_token
+                return; // Skip adding WG_token header
             }
 
-            // Add WG_token header
-            if (operation.Parameters == null)
-            {
-                operation.Parameters = new List<OpenApiParameter>();
-            }
+            operation.Parameters ??= new List<OpenApiParameter>();
 
             operation.Parameters.Add(new OpenApiParameter
             {
@@ -50,7 +42,6 @@ namespace APIGateway.API.Swagger
         }
     }
 }
-
 
 //using Microsoft.OpenApi.Models;
 //using Swashbuckle.AspNetCore.SwaggerGen;

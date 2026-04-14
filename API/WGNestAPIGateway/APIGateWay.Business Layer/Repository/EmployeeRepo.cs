@@ -8,13 +8,7 @@ using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
 using AutoMapper;
-using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Repository
 {
@@ -25,56 +19,68 @@ namespace APIGateWay.Business_Layer.Repository
         private readonly ILoginContextService _loginContextService;
         private readonly IMapper _mapper;
         private readonly APIGatewayDBContext _dbContext;
+        private readonly IRequestStepContext _stepContext;            // ← ADDED
 
         public EmployeeRepo(
             IAttachmentService attachmentService,
             IDomainService domainService,
             ILoginContextService loginContext,
             IMapper mapper,
-            APIGatewayDBContext Context)
+            APIGatewayDBContext Context,
+            IRequestStepContext stepContext)                          // ← ADDED
         {
             _attachmentService = attachmentService;
             _domainService = domainService;
             _loginContextService = loginContext;
             _mapper = mapper;
             _dbContext = Context;
+            _stepContext = stepContext;                        // ← ADDED
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // UPDATE EMPLOYEE
+        //
+        // Step log order:
+        //   1. AttachmentMaster  — deactivate old + add new  (skipped if no upload)
+        //   2. LOGIN_MASTER      — username / status update
+        //   3. EMPLOYEEMASTER    — core fields update
+        // ─────────────────────────────────────────────────────────────────────
         public async Task<GetEmployee> UpdateEmployeeAsync(Guid employeeId, RegisterRequestDto dto)
         {
-            // Safety check to ensure the payload actually contains Employee data
             if (dto.Employee == null)
-            {
                 throw new ArgumentException("Employee details must be provided for the update.");
-            }
 
             ProcessedAttachmentResult attachmentResult = null;
             GetEmployee finalData = null;
 
             try
             {
-                // 1. Validate Username (Fail-fast before processing attachments)
+                // 1. Validate Username (fail-fast before processing attachments)
                 if (dto.Login != null && !string.IsNullOrEmpty(dto.Login.UserName))
                 {
-                    // Fetch ONLY the current username as a string (highly optimized query)
+                    var timer = _stepContext.StartStep();
                     var currentUserName = await _dbContext.LOGIN_MASTER
                         .Where(x => x.UserID == employeeId)
                         .Select(x => x.UserName)
                         .FirstOrDefaultAsync();
 
-                    // If the user typed a username that is DIFFERENT from their current one
                     if (currentUserName != dto.Login.UserName)
                     {
-                        // Check if the new name is already taken by someone else
-                        bool isTaken = await _dbContext.LOGIN_MASTER.AnyAsync(x => x.UserName == dto.Login.UserName);
+                        bool isTaken = await _dbContext.LOGIN_MASTER
+                            .AnyAsync(x => x.UserName == dto.Login.UserName);
 
                         if (isTaken)
                         {
-                            throw new Exceptionlist.UserAlreadyExistsException($"{dto.Login.UserName} already exists.");
+                            _stepContext.Failure("LOGIN_MASTER", "UPDATE/INSERT",
+                                    $"{dto.Login.UserName} already exists.","", timer);
+                            throw new Exceptionlist.UserAlreadyExistsException(
+                                $"{dto.Login.UserName} already exists.");
+                            
                         }
                     }
                 }
 
-                // 2. Process New Attachments (Before DB Transaction)
+                // 2. Process new attachments (before DB transaction)
                 if (dto.temp?.temps != null && dto.temp.temps.Any())
                 {
                     var permUserId = $"{_loginContextService.userId}-{_loginContextService.userName}";
@@ -82,86 +88,114 @@ namespace APIGateWay.Business_Layer.Repository
                     var relativePath = $"{permUserId}/{permFolder}";
 
                     attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
-                        "EmployeeAvatar",
-                        dto.temp.temps,
-                        relativePath,
-                        employeeId.ToString(),
-                        "Employee"
-                    );
+                        "EmployeeAvatar", dto.temp.temps,
+                        relativePath, employeeId.ToString(), "Employee");
                 }
 
                 finalData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    // 3. Update LOGIN_MASTER (Username & Future Password)
-                    var loginData = await _dbContext.LOGIN_MASTER.FirstOrDefaultAsync(x => x.UserID == employeeId);
+                    // ── Step 1: AttachmentMaster (deactivate old + track new) ─
+                    if (attachmentResult != null && attachmentResult.Attachments.Any())
+                    {
+                        var timer = _stepContext.StartStep();
+                        try
+                        {
+                            var oldAttachments = await _dbContext.AttachmentMaster
+                                .Where(a =>
+                                    a.ModuleId == employeeId.ToString() &&
+                                    a.Module == "EmployeeAvatar" &&
+                                    a.Status == "Active")
+                                .ToListAsync();
+
+                            foreach (var old in oldAttachments)
+                            {
+                                old.Status = "Inactive";
+                                _dbContext.AttachmentMaster.Update(old);
+                            }
+
+                            var ids = string.Join(",",
+                                attachmentResult.Attachments.Select(a => a.AttachmentId));
+                            _stepContext.Success("AttachmentMaster", "UPDATE/INSERT", ids, timer);
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("AttachmentMaster", "UPDATE/INSERT",
+                                ex.Message, ex.InnerException?.Message, timer);
+                            throw;
+                        }
+                    }
+
+                    // ── Step 2: LOGIN_MASTER ──────────────────────────────────
+                    var loginData = await _dbContext.LOGIN_MASTER
+                        .FirstOrDefaultAsync(x => x.UserID == employeeId);
 
                     if (loginData != null && dto.Login != null)
                     {
-                        // Update Username
-                        if (!string.IsNullOrEmpty(dto.Login.UserName))
+                        var timer = _stepContext.StartStep();
+                        try
                         {
-                            loginData.UserName = dto.Login.UserName;
-                        }
-                        if (string.Equals(dto.Login.Status, "InActive", StringComparison.OrdinalIgnoreCase))
-                        {
-                            loginData.Status = "Inactive";
-                        }
-                        if (string.Equals(dto.Login.Status, "Active", StringComparison.OrdinalIgnoreCase))
-                        {
-                            loginData.Status = "Active";
-                        }
-                            // Update Password (For future use)
-                        if (!string.IsNullOrEmpty(dto.Login.Password))
-                        {
-                            // var (hash, salt) = HashPasswordAgron(dto.Login.Password);
-                            // loginData.PasswordHash = hash;
-                            // loginData.Salt = salt;
-                        }
+                            if (!string.IsNullOrEmpty(dto.Login.UserName))
+                                loginData.UserName = dto.Login.UserName;
 
-                        _dbContext.LOGIN_MASTER.Update(loginData);
+                            if (string.Equals(dto.Login.Status, "InActive", StringComparison.OrdinalIgnoreCase))
+                                loginData.Status = "Inactive";
+
+                            if (string.Equals(dto.Login.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                                loginData.Status = "Active";
+
+                            _dbContext.LOGIN_MASTER.Update(loginData);
+
+                            _stepContext.Success("LOGIN_MASTER", "UPDATE", employeeId.ToString(), timer);
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("LOGIN_MASTER", "UPDATE",
+                                ex.Message, ex.InnerException?.Message, timer);
+                            throw;
+                        }
                     }
 
-                    // 4. Deactivate Old Attachments (If a new one is uploaded)
-                    if (attachmentResult != null && attachmentResult.Attachments.Any())
+                    // ── Step 3: EMPLOYEEMASTER ────────────────────────────────
+                    EMPLOYEEMASTER updatedEmployee;
                     {
-                        var oldAttachments = await _dbContext.AttachmentMaster
-                            .Where(a => a.ModuleId == employeeId.ToString() &&
-                                        a.Module == "EmployeeAvatar" &&
-                                        a.Status == "Active")
-                            .ToListAsync();
-
-                        foreach (var oldAttach in oldAttachments)
+                        var timer = _stepContext.StartStep();
+                        try
                         {
-                            oldAttach.Status = "Inactive";
-                            _dbContext.AttachmentMaster.Update(oldAttach);
+                            updatedEmployee = await _domainService
+                                .UpdateEntityByPredicateWithAttachmentsAsync<EMPLOYEEMASTER>(
+                                    x => x.EmployeeID == employeeId,
+                                    entity =>
+                                    {
+                                        entity.EmployeeName = dto.Employee.EmployeeName;
+                                        entity.Status = dto.Login.Status;
+                                        entity.Team = dto.Employee.Team;
+                                        entity.Role = dto.Employee.Role;
+                                        entity.Specialization = dto.Employee.Specialization;
+                                        entity.Email = dto.Employee.Email;
+                                        entity.PhoneNumber = dto.Employee.PhoneNumber;
+                                        entity.DoB = dto.Employee.DoB;
+                                    },
+                                    attachmentResult?.Attachments);
+
+                            // Commit LOGIN_MASTER + AttachmentMaster changes together
+                            await _dbContext.SaveChangesAsync();
+
+                            _stepContext.Success("EMPLOYEEMASTER", "UPDATE", employeeId.ToString(), timer);
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("EMPLOYEEMASTER", "UPDATE",
+                                ex.Message, ex.InnerException?.Message, timer);
+                            throw;
                         }
                     }
 
-                    // 5. Update EMPLOYEEMASTER
-                    var updatedEmployee = await _domainService.UpdateEntityByPredicateWithAttachmentsAsync<EMPLOYEEMASTER>(
-                        x => x.EmployeeID == employeeId, // 👈 Safe query!
-                        entity =>
-                        {
-                            entity.EmployeeName = dto.Employee.EmployeeName;
-                            entity.Status = dto.Login.Status;
-                            entity.Team = dto.Employee.Team;
-                            entity.Role = dto.Employee.Role;
-                            entity.Specialization = dto.Employee.Specialization;
-                            entity.Email = dto.Employee.Email;
-                            entity.PhoneNumber = dto.Employee.PhoneNumber;
-                            entity.DoB = dto.Employee.DoB;
-                        },
-                        attachmentResult?.Attachments
-                    );
-
-                    // Ensure manual context updates (Login/Attachments) are committed alongside the domain service
-                    await _dbContext.SaveChangesAsync();
-
-                    // 6. Fetch the newly active avatar for the response
+                    // Fetch new active avatar for response
                     var avatar = await _dbContext.AttachmentMaster
-                        .Where(a => a.ModuleId == employeeId.ToString() &&
-                                    a.Module == "EmployeeAvatar" &&
-                                    a.Status == "Active")
+                        .Where(a =>
+                            a.ModuleId == employeeId.ToString() &&
+                            a.Module == "EmployeeAvatar" &&
+                            a.Status == "Active")
                         .OrderByDescending(a => a.CreatedAt)
                         .FirstOrDefaultAsync();
 
@@ -182,24 +216,232 @@ namespace APIGateWay.Business_Layer.Repository
             }
             catch (Exception ex)
             {
-                // Rollback physical files if the DB transaction fails
                 if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
                     _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
 
-                // Extract the real database error if it exists
-                string actualError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-
-                // Throwing the detailed error makes it visible in your API response or logs
-                throw new Exceptionlist.InvalidDataException($"Employee update failed. Detail: {actualError}", ex);
+                string actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exceptionlist.InvalidDataException(
+                    $"Employee update failed. Detail: {actualError}", ex);
             }
 
-            // Cleanup temp files on absolute success
             if (dto.temp?.temps != null && dto.temp.temps.Any())
-            {
                 await _attachmentService.CleanupTempFiles(dto.temp);
-            }
 
             return finalData;
         }
     }
 }
+
+
+
+
+
+
+
+#region Before log
+//using APIGateWay.Business_Layer.Interface;
+//using APIGateWay.DomainLayer.DBContext;
+//using APIGateWay.DomainLayer.Helpers;
+//using APIGateWay.DomainLayer.Interface;
+//using APIGateWay.ModalLayer.DTOs;
+//using APIGateWay.ModalLayer.GETData;
+//using APIGateWay.ModalLayer.MasterData;
+//using APIGateWay.ModalLayer.PostData;
+//using APIGateWay.ModelLayer.ErrorException;
+//using AutoMapper;
+//using Microsoft.AspNetCore.Routing.Template;
+//using Microsoft.EntityFrameworkCore;
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Text;
+//using System.Threading.Tasks;
+
+//namespace APIGateWay.Business_Layer.Repository
+//{
+//    public class EmployeeRepo : IEmployeeRepo
+//    {
+//        private readonly IAttachmentService _attachmentService;
+//        private readonly IDomainService _domainService;
+//        private readonly ILoginContextService _loginContextService;
+//        private readonly IMapper _mapper;
+//        private readonly APIGatewayDBContext _dbContext;
+
+//        public EmployeeRepo(
+//            IAttachmentService attachmentService,
+//            IDomainService domainService,
+//            ILoginContextService loginContext,
+//            IMapper mapper,
+//            APIGatewayDBContext Context)
+//        {
+//            _attachmentService = attachmentService;
+//            _domainService = domainService;
+//            _loginContextService = loginContext;
+//            _mapper = mapper;
+//            _dbContext = Context;
+//        }
+//        public async Task<GetEmployee> UpdateEmployeeAsync(Guid employeeId, RegisterRequestDto dto)
+//        {
+//            // Safety check to ensure the payload actually contains Employee data
+//            if (dto.Employee == null)
+//            {
+//                throw new ArgumentException("Employee details must be provided for the update.");
+//            }
+
+//            ProcessedAttachmentResult attachmentResult = null;
+//            GetEmployee finalData = null;
+
+//            try
+//            {
+//                // 1. Validate Username (Fail-fast before processing attachments)
+//                if (dto.Login != null && !string.IsNullOrEmpty(dto.Login.UserName))
+//                {
+//                    // Fetch ONLY the current username as a string (highly optimized query)
+//                    var currentUserName = await _dbContext.LOGIN_MASTER
+//                        .Where(x => x.UserID == employeeId)
+//                        .Select(x => x.UserName)
+//                        .FirstOrDefaultAsync();
+
+//                    // If the user typed a username that is DIFFERENT from their current one
+//                    if (currentUserName != dto.Login.UserName)
+//                    {
+//                        // Check if the new name is already taken by someone else
+//                        bool isTaken = await _dbContext.LOGIN_MASTER.AnyAsync(x => x.UserName == dto.Login.UserName);
+
+//                        if (isTaken)
+//                        {
+//                            throw new Exceptionlist.UserAlreadyExistsException($"{dto.Login.UserName} already exists.");
+//                        }
+//                    }
+//                }
+
+//                // 2. Process New Attachments (Before DB Transaction)
+//                if (dto.temp?.temps != null && dto.temp.temps.Any())
+//                {
+//                    var permUserId = $"{_loginContextService.userId}-{_loginContextService.userName}";
+//                    var permFolder = $"Employee-{employeeId}";
+//                    var relativePath = $"{permUserId}/{permFolder}";
+
+//                    attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+//                        "EmployeeAvatar",
+//                        dto.temp.temps,
+//                        relativePath,
+//                        employeeId.ToString(),
+//                        "Employee"
+//                    );
+//                }
+
+//                finalData = await _domainService.ExecuteInTransactionAsync(async () =>
+//                {
+//                    // 3. Update LOGIN_MASTER (Username & Future Password)
+//                    var loginData = await _dbContext.LOGIN_MASTER.FirstOrDefaultAsync(x => x.UserID == employeeId);
+
+//                    if (loginData != null && dto.Login != null)
+//                    {
+//                        // Update Username
+//                        if (!string.IsNullOrEmpty(dto.Login.UserName))
+//                        {
+//                            loginData.UserName = dto.Login.UserName;
+//                        }
+//                        if (string.Equals(dto.Login.Status, "InActive", StringComparison.OrdinalIgnoreCase))
+//                        {
+//                            loginData.Status = "Inactive";
+//                        }
+//                        if (string.Equals(dto.Login.Status, "Active", StringComparison.OrdinalIgnoreCase))
+//                        {
+//                            loginData.Status = "Active";
+//                        }
+//                            // Update Password (For future use)
+//                        if (!string.IsNullOrEmpty(dto.Login.Password))
+//                        {
+//                            // var (hash, salt) = HashPasswordAgron(dto.Login.Password);
+//                            // loginData.PasswordHash = hash;
+//                            // loginData.Salt = salt;
+//                        }
+
+//                        _dbContext.LOGIN_MASTER.Update(loginData);
+//                    }
+
+//                    // 4. Deactivate Old Attachments (If a new one is uploaded)
+//                    if (attachmentResult != null && attachmentResult.Attachments.Any())
+//                    {
+//                        var oldAttachments = await _dbContext.AttachmentMaster
+//                            .Where(a => a.ModuleId == employeeId.ToString() &&
+//                                        a.Module == "EmployeeAvatar" &&
+//                                        a.Status == "Active")
+//                            .ToListAsync();
+
+//                        foreach (var oldAttach in oldAttachments)
+//                        {
+//                            oldAttach.Status = "Inactive";
+//                            _dbContext.AttachmentMaster.Update(oldAttach);
+//                        }
+//                    }
+
+//                    // 5. Update EMPLOYEEMASTER
+//                    var updatedEmployee = await _domainService.UpdateEntityByPredicateWithAttachmentsAsync<EMPLOYEEMASTER>(
+//                        x => x.EmployeeID == employeeId, // 👈 Safe query!
+//                        entity =>
+//                        {
+//                            entity.EmployeeName = dto.Employee.EmployeeName;
+//                            entity.Status = dto.Login.Status;
+//                            entity.Team = dto.Employee.Team;
+//                            entity.Role = dto.Employee.Role;
+//                            entity.Specialization = dto.Employee.Specialization;
+//                            entity.Email = dto.Employee.Email;
+//                            entity.PhoneNumber = dto.Employee.PhoneNumber;
+//                            entity.DoB = dto.Employee.DoB;
+//                        },
+//                        attachmentResult?.Attachments
+//                    );
+
+//                    // Ensure manual context updates (Login/Attachments) are committed alongside the domain service
+//                    await _dbContext.SaveChangesAsync();
+
+//                    // 6. Fetch the newly active avatar for the response
+//                    var avatar = await _dbContext.AttachmentMaster
+//                        .Where(a => a.ModuleId == employeeId.ToString() &&
+//                                    a.Module == "EmployeeAvatar" &&
+//                                    a.Status == "Active")
+//                        .OrderByDescending(a => a.CreatedAt)
+//                        .FirstOrDefaultAsync();
+
+//                    return new GetEmployee
+//                    {
+//                        UserID = updatedEmployee.EmployeeID,
+//                        UserName = loginData?.UserName ?? updatedEmployee.EmployeeName,
+//                        Attachment_JSON = avatar?.RelativePath,
+//                        Status = updatedEmployee.Status,
+//                        Team = updatedEmployee.Team,
+//                        Role = updatedEmployee.Role,
+//                        Specialization = updatedEmployee.Specialization,
+//                        Email = updatedEmployee.Email,
+//                        PhoneNumber = updatedEmployee.PhoneNumber,
+//                        DoB = updatedEmployee.DoB,
+//                    };
+//                });
+//            }
+//            catch (Exception ex)
+//            {
+//                // Rollback physical files if the DB transaction fails
+//                if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
+//                    _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
+
+//                // Extract the real database error if it exists
+//                string actualError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+
+//                // Throwing the detailed error makes it visible in your API response or logs
+//                throw new Exceptionlist.InvalidDataException($"Employee update failed. Detail: {actualError}", ex);
+//            }
+
+//            // Cleanup temp files on absolute success
+//            if (dto.temp?.temps != null && dto.temp.temps.Any())
+//            {
+//                await _attachmentService.CleanupTempFiles(dto.temp);
+//            }
+
+//            return finalData;
+//        }
+//    }
+//}
+#endregion

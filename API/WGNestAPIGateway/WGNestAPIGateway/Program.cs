@@ -3,6 +3,7 @@ using APIGateway.Infrastructure;
 using APIGateway.Middleware;
 using APIGateway.Proxy;
 using APIGateway.Swagger;
+using APIGateWay.Business_Layer.Helper;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.Repository;
 using APIGateWay.BusinessLayer.Auth;
@@ -83,6 +84,8 @@ builder.Services.AddScoped<IDomainService, DomainService>();
 builder.Services.AddScoped<IHelperGetData, HelperGetData>();
 builder.Services.AddScoped<IDashBoardDataService, DashBoardDataService>();
 builder.Services.AddScoped<IWorkStreamService, WorkStreamService>();
+builder.Services.AddScoped<IRequestStepContext, RequestStepContext>();
+builder.Services.AddScoped<IApiLoggerService, ApiLoggerService>();
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure
@@ -165,6 +168,10 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowCredentials());
 });
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+});
 // ─────────────────────────────────────────────────────────────
 // Build App
 // ─────────────────────────────────────────────────────────────
@@ -175,11 +182,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors("FrontendPolicy");
-
+app.UseExceptionHandler("/error");
 // 🔐 Authentication & Authorization MUST be before endpoints
 app.UseAuthentication();
 app.UseAuthorization();
-
 
 // ─────────────────────────────────────────────────────────────
 // Static Files
@@ -202,6 +208,7 @@ if (staticFolders != null)
     }
 }
 
+app.UseMiddleware<RequestLoggingMiddleware>();
 // Optional middlewares
 app.UseMiddleware<ResponseWrappingMiddleware>();
 app.UseMiddleware<ErrorHandlingMiddleware>();

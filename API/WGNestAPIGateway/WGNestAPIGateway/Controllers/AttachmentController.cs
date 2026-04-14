@@ -32,6 +32,8 @@ namespace APIGateway.Controllers
 
         [HttpPost("upload")]
         [AllowAnonymous]
+        [RequestSizeLimit(104857600)] // 100 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 104857600)]      
         public async Task<IActionResult> Upload(IFormFile file)
         {
             // 1. Await the method, but don't assign it to a variable since it returns nothing
