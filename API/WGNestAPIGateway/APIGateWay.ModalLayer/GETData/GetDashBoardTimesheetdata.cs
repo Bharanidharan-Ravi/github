@@ -28,6 +28,8 @@ namespace APIGateWay.ModalLayer.GETData
         public string? EstimatedHours { get; set; }
 
         public string? ConsumeTime { get; set; }
+        public decimal? CompletionPct { get; set; }
+        public DateTime? Due_Date { get; set; }
 
         public string? Comment { get; set; }
         public string? Labels_JSON { get; set; }

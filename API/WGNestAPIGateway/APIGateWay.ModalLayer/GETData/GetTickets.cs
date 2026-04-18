@@ -14,11 +14,12 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Title { get; set; }
         public string? Description { get; set; }
         public string? HtmlDesc { get; set; }
-        public Guid? CreatedBy { get; set; }
         public string? Issuer_Name { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public Guid? CreatedBy { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public Guid? ReopenedBy { get; set; }
         public Guid Project_Id { get; set; }
         public Guid? RepoId { get; set; }
         public decimal? CompletionPct { get; set; }

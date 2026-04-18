@@ -68,12 +68,21 @@ namespace APIGateWay.ModalLayer.PostData
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
         public string? Hours { get; set; }
+        public bool IsReopenRequest { get; set; }
+        public int? ReopenCount { get; set; }
+        public Guid? ReopenedBy { get; set; }
         public bool ReportTestFailure { get; set; } = false;
         public string? TestFailureComment { get; set; }
         public bool ClearTestFailure { get; set; } = false;
         public Guid? TargetDeveloperResourceId { get; set; }
         public Guid? WorkStreamId { get; set; }
         public decimal? PercentageDrop { get; set; }
+        public decimal? TicketOverallPercentage { get; set; }
+        public string? TicketStatusSummary { get; set; }
+
+        // Set this to true from the UI if the user is ONLY submitting 
+        // the overall progress and NOT updating their subtask/comments.
+        public bool IsTicketProgressOnly { get; set; }
     }
 
     public class NextAssigneeDto

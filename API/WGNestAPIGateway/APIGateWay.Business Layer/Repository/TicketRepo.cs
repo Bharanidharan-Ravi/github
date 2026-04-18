@@ -7,6 +7,7 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
+using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -89,6 +90,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var ticketMaster = _mapper.Map<TicketMaster>(ticketDto);
                     ticketMaster.Issue_Id = Guid.NewGuid();
                     ticketMaster.Status = 1;
+                    ticketMaster.ReopenCount = 0;
 
                     if (!ticketDto.RepoId.HasValue)
                         throw new Exception("Repo_Id is required to create a Ticket.");
@@ -326,6 +328,7 @@ namespace APIGateWay.BusinessLayer.Repository
         //   3. IssueLabels       — full replace     (skipped if labelId null)
         //   4. WorkStream        — upsert/deactivate per assignee (skipped if resourceIds null)
         // ─────────────────────────────────────────────────────────────────────
+       
         public async Task<GetTickets> UpdateTicketAsync(Guid ticketId, UpdateTicketDto dto)
         {
             ProcessedAttachmentResult attachmentResult = null;
@@ -335,9 +338,17 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 finalTicketData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    string finalHtmlDescription = dto.Description ?? string.Empty;
+                    // ── Load existing record first ────────────────────────────
+                    var existingTicket = await _db.ISSUEMASTER.FindAsync(ticketId)
+                        ?? throw new Exception("Ticket not found");
+
+                    var oldLabels = await _db.ISSUE_LABELS
+                        .Where(il => il.Issue_Id == ticketId)
+                        .ToListAsync();
 
                     // ── Step 1: AttachmentMaster ──────────────────────────────
+                    string finalHtmlDescription = dto.Description ?? string.Empty;
+
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                     {
                         var timer = _stepContext.StartStep();
@@ -347,16 +358,14 @@ namespace APIGateWay.BusinessLayer.Repository
                             var relativePath = $"{permUserId}/{ticketId}";
 
                             attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
-                                dto.Description,
-                                dto.temp.temps,
-                                relativePath,
-                                ticketId.ToString(),
-                                "TicketMaster");
+                                dto.Description, dto.temp.temps,
+                                relativePath, ticketId.ToString(), "TicketMaster");
 
                             finalHtmlDescription = attachmentResult.UpdatedHtml;
 
                             var attachmentIds = string.Join(",",
                                 attachmentResult.Attachments.Select(a => a.AttachmentId));
+
                             _stepContext.Success("AttachmentMaster", "INSERT", attachmentIds, timer);
                         }
                         catch (Exception ex)
@@ -367,57 +376,55 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
 
-                    var capturedHtml = finalHtmlDescription;
-                    var existingTicket = await _db.ISSUEMASTER.FindAsync(ticketId);
-                    if (existingTicket == null)
-                        throw new Exception("Ticket not found");
+                    // ── Step 2: TicketMaster — patch only changed fields ──────
+                    var patcher = new EntityPatcher<TicketMaster>(existingTicket)
+                        .Set("Title",
+                            existingTicket.Title, dto.Title,
+                            (e, v) => e.Title = v)
 
-                    var oldTitle = existingTicket.Title;
-                    var oldDescription = existingTicket.HtmlDesc;
-                    var oldPriority = existingTicket.Priority?.ToString();
-                    var oldDueDate = existingTicket.Due_Date;
-                    var oldStatus = existingTicket.Status?.ToString();
+                        .Set("Description",
+                            existingTicket.HtmlDesc?.Trim(), finalHtmlDescription.Trim(),
+                            (e, v) =>
+                            {
+                                e.HtmlDesc = v;
+                                e.Description = HtmlUtilities.ConvertToPlainText(v ?? string.Empty);
+                            },
+                            // Display formatter: plain-text truncated for history
+                            v => Truncate(HtmlUtilities.ConvertToPlainText(v ?? string.Empty), 100))
 
-                    var oldLabels = await _db.ISSUE_LABELS
-                        .Where(il => il.Issue_Id == ticketId)
-                        .ToListAsync();
+                        .Set("Priority",
+                            existingTicket.Priority?.ToString(), dto.Priority,
+                            (e, v) => e.Priority = v == null ? null : v)
 
-                    var currentlyActiveAssignees = await _db.WorkStreams
-                        .Where(ws =>
-                            ws.IssueId == ticketId &&
-                            ws.StreamStatus != StatusId.Inactive &&
-                            ws.StreamStatus != StatusId.Cancelled)
-                        .Join(_db.eMPLOYEEMASTERs,
-                            ws => ws.ResourceId,
-                            e => e.EmployeeID,
-                            (ws, e) => new { ws.ResourceId, e.EmployeeName })
-                        .ToListAsync();
+                        .Set("Hours",
+                            existingTicket.Hours, dto.Hours,
+                            (e, v) => e.Hours = v)
 
-                    // ── Step 2: TicketMaster ──────────────────────────────────
+                        .Set("Assignee",
+                            existingTicket.Assignee_Id, dto.Assignee_Id,
+                            (e, v) => { if (v.HasValue) e.Assignee_Id = v.Value; })
+
+                        .Set("Due Date",
+                            existingTicket.Due_Date, dto.Due_Date,
+                            (e, v) => { if (v.HasValue) e.Due_Date = v.Value; },
+                            v => v?.ToString("yyyy-MM-dd"))
+
+                        .Set("Status",
+                            existingTicket.Status, dto.Status,
+                            (e, v) => { if (v.HasValue) e.Status = v.Value; });
+
                     TicketMaster updatedTicket;
+
+                    if (patcher.HasChanges)
                     {
                         var timer = _stepContext.StartStep();
                         try
                         {
+                            patcher.Apply();   // ← mutates existingTicket with only the changed fields
+
                             updatedTicket = await _domainService.UpdateEntityWithAttachmentsAsync<TicketMaster>(
                                 ticketId,
-                                entity =>
-                                {
-                                    entity.Title = dto.Title;
-                                    entity.HtmlDesc = capturedHtml;
-                                    entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
-                                    entity.Priority = dto.Priority;
-                                    entity.Hours = dto.Hours;
-
-                                    if (dto.Assignee_Id.HasValue)
-                                        entity.Assignee_Id = dto.Assignee_Id.Value;
-
-                                    if (dto.Due_Date.HasValue)
-                                        entity.Due_Date = dto.Due_Date.Value;
-
-                                    if (dto.Status.HasValue)
-                                        entity.Status = dto.Status.Value;
-                                },
+                                _ => { },      // entity already patched above — no-op lambda
                                 attachmentResult?.Attachments);
 
                             _stepContext.Success("TicketMaster", "UPDATE", ticketId.ToString(), timer);
@@ -428,121 +435,134 @@ namespace APIGateWay.BusinessLayer.Repository
                                 ex.Message, ex.InnerException?.Message, timer);
                             throw;
                         }
+
+                        // ── Audit history — only for changed fields ───────────
+                        foreach (var change in patcher.Changes)
+                        {
+                            await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+                                issueId: ticketId,
+                                fieldName: change.FieldName,
+                                oldValue: change.OldValue,
+                                newValue: change.NewValue,
+                                actorId: _loginContext.userId,
+                                actorName: _loginContext.userName));
+                        }
                     }
-
-                    // History logs for changed fields (no step log needed — these are audit rows)
-                    if (oldTitle != dto.Title)
-                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
-                            issueId: ticketId, fieldName: "Title",
-                            oldValue: oldTitle, newValue: dto.Title,
-                            actorId: _loginContext.userId, actorName: _loginContext.userName));
-
-                    if (oldDescription != dto.Description)
-                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
-                            issueId: ticketId, fieldName: "Description",
-                            oldValue: oldDescription, newValue: dto.Description,
-                            actorId: _loginContext.userId, actorName: _loginContext.userName));
-
-                    if (oldPriority != dto.Priority)
-                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
-                            issueId: ticketId, fieldName: "Priority",
-                            oldValue: oldPriority, newValue: dto.Priority,
-                            actorId: _loginContext.userId, actorName: _loginContext.userName));
-
-                    if (dto.Due_Date.HasValue && oldDueDate != dto.Due_Date)
-                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
-                            issueId: ticketId, fieldName: "Due Date",
-                            oldValue: oldDueDate?.ToString("yyyy-MM-dd"),
-                            newValue: dto.Due_Date?.ToString("yyyy-MM-dd"),
-                            actorId: _loginContext.userId, actorName: _loginContext.userName));
+                    else
+                    {
+                        // Nothing changed — skip DB write entirely
+                        updatedTicket = existingTicket;
+                    }
 
                     // ── Step 3: IssueLabels ───────────────────────────────────
                     if (dto.labelId != null)
                     {
-                        var timer = _stepContext.StartStep();
-                        try
+                        var incomingLabelIds = dto.labelId
+                            .Where(l => l.Id.HasValue)
+                            .Select(l => l.Id!.Value)
+                            .OrderBy(x => x)
+                            .ToList();
+
+                        var existingLabelIds = oldLabels
+                            .Where(ol => ol.Label_Id.HasValue)
+                            .Select(ol => ol.Label_Id!.Value)
+                            .OrderBy(x => x)
+                            .ToList();
+
+                        // Only touch labels if the set actually changed
+                        if (!incomingLabelIds.SequenceEqual(existingLabelIds))
                         {
-                            var labelNames = await _db.labelMaster
-                                .Where(lm =>
-                                    oldLabels.Select(ol => ol.Label_Id).Contains(lm.Id) ||
-                                    dto.labelId.Select(d => d.Id).Contains(lm.Id))
-                                .ToDictionaryAsync(lm => lm.Id, lm => lm.Title);
+                            var timer = _stepContext.StartStep();
+                            try
+                            {
+                                var labelNames = await _db.labelMaster
+                                    .Where(lm => existingLabelIds.Contains(lm.Id)
+                                              || incomingLabelIds.Contains(lm.Id))
+                                    .ToDictionaryAsync(lm => lm.Id, lm => lm.Title);
 
-                            var oldLabelNames = string.Join(", ", oldLabels
-                                .Select(ol => labelNames.GetValueOrDefault(ol.Label_Id ?? 0, "Unknown"))
-                                .Where(name => name != "Unknown"));
+                                var oldLabelNames = string.Join(", ",
+                                    existingLabelIds.Select(id => labelNames.GetValueOrDefault(id, "Unknown")));
 
-                            var newLabelNames = string.Join(", ", dto.labelId
-                                .Select(nl => labelNames.GetValueOrDefault(nl.Id ?? 0, "Unknown"))
-                                .Where(name => name != "Unknown"));
+                                var newLabelNames = string.Join(", ",
+                                    incomingLabelIds.Select(id => labelNames.GetValueOrDefault(id, "Unknown")));
 
-                            if (oldLabelNames != newLabelNames)
                                 await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
                                     issueId: ticketId, fieldName: "Label",
                                     oldValue: string.IsNullOrEmpty(oldLabelNames) ? "None" : oldLabelNames,
                                     newValue: string.IsNullOrEmpty(newLabelNames) ? "None" : newLabelNames,
-                                    actorId: _loginContext.userId, actorName: _loginContext.userName));
+                                    actorId: _loginContext.userId,
+                                    actorName: _loginContext.userName));
 
-                            var newLabels = dto.labelId.Select(l => new IssueLabel
+                                var newLabels = incomingLabelIds.Select(id => new IssueLabel
+                                {
+                                    Issue_Id = ticketId,
+                                    Label_Id = id
+                                }).ToList();
+
+                                await _domainService.UpdateLabelAsync(ticketId, newLabels);
+
+                                _stepContext.Success("IssueLabels", "UPDATE",
+                                    string.Join(",", incomingLabelIds), timer);
+                            }
+                            catch (Exception ex)
                             {
-                                Issue_Id = ticketId,
-                                Label_Id = l.Id
-                            }).ToList();
-
-                            await _domainService.UpdateLabelAsync(ticketId, newLabels);
-
-                            var labelIds = string.Join(",", dto.labelId.Select(l => l.Id));
-                            _stepContext.Success("IssueLabels", "UPDATE", labelIds, timer);
-                        }
-                        catch (Exception ex)
-                        {
-                            _stepContext.Failure("IssueLabels", "UPDATE",
-                                ex.Message, ex.InnerException?.Message, timer);
-                            throw;
+                                _stepContext.Failure("IssueLabels", "UPDATE",
+                                    ex.Message, ex.InnerException?.Message, timer);
+                                throw;
+                            }
                         }
                     }
 
-                    // ── Step 4: WorkStream ────────────────────────────────────
+                    // ── Step 4: WorkStream — full assignee sync ───────────────
+                    //
+                    //   DB has:      [A, B, C]
+                    //   DTO sends:   [A, B]
+                    //   Result:      A → keep, B → keep, C → Inactive
+                    //
                     if (dto.resourceIds != null)
                     {
-                        var timer = _stepContext.StartStep();
-                        try
+                        var incomingIds = dto.resourceIds
+                            .Where(r => r.Id.HasValue)
+                            .Select(r => r.Id!.Value)
+                            .ToList();
+
+                        var activeInDb = await _db.WorkStreams
+                            .Where(ws => ws.IssueId == ticketId
+                                      && ws.StreamStatus != StatusId.Inactive
+                                      && ws.StreamStatus != StatusId.Cancelled)
+                            .Select(ws => ws.ResourceId!.Value)
+                            .ToListAsync();
+
+                        // Who to deactivate: in DB but NOT in incoming list
+                        var toDeactivate = activeInDb.Except(incomingIds).ToList();
+
+                        // Who to upsert: in incoming list (new or existing)
+                        var toUpsert = incomingIds.ToList();
+
+                        bool assigneesChanged = toDeactivate.Any()
+                            || incomingIds.Except(activeInDb).Any();
+
+                        if (assigneesChanged)
                         {
-                            var updateResourceIds = dto.resourceIds
-                                .Where(r => r.Id.HasValue)
-                                .Select(r => r.Id!.Value)
-                                .ToList();
-
-                            var currentlyActiveIds = await _db.WorkStreams
-                                .Where(ws =>
-                                    ws.IssueId == ticketId &&
-                                    ws.StreamStatus != StatusId.Inactive &&
-                                    ws.StreamStatus != StatusId.Cancelled)
-                                .Select(ws => ws.ResourceId!.Value)
-                                .ToListAsync();
-
-                            // Deactivate removed assignees
-                            var removedIds = currentlyActiveIds
-                                .Where(id => !updateResourceIds.Contains(id))
-                                .ToList();
-
-                            foreach (var removedId in removedIds)
+                            var timer = _stepContext.StartStep();
+                            try
                             {
-                                await _workStreamService.UpsertWorkStreamsAsync(
-                                    new WorkStreamContext
-                                    {
-                                        IssueId = ticketId,
-                                        ResourceId = removedId,
-                                        StreamStatus = StatusId.Inactive,
-                                        CompletionPct = null,
-                                        TargetDate = null
-                                    });
-                            }
+                                // ── Deactivate removed assignees ──────────────
+                                foreach (var removedId in toDeactivate)
+                                {
+                                    await _workStreamService.UpsertWorkStreamsAsync(
+                                        new WorkStreamContext
+                                        {
+                                            IssueId = ticketId,
+                                            ResourceId = removedId,
+                                            StreamStatus = StatusId.Inactive,
+                                            CompletionPct = null,
+                                            TargetDate = null
+                                        });
+                                }
 
-                            // Upsert remaining / new assignees
-                            if (updateResourceIds.Any())
-                            {
-                                foreach (var resourceId in updateResourceIds)
+                                // ── Upsert kept / new assignees ───────────────
+                                foreach (var resourceId in toUpsert)
                                 {
                                     await _workStreamService.UpsertWorkStreamsAsync(
                                         new WorkStreamContext
@@ -554,16 +574,16 @@ namespace APIGateWay.BusinessLayer.Repository
                                             TargetDate = dto.TargetDate
                                         });
                                 }
-                            }
 
-                            var streamIds = string.Join(",", updateResourceIds);
-                            _stepContext.Success("WorkStream", "UPDATE", streamIds, timer);
-                        }
-                        catch (Exception ex)
-                        {
-                            _stepContext.Failure("WorkStream", "UPDATE",
-                                ex.Message, ex.InnerException?.Message, timer);
-                            throw;
+                                _stepContext.Success("WorkStream", "UPDATE",
+                                    string.Join(",", toUpsert), timer);
+                            }
+                            catch (Exception ex)
+                            {
+                                _stepContext.Failure("WorkStream", "UPDATE",
+                                    ex.Message, ex.InnerException?.Message, timer);
+                                throw;
+                            }
                         }
                     }
 
@@ -578,9 +598,10 @@ namespace APIGateWay.BusinessLayer.Repository
                 if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
                     _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
 
-                throw new Exception($"Ticket update failed. Everything was rolled back safely.{ex}", ex);
+                throw new Exception($"Ticket update failed. Everything was rolled back safely. {ex}", ex);
             }
 
+            // ── Realtime broadcast (unchanged) ───────────────────────────────────
             var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
                 configKey: "TicketsList",
                 syncParams: new Dictionary<string, string> { { "IssueId", finalTicketData.Issue_Id.ToString() } },
@@ -610,6 +631,10 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return richTicketData;
         }
+
+        // ── Private helper ────────────────────────────────────────────────────────
+        private static string Truncate(string value, int max) =>
+            value.Length > max ? value[..max] + "..." : value;
 
         // ─────────────────────────────────────────────────────────────────────
         // STATUS-ONLY UPDATE
@@ -684,6 +709,80 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return richTicketData;
         }
+
+        //public async Task<GetTickets> UpdateTicketProgressAsync(Guid ticketId, UpdateProgressDto dto)
+        //{
+        //    GetTickets finalTicketData = null;
+
+        //    try
+        //    {
+        //        finalTicketData = await _domainService.ExecuteInTransactionAsync(async () =>
+        //        {
+        //            var timer = _stepContext.StartStep();
+
+        //            try
+        //            {
+        //                // 1. Find the current active log(s) and make them inactive
+        //                var activeLogs = await _db.TicketProgressLogs
+        //                    .Where(log => log.Issue_Id == ticketId && log.IsActive)
+        //                    .ToListAsync();
+
+        //                foreach (var log in activeLogs)
+        //                {
+        //                    log.IsActive = false;
+        //                }
+
+        //                // 2. Create the new active log from the user's input
+        //                var newLog = new TicketProgressLog
+        //                {
+        //                    Issue_Id = ticketId,
+        //                    Assignee_Id = _loginContext.userId,
+        //                    Percentage = dto.Percentage,
+        //                    StatusSummary = dto.StatusSummary,
+        //                    IsActive = true,
+        //                    CreatedAt = DateTime.UtcNow
+        //                };
+
+        //                await _db.TicketProgressLogs.AddAsync(newLog);
+
+        //                // 3. Update the TicketMaster so your list views load fast
+        //                var ticketMaster = await _db.ISSUEMASTER.FindAsync(ticketId)
+        //                    ?? throw new Exception("Ticket not found");
+
+        //                ticketMaster.OverallPercentage = dto.Percentage;
+
+        //                // 4. Save changes and log to TicketHistory
+        //                await _db.SaveChangesAsync();
+
+        //                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+        //                    issueId: ticketId,
+        //                    fieldName: "Overall Progress",
+        //                    oldValue: activeLogs.FirstOrDefault()?.Percentage.ToString() ?? "0",
+        //                    newValue: dto.Percentage.ToString(),
+        //                    actorId: _loginContext.userId,
+        //                    actorName: _loginContext.userName));
+
+        //                _stepContext.Success("TicketProgress", "UPDATE", ticketId.ToString(), timer);
+
+        //                return _mapper.Map<GetTickets>(ticketMaster);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                _stepContext.Failure("TicketProgress", "UPDATE", ex.Message, ex.InnerException?.Message, timer);
+        //                throw;
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception($"Failed to update ticket progress. {ex.Message}", ex);
+        //    }
+
+        //    // Broadcast the update to realtime notifier just like your other methods
+        //    //await BroadcastTicketUpdateAsync(finalTicketData);
+
+        //    return finalTicketData;
+        //}
     }
    
 }
@@ -1233,3 +1332,308 @@ namespace APIGateWay.BusinessLayer.Repository
 //        return richTicketData;
 //    }
 //}
+
+#region update ticket
+//public async Task<GetTickets> UpdateTicketAsync(Guid ticketId, UpdateTicketDto dto)
+//{
+//    ProcessedAttachmentResult attachmentResult = null;
+//    GetTickets finalTicketData = null;
+
+//    try
+//    {
+//        finalTicketData = await _domainService.ExecuteInTransactionAsync(async () =>
+//        {
+//            string finalHtmlDescription = dto.Description ?? string.Empty;
+
+//            // ── Step 1: AttachmentMaster ──────────────────────────────
+//            if (dto.temp?.temps != null && dto.temp.temps.Any())
+//            {
+//                var timer = _stepContext.StartStep();
+//                try
+//                {
+//                    var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+//                    var relativePath = $"{permUserId}/{ticketId}";
+
+//                    attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+//                        dto.Description,
+//                        dto.temp.temps,
+//                        relativePath,
+//                        ticketId.ToString(),
+//                        "TicketMaster");
+
+//                    finalHtmlDescription = attachmentResult.UpdatedHtml;
+
+//                    var attachmentIds = string.Join(",",
+//                        attachmentResult.Attachments.Select(a => a.AttachmentId));
+//                    _stepContext.Success("AttachmentMaster", "INSERT", attachmentIds, timer);
+//                }
+//                catch (Exception ex)
+//                {
+//                    _stepContext.Failure("AttachmentMaster", "INSERT",
+//                        ex.Message, ex.InnerException?.Message, timer);
+//                    throw;
+//                }
+//            }
+
+//            var capturedHtml = finalHtmlDescription;
+//            var existingTicket = await _db.ISSUEMASTER.FindAsync(ticketId);
+//            if (existingTicket == null)
+//                throw new Exception("Ticket not found");
+
+//            var oldTitle = existingTicket.Title;
+//            var oldDescription = existingTicket.HtmlDesc;
+//            var oldPriority = existingTicket.Priority?.ToString();
+//            var oldDueDate = existingTicket.Due_Date;
+//            var oldStatus = existingTicket.Status?.ToString();
+
+//            var oldLabels = await _db.ISSUE_LABELS
+//                .Where(il => il.Issue_Id == ticketId)
+//                .ToListAsync();
+
+//            var currentlyActiveAssignees = await _db.WorkStreams
+//                .Where(ws =>
+//                    ws.IssueId == ticketId &&
+//                    ws.StreamStatus != StatusId.Inactive &&
+//                    ws.StreamStatus != StatusId.Cancelled)
+//                .Join(_db.eMPLOYEEMASTERs,
+//                    ws => ws.ResourceId,
+//                    e => e.EmployeeID,
+//                    (ws, e) => new { ws.ResourceId, e.EmployeeName })
+//                .ToListAsync();
+
+//            // ── Step 2: TicketMaster ──────────────────────────────────
+//            TicketMaster updatedTicket;
+//            {
+//                var timer = _stepContext.StartStep();
+//                try
+//                {
+//                    updatedTicket = await _domainService.UpdateEntityWithAttachmentsAsync<TicketMaster>(
+//                        ticketId,
+//                        entity =>
+//                        {
+//                            entity.Title = dto.Title;
+//                            entity.HtmlDesc = capturedHtml;
+//                            entity.Description = HtmlUtilities.ConvertToPlainText(capturedHtml);
+//                            entity.Priority = dto.Priority;
+//                            entity.Hours = dto.Hours;
+
+//                            if (dto.Assignee_Id.HasValue)
+//                                entity.Assignee_Id = dto.Assignee_Id.Value;
+
+//                            if (dto.Due_Date.HasValue)
+//                                entity.Due_Date = dto.Due_Date.Value;
+
+//                            if (dto.Status.HasValue)
+//                                entity.Status = dto.Status.Value;
+//                        },
+//                        attachmentResult?.Attachments);
+
+//                    _stepContext.Success("TicketMaster", "UPDATE", ticketId.ToString(), timer);
+//                }
+//                catch (Exception ex)
+//                {
+//                    _stepContext.Failure("TicketMaster", "UPDATE",
+//                        ex.Message, ex.InnerException?.Message, timer);
+//                    throw;
+//                }
+//            }
+
+//            // History logs for changed fields (no step log needed — these are audit rows)
+//            if (oldTitle != dto.Title)
+//                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+//                    issueId: ticketId, fieldName: "Title",
+//                    oldValue: oldTitle, newValue: dto.Title,
+//                    actorId: _loginContext.userId, actorName: _loginContext.userName));
+
+//            string currentHtml = (oldDescription ?? string.Empty).Trim();
+//            string incomingHtml = (dto.Description ?? string.Empty).Trim();
+
+//            // 2. Compare the cleaned strings
+//            if (!string.Equals(currentHtml, incomingHtml, StringComparison.OrdinalIgnoreCase))
+//            {
+//                // 3. Truncate the values to prevent the SQL crash we fixed earlier!
+//                int maxLength = 100; // Adjust based on your DB column size
+
+//                string safeOldDesc = HtmlUtilities.ConvertToPlainText(currentHtml);
+//                safeOldDesc = safeOldDesc.Length > maxLength ? safeOldDesc.Substring(0, maxLength) + "..." : safeOldDesc;
+
+//                string safeNewDesc = HtmlUtilities.ConvertToPlainText(incomingHtml);
+//                safeNewDesc = safeNewDesc.Length > maxLength ? safeNewDesc.Substring(0, maxLength) + "..." : safeNewDesc;
+
+//                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+//                    issueId: ticketId,
+//                    fieldName: "Description",
+//                    oldValue: safeOldDesc,
+//                    newValue: safeNewDesc,
+//                    actorId: _loginContext.userId,
+//                    actorName: _loginContext.userName));
+//            }
+
+//            if (oldPriority != dto.Priority)
+//                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+//                    issueId: ticketId, fieldName: "Priority",
+//                    oldValue: oldPriority, newValue: dto.Priority,
+//                    actorId: _loginContext.userId, actorName: _loginContext.userName));
+
+//            if (dto.Due_Date.HasValue && oldDueDate != dto.Due_Date)
+//                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+//                    issueId: ticketId, fieldName: "Due Date",
+//                    oldValue: oldDueDate?.ToString("yyyy-MM-dd"),
+//                    newValue: dto.Due_Date?.ToString("yyyy-MM-dd"),
+//                    actorId: _loginContext.userId, actorName: _loginContext.userName));
+
+//            // ── Step 3: IssueLabels ───────────────────────────────────
+//            if (dto.labelId != null)
+//            {
+//                var timer = _stepContext.StartStep();
+//                try
+//                {
+//                    var labelNames = await _db.labelMaster
+//                        .Where(lm =>
+//                            oldLabels.Select(ol => ol.Label_Id).Contains(lm.Id) ||
+//                            dto.labelId.Select(d => d.Id).Contains(lm.Id))
+//                        .ToDictionaryAsync(lm => lm.Id, lm => lm.Title);
+
+//                    var oldLabelNames = string.Join(", ", oldLabels
+//                        .Select(ol => labelNames.GetValueOrDefault(ol.Label_Id ?? 0, "Unknown"))
+//                        .Where(name => name != "Unknown"));
+
+//                    var newLabelNames = string.Join(", ", dto.labelId
+//                        .Select(nl => labelNames.GetValueOrDefault(nl.Id ?? 0, "Unknown"))
+//                        .Where(name => name != "Unknown"));
+
+//                    if (oldLabelNames != newLabelNames)
+//                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
+//                            issueId: ticketId, fieldName: "Label",
+//                            oldValue: string.IsNullOrEmpty(oldLabelNames) ? "None" : oldLabelNames,
+//                            newValue: string.IsNullOrEmpty(newLabelNames) ? "None" : newLabelNames,
+//                            actorId: _loginContext.userId, actorName: _loginContext.userName));
+
+//                    var newLabels = dto.labelId.Select(l => new IssueLabel
+//                    {
+//                        Issue_Id = ticketId,
+//                        Label_Id = l.Id
+//                    }).ToList();
+
+//                    await _domainService.UpdateLabelAsync(ticketId, newLabels);
+
+//                    var labelIds = string.Join(",", dto.labelId.Select(l => l.Id));
+//                    _stepContext.Success("IssueLabels", "UPDATE", labelIds, timer);
+//                }
+//                catch (Exception ex)
+//                {
+//                    _stepContext.Failure("IssueLabels", "UPDATE",
+//                        ex.Message, ex.InnerException?.Message, timer);
+//                    throw;
+//                }
+//            }
+
+//            // ── Step 4: WorkStream ────────────────────────────────────
+//            if (dto.resourceIds != null)
+//            {
+//                var timer = _stepContext.StartStep();
+//                try
+//                {
+//                    var updateResourceIds = dto.resourceIds
+//                        .Where(r => r.Id.HasValue)
+//                        .Select(r => r.Id!.Value)
+//                        .ToList();
+
+//                    var currentlyActiveIds = await _db.WorkStreams
+//                        .Where(ws =>
+//                            ws.IssueId == ticketId &&
+//                            ws.StreamStatus != StatusId.Inactive &&
+//                            ws.StreamStatus != StatusId.Cancelled)
+//                        .Select(ws => ws.ResourceId!.Value)
+//                        .ToListAsync();
+
+//                    // Deactivate removed assignees
+//                    var removedIds = currentlyActiveIds
+//                        .Where(id => !updateResourceIds.Contains(id))
+//                        .ToList();
+
+//                    foreach (var removedId in removedIds)
+//                    {
+//                        await _workStreamService.UpsertWorkStreamsAsync(
+//                            new WorkStreamContext
+//                            {
+//                                IssueId = ticketId,
+//                                ResourceId = removedId,
+//                                StreamStatus = StatusId.Inactive,
+//                                CompletionPct = null,
+//                                TargetDate = null
+//                            });
+//                    }
+
+//                    // Upsert remaining / new assignees
+//                    if (updateResourceIds.Any())
+//                    {
+//                        foreach (var resourceId in updateResourceIds)
+//                        {
+//                            await _workStreamService.UpsertWorkStreamsAsync(
+//                                new WorkStreamContext
+//                                {
+//                                    IssueId = ticketId,
+//                                    ResourceId = resourceId,
+//                                    StreamStatus = null,
+//                                    CompletionPct = 0,
+//                                    TargetDate = dto.TargetDate
+//                                });
+//                        }
+//                    }
+
+//                    var streamIds = string.Join(",", updateResourceIds);
+//                    _stepContext.Success("WorkStream", "UPDATE", streamIds, timer);
+//                }
+//                catch (Exception ex)
+//                {
+//                    _stepContext.Failure("WorkStream", "UPDATE",
+//                        ex.Message, ex.InnerException?.Message, timer);
+//                    throw;
+//                }
+//            }
+
+//            if (dto.temp?.temps != null && dto.temp.temps.Any())
+//                await _attachmentService.CleanupTempFiles(dto.temp);
+
+//            return _mapper.Map<GetTickets>(updatedTicket);
+//        });
+//    }
+//    catch (Exception ex)
+//    {
+//        if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
+//            _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
+
+//        throw new Exception($"Ticket update failed. Everything was rolled back safely.{ex}", ex);
+//    }
+
+//    var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
+//        configKey: "TicketsList",
+//        syncParams: new Dictionary<string, string> { { "IssueId", finalTicketData.Issue_Id.ToString() } },
+//        matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
+//        fallbackData: finalTicketData,
+//        lastSync: null);
+
+//    if (richTicketData != null)
+//    {
+//        try
+//        {
+//            await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+//            {
+//                Entity = "Ticket",
+//                Action = "Update",
+//                Payload = richTicketData,
+//                KeyField = "Issue_Id",
+//                RepoKey = richTicketData.RepoKey,
+//                Timestamp = DateTime.UtcNow
+//            });
+//        }
+//        catch (Exception ex)
+//        {
+//            Console.WriteLine($"Failed to broadcast Ticket update: {ex.Message}");
+//        }
+//    }
+
+//    return richTicketData;
+//}
+#endregion

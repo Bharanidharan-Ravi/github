@@ -46,6 +46,103 @@ namespace APIGateWay.BusinessLayer.Repository
                 {
                     var posterId = dto.ResourceId ?? _loginContext.userId;
 
+                    // =========================================================================
+                    // ── TICKET OVERALL PROGRESS (MANUAL UPDATE) ──────────────────────────────
+                    // =========================================================================
+                    if (dto.TicketOverallPercentage.HasValue || !string.IsNullOrWhiteSpace(dto.TicketStatusSummary))
+                    {
+                        var progTimer = _stepContext.StartStep();
+                        try
+                        {
+                            // 1. Fetch the currently active log(s)
+                            var activeLogs = await _db.Set<TicketProgressLog>()
+             .Where(log => log.Issue_Id == dto.IssueId && log.IsActive && log.Assignee_Id == posterId)
+             .ToListAsync();
+                            var currentLog = activeLogs.FirstOrDefault();
+                            decimal newPercentage = dto.TicketOverallPercentage ?? currentLog?.Percentage ?? 0;
+                            string actionType = "";
+                            var indiaTimeZone =
+                                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+                            var indiaTime =
+                                TimeZoneInfo.ConvertTimeFromUtc(
+                                    DateTime.UtcNow,
+                                    indiaTimeZone
+                                );
+                            // 2. Logic: Insert New Row OR Update Existing Row
+                            if (!string.IsNullOrWhiteSpace(dto.TicketStatusSummary) || currentLog == null)
+                            {
+                                // CREATE NEW ROW: Summary was provided, or no log exists yet
+                                foreach (var log in activeLogs)
+                                {
+                                    log.IsActive = false;
+                                }
+
+                                var newLog = new TicketProgressLog
+                                {
+                                    LogId = Guid.NewGuid(), // Ensure LogId is generated
+                                    Issue_Id = dto.IssueId,
+                                    Assignee_Id = posterId,
+                                    Percentage = newPercentage,
+                                    StatusSummary = dto.TicketStatusSummary,
+                                    IsActive = true,
+                                    CreatedAt = indiaTime
+                                };
+
+                                await _db.Set<TicketProgressLog>().AddAsync(newLog);
+                                actionType = "INSERT";
+                            }
+                            else
+                            {
+                                // UPDATE EXISTING ROW: Only Percentage was provided
+                                currentLog.Percentage = newPercentage;
+
+                                // Optional: Update who changed the percentage last
+                                currentLog.Assignee_Id = posterId;
+                                actionType = "UPDATE";
+                            }
+
+                            // 3. Update main TicketMaster for fast list fetching
+                            var ticketMaster = await _db.Set<TicketMaster>().FindAsync(dto.IssueId);
+                            if (ticketMaster != null)
+                            {
+                                ticketMaster.OverallPercentage = newPercentage;
+                            }
+
+                            await _db.SaveChangesAsync();
+
+                            _stepContext.Success("TicketProgressLog", actionType, dto.IssueId.ToString(), progTimer);
+
+                            // 4. SHORT-CIRCUIT: If the UI specifies this is ONLY a progress update,
+                            // we return immediately and skip all the WorkStream logic below.
+                            if (dto.IsTicketProgressOnly)
+                            {
+                                var ticketStatus = await ComputeAndUpdateTicketStatusAsync(dto.IssueId);
+
+                                return new PostWorkStreamResponse
+                                {
+                                    IssueId = dto.IssueId,
+                                    TicketOverallPct = newPercentage, // Use the new manual percentage
+                                    TicketStatusId = ticketStatus.ComputedStatusId,
+                                    TicketStatusName = ticketStatus.ComputedStatusName,
+                                    TotalSubtasks = ticketStatus.TotalSubtasks,
+                                    CompletedSubtasks = ticketStatus.CompletedSubtasks,
+                                    ActiveSubtasks = ticketStatus.ActiveSubtasks,
+                                    TicketCompleted = ticketStatus.TicketAutoCompleted,
+                                    RepoKey = ticketStatus.RepoKey,
+                                    IsTerminal = ticketStatus.IsTerminal,
+                                    BroadcastPayload = ticketStatus.BroadcastPayload,
+                                };
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("TicketProgressLog", "UPSERT", ex.Message, ex.InnerException?.Message, progTimer);
+                            throw;
+                        }
+                    }
+                    // =========================================================================
+
                     // ── TYPE 1: Pure assignment ───────────────────────────────
                     if (dto.AssignOnly)
                     {
@@ -184,7 +281,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                 var pctTimer = _stepContext.StartStep();
                                 try
                                 {
-                                    await _domainService.UpdateTrackedEntityAsync<WorkStream>(
+                                  await _domainService.UpdateTrackedEntityAsync<WorkStream>(
                                         ws => ws.StreamId == stream.StreamId,
                                         ws => { ws.CompletionPct = stream.CompletionPct; });
 
@@ -266,7 +363,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             var timer = _stepContext.StartStep();
                             try
                             {
-                                await _domainService.UpdateTrackedEntityAsync<ThreadMaster>(
+                               await _domainService.UpdateTrackedEntityAsync<ThreadMaster>(
                                     t => t.ThreadId == threadId,
                                     t =>
                                     {
@@ -326,8 +423,11 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
 
                     var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(
-                        dto.IssueId,
-                        isTerminalAction ? targetStatusId : null);
+                          dto.IssueId,
+                          isTerminalAction ? targetStatusId : null,
+                          dto.IsReopenRequest, // Pass the flag from UI
+                          dto.IsReopenRequest ? posterId : null // Pass the user ID if reopening
+                      );
 
                     return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
                 });
@@ -674,7 +774,7 @@ namespace APIGateWay.BusinessLayer.Repository
         // COMPUTE AND UPDATE TICKET STATUS
         // =====================================================================
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
-            Guid? issueId, int? forceTerminalStatusId = null)
+       Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -750,6 +850,28 @@ namespace APIGateWay.BusinessLayer.Repository
             }
 
             var ticket = await _db.Set<TicketMaster>().FirstOrDefaultAsync(t => t.Issue_Id == issueId);
+            // 🔥 NEW: TEAM-BASED REOPEN STATUS OVERRIDE 🔥
+            if (isReopenRequest && ticket != null)
+            {
+                // 1. Get the ticket owner's (Assignee's) Team ID
+                // (This uses your existing GetDepartmentNameAsync which returns the team int)
+                int? ownerTeamId = await GetDepartmentNameAsync(ticket.Assignee_Id);
+
+                // 2. Map the Status based on Team ID
+                if (ownerTeamId == 1) // Functional Team
+                {
+                    computedStatusId = 11; // FunctionalSupport
+                    computedStatusName = "Functional Support";
+                }
+                else // Technical (2) or Web (3)
+                {
+                    computedStatusId = 5; // InDevelopment
+                    computedStatusName = "In Development";
+                }
+
+                // Optional: Reset ticket progress to 0% when reopened
+                overallPct = 0;
+            }
             bool isTerminal = computedStatusId == StatusId.Closed || computedStatusId == StatusId.Cancelled;
             bool shouldReopen = isTerminal && activeSubtasks > 0;
 
@@ -766,6 +888,11 @@ namespace APIGateWay.BusinessLayer.Repository
                             t.Status = computedStatusId;
                             t.CompletionPct = (decimal?)overallPct;
                             t.StatusName = computedStatusName;
+                            if (isReopenRequest)
+                            {
+                                t.ReopenCount += 1;
+                                t.ReopenedBy = reopenedBy;
+                            }
                         });
 
                     _stepContext.Success("TicketMaster", "UPDATE(StatusCompute)",

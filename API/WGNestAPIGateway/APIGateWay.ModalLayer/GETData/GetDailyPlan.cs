@@ -25,10 +25,10 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Title { get; set; }
         public string? Issue_Code { get; set; }
         //public string? ProjectName { get; set; }
-
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-
+        public Guid? CreatedBy { get; set; }
+        public Guid? UpdatedBy { get; set; }
         public Guid UserId { get; set; }
         public string? Priority { get; set; }
         public string? Labels_JSON { get; set; }

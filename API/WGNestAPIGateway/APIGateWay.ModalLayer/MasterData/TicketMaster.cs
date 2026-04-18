@@ -38,7 +38,10 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? Priority { get; set; }
         public string? StatusName { get; set; }
         public decimal? CompletionPct { get; set; }
+        public decimal? OverallPercentage { get; set; }
         //public string? StreamName { get; set; }
+        public int? ReopenCount { get; set; }
+        public Guid? ReopenedBy { get; set; }
         public Guid? Assignee_Id { get; set; }
         public Guid? Project_Id { get; set; }
         public DateTime? Due_Date { get; set; }
