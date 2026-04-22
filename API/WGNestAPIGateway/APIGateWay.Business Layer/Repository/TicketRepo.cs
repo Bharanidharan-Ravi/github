@@ -101,6 +101,8 @@ namespace APIGateWay.BusinessLayer.Repository
                     ticketMaster.Issue_Code = $"T{seq.ColumnValue}";
                     ticketMaster.RepoKey = projectKey.RepoKey;
                     ticketMaster.ProjKey = projectKey.ProjectKey;
+                    ticketMaster.OverallPercentage = 0;
+                    ticketMaster.IsCloseRequested = false;
                     string finalHtmlDescription = ticketDto.Description;
 
                     // ── Step 1: AttachmentMaster ──────────────────────────────

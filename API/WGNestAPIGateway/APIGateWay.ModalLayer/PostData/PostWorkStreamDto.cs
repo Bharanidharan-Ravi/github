@@ -79,12 +79,17 @@ namespace APIGateWay.ModalLayer.PostData
         public decimal? PercentageDrop { get; set; }
         public decimal? TicketOverallPercentage { get; set; }
         public string? TicketStatusSummary { get; set; }
+        public bool IsCloseRequested { get; set; }
+        public List<CoContributorItemDto>? CoContributors { get; set; }
 
         // Set this to true from the UI if the user is ONLY submitting 
         // the overall progress and NOT updating their subtask/comments.
         public bool IsTicketProgressOnly { get; set; }
     }
-
+    public class CoContributorItemDto
+    {
+        public Guid id { get; set; } // Matches the "id" key in your JSON payload
+    }
     public class NextAssigneeDto
     {
         // The person being assigned

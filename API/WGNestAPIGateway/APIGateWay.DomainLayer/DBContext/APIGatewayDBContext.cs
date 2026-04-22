@@ -91,6 +91,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<TicketHistory> TicketHistories { get; set; }
         public DbSet<TicketProgressLog> TicketProgressLogs { get; set; }
         public DbSet<TicketProgressLogDto> TicketProgressLogDtos { get; set; }
+        public DbSet<ThreadCoContributor> ThreadCoContributors { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -186,7 +187,8 @@ namespace APIGateWay.DomainLayer.DBContext
                 .HasForeignKey<EMPLOYEEMASTER>(e => e.EmployeeID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
+            modelBuilder.Entity<ThreadCoContributor>()
+                .HasKey(t => new { t.ThreadId, t.EmployeeId });
             modelBuilder.Entity<EMPLOYEEMASTER>(entity =>
             {
                 entity.Property(e => e.Status).HasDefaultValue("Active");

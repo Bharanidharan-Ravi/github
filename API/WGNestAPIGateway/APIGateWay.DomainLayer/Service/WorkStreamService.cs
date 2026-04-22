@@ -426,7 +426,8 @@ namespace APIGateWay.BusinessLayer.Repository
                           dto.IssueId,
                           isTerminalAction ? targetStatusId : null,
                           dto.IsReopenRequest, // Pass the flag from UI
-                          dto.IsReopenRequest ? posterId : null // Pass the user ID if reopening
+                          dto.IsReopenRequest ? posterId : null,
+                          dto.IsCloseRequested
                       );
 
                     return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
@@ -501,6 +502,30 @@ namespace APIGateWay.BusinessLayer.Repository
                 {
                     await _domainService.SaveEntityWithAttachmentsAsync(
                         thread, attachmentResult?.Attachments);
+
+                    if (dto.CoContributors != null && dto.CoContributors.Any())
+                    {
+                        var indiaTimeZone =
+                            TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+                        var indiaTime =
+                            TimeZoneInfo.ConvertTimeFromUtc(
+                                DateTime.UtcNow,
+                                indiaTimeZone
+                            );
+
+                        // 🔥 FIX: Use 'c.id' to extract the Guid out of the incoming object
+                        var coContributorRecords = dto.CoContributors.Select(c => new ThreadCoContributor
+                        {
+                            ThreadId = threadId,
+                            EmployeeId = c.id,
+                            CreatedAt = indiaTime
+                        }).ToList();
+
+                        // Insert them into the database
+                        await _db.Set<ThreadCoContributor>().AddRangeAsync(coContributorRecords);
+                        await _db.SaveChangesAsync();
+                    }
 
                     _stepContext.Success("ThreadMaster", "INSERT", threadId.ToString(), timer);
                 }
@@ -774,7 +799,8 @@ namespace APIGateWay.BusinessLayer.Repository
         // COMPUTE AND UPDATE TICKET STATUS
         // =====================================================================
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
-       Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null)
+       Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
+        bool isCloseRequested = false)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -892,6 +918,16 @@ namespace APIGateWay.BusinessLayer.Repository
                             {
                                 t.ReopenCount += 1;
                                 t.ReopenedBy = reopenedBy;
+                            }
+                            if (isCloseRequested)
+                            {
+                                t.IsCloseRequested = true;
+                            }
+
+                            // Clear the flag if the owner actually closes or cancels the ticket
+                            if (isExplicitlyClosed || isExplicitlyCancelled)
+                            {
+                                t.IsCloseRequested = false;
                             }
                         });
 

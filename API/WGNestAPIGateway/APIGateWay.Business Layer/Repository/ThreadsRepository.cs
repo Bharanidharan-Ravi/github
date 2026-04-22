@@ -368,6 +368,45 @@ namespace APIGateWay.BusinessLayer.Repository
                             throw;
                         }
                     }
+                    // ── Step 4: Co-Contributors ──────────────────────────────
+                    if (dto.CoContributors != null)
+                    {
+                        var timer = _stepContext.StartStep();
+                        try
+                        {
+                            // 1. Find and remove old mappings
+                            var existingMappings = await _dBContext.Set<ThreadCoContributor>()
+                                                            .Where(tc => tc.ThreadId == threadId)
+                                                            .ToListAsync();
+
+                            if (existingMappings.Any())
+                            {
+                                _dBContext.Set<ThreadCoContributor>().RemoveRange(existingMappings);
+                            }
+
+                            // 2. Insert the newly selected ones
+                            if (dto.CoContributors.Any())
+                            {
+                                var newMappings = dto.CoContributors.Select(c => new ThreadCoContributor
+                                {
+                                    ThreadId = threadId,
+                                    EmployeeId = c.id,
+                                    CreatedAt = DateTime.UtcNow
+                                }).ToList();
+
+                                await _dBContext.Set<ThreadCoContributor>().AddRangeAsync(newMappings);
+                            }
+
+                            await _dBContext.SaveChangesAsync();
+                            _stepContext.Success("ThreadCoContributor", "UPDATE", threadId.ToString(), timer);
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("ThreadCoContributor", "UPDATE",
+                                ex.Message, ex.InnerException?.Message, timer);
+                            throw;
+                        }
+                    }
 
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                         await _attachmentService.CleanupTempFiles(dto.temp);

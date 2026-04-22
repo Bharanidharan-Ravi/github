@@ -39,6 +39,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? StatusName { get; set; }
         public decimal? CompletionPct { get; set; }
         public decimal? OverallPercentage { get; set; }
+        public bool IsCloseRequested { get; set; }
         //public string? StreamName { get; set; }
         public int? ReopenCount { get; set; }
         public Guid? ReopenedBy { get; set; }

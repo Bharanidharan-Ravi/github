@@ -21,6 +21,9 @@ namespace APIGateWay.ModalLayer.PostData
         public TempReturn? temp { get; set; }
         public List<LabelData>? labelId { get; set; }
         public List<ResourceIds>? resourceIds { get; set; }
+        public decimal? OverallPercentage { get; set; }
+        public string? CurrentStatusSummary { get; set; }
+        public bool IsCloseRequested { get; set; }
         public DateTime? TargetDate { get; set; }
     }
 

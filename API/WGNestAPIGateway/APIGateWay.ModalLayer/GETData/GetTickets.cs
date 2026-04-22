@@ -35,6 +35,9 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Hours { get; set; }
         public string? Labels_JSON { get; set; }
         public string? Attachment_JSON { get; set; }
+        public decimal? OverallPercentage { get; set; }
+        public string? CurrentStatusSummary { get; set; }
+        public bool IsCloseRequested { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }
         //public List<GetAttachForIssues> Attachment_JSON { get; set; }
     }
@@ -69,13 +72,14 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid? WorkStreamId { get; set; }
         public string? CreatedBy { get; set; }
         public decimal? CompletionPct { get; set; }
+        public string? CoContributors_JSON { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
         public string? Hours { get; set; }
-
+        public int? team { get; set; }
     }
 
     public class IssueRepositoryInfo

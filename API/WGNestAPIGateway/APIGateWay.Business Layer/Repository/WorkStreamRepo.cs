@@ -88,112 +88,14 @@ namespace APIGateWay.BusinessLayer.Repository
 
             await BroadcastTicketDetailAsync(dto.IssueId, response.RepoKey);
 
+            if (dto.TicketOverallPercentage.HasValue || !string.IsNullOrWhiteSpace(dto.TicketStatusSummary))
+            {
+                // Add dto.TicketStatusSummary here 👇
+                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoKey, response.TicketOverallPct, dto.TicketStatusSummary);
+            }
+
             return response;
         }
-
-        //private async Task LogWorkStreamHistoryAsync(PostWorkStreamDto dto, PostWorkStreamResponse response)
-        //{
-        //    try
-        //    {
-        //        var actorId = _loginContextService.userId;
-        //        var actorName = _loginContextService.userName;
-
-        //        bool isCompletedByPct = dto.CompletionPct.HasValue && dto.CompletionPct.Value >= 100;
-        //        bool isCompletedByStatus = dto.StreamStatus.HasValue && StatusId.CompletedStatuses.Contains(dto.StreamStatus.Value);
-
-        //        if (isCompletedByPct || isCompletedByStatus)
-        //        {
-        //            var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
-        //            await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCompleted(
-        //                issueId: dto.IssueId,
-        //                assigneeName: assigneeName,
-        //                streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                workStreamId: response.WorkStreamId,
-        //                actorId: actorId,
-        //                actorName: actorName,
-        //                threadId: response.ThreadId
-        //                ));
-
-        //            if (dto.NextAssignees == null || !dto.NextAssignees.Any())
-        //                return;
-        //        }
-
-        //        //posted own
-        //        if (!dto.AssignOnly && !isCompletedByPct && !isCompletedByStatus)
-        //        {
-        //            var stream = await _db.WorkStreams
-        //                .Where(ws => ws.StreamId == response.WorkStreamId)
-        //                .Select(ws => new { ws.CreatedAt })
-        //                .FirstOrDefaultAsync();
-
-        //            bool isNewRow = stream?.CreatedAt.HasValue == true && (DateTime.UtcNow - stream.CreatedAt.Value).TotalSeconds < 5;
-
-        //            if (isNewRow)
-        //            {
-        //                var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
-        //                await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
-        //                    issueId: dto.IssueId,
-        //                    assigneeName: assigneeName,
-        //                    streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                    statusName: await GetStatusNameAsync(dto.StreamStatus),
-        //                    workStreamId: response.WorkStreamId,
-        //                    actorId: actorId,
-        //                    actorName: actorName,
-        //                    threadId: response.ThreadId
-        //                ));
-        //            }
-        //        }
-
-        //        //event 2 user assign another user
-
-        //        if (dto.NextAssignees != null && dto.NextAssignees.Any())
-        //        {
-        //            var assigneeIds = dto.NextAssignees.Select(a => a.Id).ToList();
-        //            var employeeNameList = await _db.eMPLOYEEMASTERs
-        //                .Where(e => assigneeIds.Contains(e.EmployeeID))
-        //                .Select(e => new { e.EmployeeID, Name = e.EmployeeName ?? "Unknown" })
-        //                .ToListAsync();
-        //            var employeeNames = employeeNameList
-        //                .ToDictionary(e => e.EmployeeID, e => e.Name);
-
-        //            foreach (var assignee in dto.NextAssignees)
-        //            {
-        //                var assigneeName = employeeNames.GetValueOrDefault(assignee.Id, "Unknown");
-
-        //                var assigneeStream = await _db.WorkStreams
-        //                    .Where(ws =>
-        //                    ws.IssueId == dto.IssueId &&
-        //                    ws.ResourceId == assignee.Id)
-        //                 .OrderByDescending(ws => ws.CreatedAt)
-        //                 .Select(ws => new { ws.StreamId })
-        //                 .FirstOrDefaultAsync();
-
-        //                if (assigneeStream == null) continue;
-
-        //                await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
-        //                    issueId: dto.IssueId,
-        //                    assigneeName: assigneeName,
-        //                    streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                    statusName: await GetStatusNameAsync(assignee.StreamId),
-        //                    workStreamId: assigneeStream.StreamId,
-        //                    actorId: actorId,
-        //                    actorName: actorName,
-        //                    threadId: response.ThreadId
-        //                ));
-        //            }
-
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"[WorkStreamRepo] History logging failed: {ex.Message}");
-        //    }
-        //}
-
-
-        // =====================================================================
-        // HELPER
-        // =====================================================================
 
 
         private async Task LogWorkStreamHistoryAsync(PostWorkStreamDto dto, PostWorkStreamResponse response)
@@ -592,6 +494,40 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 Console.WriteLine(
                     $"[WorkStreamRepo] Ticket detail broadcast failed for {issueId}: {ex.Message}");
+            }
+        }
+
+        // =====================================================================
+        // TICKET PROGRESS BROADCAST
+        //
+        // Broadcasts when a TicketProgressLog is explicitly inserted or updated.
+        // =====================================================================
+        private async Task BroadcastTicketProgressAsync(Guid issueId, string repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
+        {
+            if (string.IsNullOrEmpty(repoKey)) return;
+
+            try
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "TicketProgress",
+                    Action = "Update",
+                    Payload = new
+                    {
+                        IssueId = issueId,
+                        Percentage = newPercentage,
+                        Summary = statusSummary, // 👈 Added to payload
+                        UpdatedAt = DateTime.UtcNow
+                    },
+                    KeyField = "IssueId",
+                    IssueId = issueId,
+                    RepoKey = repoKey,
+                    Timestamp = DateTime.UtcNow,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WorkStreamRepo] TicketProgress broadcast failed for {issueId}: {ex.Message}");
             }
         }
 
