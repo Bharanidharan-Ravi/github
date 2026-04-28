@@ -24,6 +24,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? TicketNo { get; set; }
 
         public string? TicketName { get; set; }
+        public int? Status { get; set; }
 
         public string? EstimatedHours { get; set; }
 
