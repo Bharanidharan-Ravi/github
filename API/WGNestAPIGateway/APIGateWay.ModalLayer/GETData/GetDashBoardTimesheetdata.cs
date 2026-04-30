@@ -12,6 +12,7 @@ namespace APIGateWay.ModalLayer.GETData
         [Key]
         public long ThreadId { get; set; }
         public Guid Issue_Id { get; set; }
+        public Guid? EmployeeId { get; set; }
 
         public string? EmployeeName { get; set; }
 
@@ -31,7 +32,8 @@ namespace APIGateWay.ModalLayer.GETData
         public string? ConsumeTime { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? Due_Date { get; set; }
-
+        public Guid? RepoId { get; set; }
+        public string? RepoKey { get; set; }
         public string? Comment { get; set; }
         public string? Labels_JSON { get; set; }
         public DateTime? StartTime { get; set; }
@@ -40,7 +42,10 @@ namespace APIGateWay.ModalLayer.GETData
 
 
         public string? total { get; set; }
-
+        public string? ThreadStatusName { get; set; }
+        public int? ThreadStatusId { get; set; }
+        public decimal? OverallPercentage { get; set; }
+        public string? CurrentStatusSummary { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
     }

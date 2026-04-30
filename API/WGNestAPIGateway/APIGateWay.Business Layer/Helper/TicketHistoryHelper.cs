@@ -264,10 +264,13 @@ namespace APIGateWay.Business_Layer.Helper
             Guid issueId,
             string assigneeName,
             string streamName,
+            string NewValue,
             Guid workStreamId,
             Guid actorId,
             string actorName,
-            long? threadId)
+            long? threadId,
+            string? oldValue
+            )
         {
             return new TicketHistoryEntry
             {
@@ -276,6 +279,9 @@ namespace APIGateWay.Business_Layer.Helper
                 //Summary = $"{assigneeName} completed {streamName}",
                 Summary = $"{assigneeName} completed this ticket",
                 WorkStreamId = workStreamId,
+                FieldName = "Status",
+                OldValue = oldValue,
+                NewValue = NewValue,
                 ActorId = actorId,
                 ActorName = actorName,
                 ThreadId = threadId,                

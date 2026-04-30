@@ -14,6 +14,7 @@ using APIGateWay.BusinessLayer.Helpers.token;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Repository;
 using APIGateWay.BusinessLayer.SignalRHub;
+using APIGateWay.BusinessLayer.SignalRHub.Middleware;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
@@ -103,6 +104,7 @@ builder.Services
     {
         options.PayloadSerializerOptions.PropertyNamingPolicy = null;
     });
+builder.Services.AddRealtimeBroadcast(RealtimePipelineConfig.Configure);
 builder.Services.AddAutoMapper(config =>
     config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
 builder.Services.AddSingleton<IUserIdProvider, GuidUserIdProvider>();
@@ -186,6 +188,7 @@ app.UseExceptionHandler("/error");
 // 🔐 Authentication & Authorization MUST be before endpoints
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRealtimeBroadcast();
 
 // ─────────────────────────────────────────────────────────────
 // Static Files

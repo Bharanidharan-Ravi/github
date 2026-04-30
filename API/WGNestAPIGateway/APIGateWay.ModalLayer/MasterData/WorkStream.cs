@@ -104,6 +104,8 @@ namespace APIGateWay.ModalLayer.MasterData
         public string StreamName { get; set; } = string.Empty;
 
         public int? StreamStatus { get; set; }
+        public int? OldTicketStatus { get; set; }
+        public int? NewTicketStatus { get; set; }
         public string? StatusName { get; set; }  // human-readable from Status_Master
         public bool IsBlocked { get; set; }
         public string? BlockedReason { get; set; }

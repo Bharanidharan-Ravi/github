@@ -7,6 +7,7 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
+using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -105,24 +106,76 @@ namespace APIGateWay.BusinessLayer.Repository
                 var actorId = _loginContextService.userId;
                 var actorName = _loginContextService.userName;
 
+                // ── 1. LOG GLOBAL TICKET STATUS CHANGES (Close, Reopen, etc.) ──
+                if (response.OldTicketStatus.HasValue &&
+                    response.NewTicketStatus.HasValue &&
+                    response.OldTicketStatus.Value != response.NewTicketStatus.Value)
+                {
+                    string oldStatusName = await GetStatusNameAsync(response.OldTicketStatus.Value);
+                    string newStatusName = await GetStatusNameAsync(response.NewTicketStatus.Value);
+
+                    var statusChangeLog = TicketHistoryHelper.TicketUpdated(
+                        issueId: dto.IssueId,
+                        fieldName: "Status",
+                        oldValue: response.OldTicketStatus.Value.ToString(),
+                        newValue: response.NewTicketStatus.Value.ToString(),
+                        actorId: actorId,
+                        actorName: actorName
+                    );
+
+                    // 👇 CUSTOM SUMMARY LOGIC
+                    int oldId = response.OldTicketStatus.Value;
+                    int newId = response.NewTicketStatus.Value;
+
+                    if (newId == StatusId.Cancelled) // 16
+                    {
+                        statusChangeLog.Summary = $"{actorName} cancelled this ticket";
+                    }
+                    else if ((oldId == StatusId.Closed || oldId == StatusId.Cancelled) &&
+                             (newId != StatusId.Closed && newId != StatusId.Cancelled))
+                    {
+                        // Moving from Terminal (15/16) to Active -> REOPEN
+                        statusChangeLog.Summary = $"{actorName} reopened this ticket";
+                    }
+                    else if (newId == StatusId.Closed) // 15
+                    {
+                        statusChangeLog.Summary = $"{actorName} closed this ticket";
+                    }
+                    else
+                    {
+                        // Default fallback for normal status changes (e.g. Assigned -> In Development)
+                        statusChangeLog.Summary = $"Status changed from '{oldStatusName}' to '{newStatusName}'";
+                    }
+
+                    statusChangeLog.ThreadId = response.ThreadId;
+
+                    await _historyRepository.LogAsync(statusChangeLog);
+                }
+
+                // ── 2. LOG WORKSTREAM SPECIFIC CHANGES ──
                 bool isCompletedByPct = dto.CompletionPct.HasValue && dto.CompletionPct.Value >= 100;
                 bool isCompletedByStatus = dto.StreamStatus.HasValue && StatusId.CompletedStatuses.Contains(dto.StreamStatus.Value);
-
-                // Check if this action includes handing off to other people
                 bool isRoutingToOthers = dto.NextAssignees != null && dto.NextAssignees.Any();
 
                 if (isCompletedByPct || isCompletedByStatus)
                 {
-                    var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
-                    await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCompleted(
-                        issueId: dto.IssueId,
-                        assigneeName: assigneeName,
-                        streamName: response.StreamName ?? dto.StreamName ?? "General",
-                        workStreamId: response.WorkStreamId,
-                        actorId: actorId,
-                        actorName: actorName,
-                        threadId: response.ThreadId
-                    ));
+                    // 👇 FIX: Prevent duplicate row! 
+                    // Only log "completed this ticket" if we aren't already logging a Close (15) or Cancel (16) action in Block 1.
+                    if (response.NewTicketStatus != StatusId.Closed && response.NewTicketStatus != StatusId.Cancelled)
+                    {
+                        var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
+                        await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCompleted(
+                            issueId: dto.IssueId,
+                            assigneeName: assigneeName,
+                            streamName: response.StreamName ?? dto.StreamName ?? "General",
+                            NewValue: response.NewTicketStatus.ToString(),
+                            workStreamId: response.WorkStreamId,
+                            actorId: actorId,
+                            actorName: actorName,
+                            threadId: response.ThreadId,
+                            oldValue: response.OldTicketStatus.ToString()
+                        ));
+                    }
 
                     if (!isRoutingToOthers)
                         return;
@@ -131,15 +184,11 @@ namespace APIGateWay.BusinessLayer.Repository
                 // ── SCENARIO 1: SELF-ASSIGNMENT (Working on the ticket) ──
                 if (!dto.AssignOnly && !isCompletedByPct && !isCompletedByStatus && !isRoutingToOthers)
                 {
-                    // 🔥 THE FIX: Stop using the 5-second timer. 
-                    // Instead, check if this EXACT thread is the parent of the WorkStream.
                     var stream = await _db.WorkStreams
                         .Where(ws => ws.StreamId == response.WorkStreamId)
                         .Select(ws => new { ws.ParentThreadId })
                         .FirstOrDefaultAsync();
 
-                    // If the stream's ParentThreadId matches the thread we just created, 
-                    // it is 100% a brand new stream. It will only ever equal true ONCE.
                     bool isNewRow = stream != null && stream.ParentThreadId == response.ThreadId;
 
                     if (isNewRow)
@@ -147,7 +196,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
                         await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
                             issueId: dto.IssueId,
-                            assigneeName: assigneeName, // This is the current user
+                            assigneeName: assigneeName,
                             streamName: response.StreamName ?? dto.StreamName ?? "General",
                             statusName: await GetStatusNameAsync(dto.StreamStatus),
                             workStreamId: response.WorkStreamId,
@@ -171,8 +220,6 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     foreach (var assignee in dto.NextAssignees)
                     {
-                        // 🔥 EXTRA SAFETY: If they somehow bypassed the UI and assigned themselves, 
-                        // skip it here so we don't get duplicates.
                         if (string.Equals(assignee.Id.ToString(), actorId.ToString(), StringComparison.OrdinalIgnoreCase)) continue;
 
                         var assigneeName = employeeNames.GetValueOrDefault(assignee.Id, "Unknown");
@@ -187,7 +234,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                         await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
                             issueId: dto.IssueId,
-                            assigneeName: assigneeName, // This is the target user
+                            assigneeName: assigneeName,
                             streamName: response.StreamName ?? dto.StreamName ?? "General",
                             statusName: await GetStatusNameAsync(assignee.StreamId),
                             workStreamId: assigneeStream.StreamId,
@@ -203,109 +250,6 @@ namespace APIGateWay.BusinessLayer.Repository
                 Console.WriteLine($"[WorkStreamRepo] History logging failed: {ex.Message}");
             }
         }
-
-        //private async Task LogWorkStreamHistoryAsync(PostWorkStreamDto dto, PostWorkStreamResponse response)
-        //{
-        //    try
-        //    {
-        //        var actorId = _loginContextService.userId;
-        //        var actorName = _loginContextService.userName;
-
-        //        bool isCompletedByPct = dto.CompletionPct.HasValue && dto.CompletionPct.Value >= 100;
-        //        bool isCompletedByStatus = dto.StreamStatus.HasValue && StatusId.CompletedStatuses.Contains(dto.StreamStatus.Value);
-
-        //        // 🔥 FIX 1: Check if this action includes handing off to other people
-        //        bool isRoutingToOthers = dto.NextAssignees != null && dto.NextAssignees.Any();
-
-        //        if (isCompletedByPct || isCompletedByStatus)
-        //        {
-        //            var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
-        //            await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCompleted(
-        //                issueId: dto.IssueId,
-        //                assigneeName: assigneeName,
-        //                streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                workStreamId: response.WorkStreamId,
-        //                actorId: actorId,
-        //                actorName: actorName,
-        //                threadId: response.ThreadId
-        //                ));
-
-        //            if (!isRoutingToOthers)
-        //                return;
-        //        }
-
-        //        // 🔥 FIX 2: Skip logging "self-assignment" if the user is routing the ticket to someone else.
-        //        // We added "&& !isRoutingToOthers" to this if statement.
-        //        // This stops "AnbuMani assigned AnbuMani" from printing when you assign Sandhiya.
-        //        if (!dto.AssignOnly && !isCompletedByPct && !isCompletedByStatus && !isRoutingToOthers)
-        //        {
-        //            var stream = await _db.WorkStreams
-        //                .Where(ws => ws.StreamId == response.WorkStreamId)
-        //                .Select(ws => new { ws.CreatedAt })
-        //                .FirstOrDefaultAsync();
-
-        //            bool isNewRow = stream?.CreatedAt.HasValue == true && (DateTime.UtcNow - stream.CreatedAt.Value).TotalSeconds < 5;
-
-        //            if (isNewRow)
-        //            {
-        //                var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
-        //                await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
-        //                    issueId: dto.IssueId,
-        //                    assigneeName: assigneeName, // This is the current user
-        //                    streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                    statusName: await GetStatusNameAsync(dto.StreamStatus),
-        //                    workStreamId: response.WorkStreamId,
-        //                    actorId: actorId,
-        //                    actorName: actorName,
-        //                    threadId: response.ThreadId
-        //                ));
-        //            }
-        //        }
-
-        //        // Event: User assigns another user
-        //        if (isRoutingToOthers)
-        //        {
-        //            var assigneeIds = dto.NextAssignees.Select(a => a.Id).ToList();
-        //            var employeeNameList = await _db.eMPLOYEEMASTERs
-        //                .Where(e => assigneeIds.Contains(e.EmployeeID))
-        //                .Select(e => new { e.EmployeeID, Name = e.EmployeeName ?? "Unknown" })
-        //                .ToListAsync();
-
-        //            var employeeNames = employeeNameList
-        //                .ToDictionary(e => e.EmployeeID, e => e.Name);
-
-        //            foreach (var assignee in dto.NextAssignees)
-        //            {
-        //                var assigneeName = employeeNames.GetValueOrDefault(assignee.Id, "Unknown");
-
-        //                var assigneeStream = await _db.WorkStreams
-        //                    .Where(ws =>
-        //                    ws.IssueId == dto.IssueId &&
-        //                    ws.ResourceId == assignee.Id)
-        //                 .OrderByDescending(ws => ws.CreatedAt)
-        //                 .Select(ws => new { ws.StreamId })
-        //                 .FirstOrDefaultAsync();
-
-        //                if (assigneeStream == null) continue;
-
-        //                await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCreated(
-        //                    issueId: dto.IssueId,
-        //                    assigneeName: assigneeName, // This is the target user (e.g., Sandhiya)
-        //                    streamName: response.StreamName ?? dto.StreamName ?? "General",
-        //                    statusName: await GetStatusNameAsync(assignee.StreamId),
-        //                    workStreamId: assigneeStream.StreamId,
-        //                    actorId: actorId,
-        //                    actorName: actorName,
-        //                    threadId: response.ThreadId
-        //                ));
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"[WorkStreamRepo] History logging failed: {ex.Message}");
-        //    }
-        //}
         private async Task<string> GetEmployeeNameAsync(Guid resourceId)
         {
             var emp = await _db.eMPLOYEEMASTERs

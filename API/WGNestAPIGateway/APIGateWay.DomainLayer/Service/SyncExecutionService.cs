@@ -184,7 +184,14 @@ namespace APIGateWay.DomainLayer.Service
 
                                             if (!string.IsNullOrEmpty(relativePath))
                                             {
-                                                emp.PreviewUrl = _Service.GeneratePreviewUrl(relativePath);
+                                                // Safely encode folder and file names containing '#', spaces, or special characters
+                                                // while keeping the forward slashes intact.
+                                                var encodedRelativePath = string.Join("/", relativePath
+                                                    .Replace("\\", "/") // Normalize slashes just in case they are backslashes
+                                                    .Split('/')
+                                                    .Select(segment => Uri.EscapeDataString(segment)));
+
+                                                emp.PreviewUrl = _Service.GeneratePreviewUrl(encodedRelativePath);
                                             }
                                         }
                                     }

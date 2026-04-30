@@ -10,6 +10,7 @@ namespace APIGateWay.ModalLayer.PostData
     {
         // ── Computed values ───────────────────────────────────────────────────────
         public int ComputedStatusId { get; set; }
+        public int? OldStatusId { get; set; }
         public string ComputedStatusName { get; set; } = string.Empty;
         public decimal OverallPct { get; set; }
         public bool TicketAutoCompleted { get; set; }

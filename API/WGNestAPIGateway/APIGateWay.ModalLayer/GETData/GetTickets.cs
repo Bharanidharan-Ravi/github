@@ -22,8 +22,8 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid? ReopenedBy { get; set; }
         public Guid Project_Id { get; set; }
         public Guid? RepoId { get; set; }
-        public decimal? CompletionPct { get; set; }
         public string? RepoKey { get; set; }
+        public decimal? CompletionPct { get; set; }
         public Guid? Assignee_Id { get; set; }
         public string? Assignee_Name { get; set; }
         public string? All_Assignees { get; set; }

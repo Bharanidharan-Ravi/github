@@ -112,7 +112,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         try
                         {
                             var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
-                            var permFolder = $"{ticketMaster.Issue_Code}-{ticketDto.Title}";
+                            var permFolder = $"{ticketMaster.Issue_Code}-{ticketMaster.RepoKey}";
                             var relativePath = $"{permUserId}/{permFolder}";
 
                             attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
@@ -357,7 +357,8 @@ namespace APIGateWay.BusinessLayer.Repository
                         try
                         {
                             var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
-                            var relativePath = $"{permUserId}/{ticketId}";
+                            var permFolder = $"{existingTicket.Issue_Code}-{existingTicket.RepoKey}";
+                            var relativePath = $"{permUserId}/{permFolder}";
 
                             attachmentResult = await _attachmentService.ProcessAndCopyAttachmentsAsync(
                                 dto.Description, dto.temp.temps,
@@ -611,25 +612,25 @@ namespace APIGateWay.BusinessLayer.Repository
                 fallbackData: finalTicketData,
                 lastSync: null);
 
-            if (richTicketData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "Ticket",
-                        Action = "Update",
-                        Payload = richTicketData,
-                        KeyField = "Issue_Id",
-                        RepoKey = richTicketData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast Ticket update: {ex.Message}");
-                }
-            }
+            //if (richTicketData != null)
+            //{
+            //    try
+            //    {
+            //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+            //        {
+            //            Entity = "Ticket",
+            //            Action = "Update",
+            //            Payload = richTicketData,
+            //            KeyField = "Issue_Id",
+            //            RepoKey = richTicketData.RepoKey,
+            //            Timestamp = DateTime.UtcNow
+            //        });
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine($"Failed to broadcast Ticket update: {ex.Message}");
+            //    }
+            //}
 
             return richTicketData;
         }
