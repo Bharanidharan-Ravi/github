@@ -54,7 +54,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "getdailyplan",
                     "GetTicketHistory",
                     "GetTeamMaster",
-                    "GetTicketProgressLogsByIssueId"
+                    "GetTicketProgressLogsByIssueId",
+                    "GetRepoUser",
                 };
 
                 if (!validProcedureNames.Contains(storedProcedure))

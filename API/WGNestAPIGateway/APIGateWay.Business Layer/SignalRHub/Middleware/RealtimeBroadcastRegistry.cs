@@ -19,7 +19,7 @@ namespace APIGateWay.Business_Layer.SignalRHub.Middleware
             MatchPredicate = (rich, base_) => rich.Issue_Id == base_.Issue_Id,
             Entity = RealtimeEntities.Ticket.Entity,
             KeyField = RealtimeEntities.Ticket.KeyField,
-            GetRepoKey = dto => dto.RepoKey,
+           GetRepoKey = dto => dto.RepoId.ToString(),
         };
 
         // ── Thread / Comments ──────────────────────────────────────────────────
@@ -55,7 +55,7 @@ namespace APIGateWay.Business_Layer.SignalRHub.Middleware
             MatchPredicate = (rich, base_) => rich.Id == base_.Id,
             Entity = RealtimeEntities.Project.Entity,
             KeyField = RealtimeEntities.Project.KeyField,
-            GetRepoKey = dto => dto.RepoKey,
+            GetRepoKey = dto => dto.Repo_Id.ToString(),
         };
 
         // ── Employee ───────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ namespace APIGateWay.Business_Layer.SignalRHub.Middleware
             MatchPredicate = (rich, base_) => rich.Repo_Id == base_.Repo_Id,
             Entity = RealtimeEntities.RepoList.Entity,
             KeyField = RealtimeEntities.RepoList.KeyField,
-            GetRepoKey = dto => dto.RepoKey,
+            GetRepoKey = dto => dto.Repo_Id.ToString(),
         };
 
         // ── Future entity template ─────────────────────────────────────────────

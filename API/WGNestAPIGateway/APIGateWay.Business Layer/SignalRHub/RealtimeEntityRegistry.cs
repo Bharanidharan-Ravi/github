@@ -29,7 +29,7 @@ namespace APIGateWay.Business_Layer.SignalRHub
         public static class Project
         {
             public const string Entity = "Project";
-            public const string KeyField = "Project_Id";
+            public const string KeyField = "Id";
         }
 
         public static class Employee

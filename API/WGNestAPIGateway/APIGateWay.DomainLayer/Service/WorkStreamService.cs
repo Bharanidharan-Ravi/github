@@ -999,7 +999,8 @@ namespace APIGateWay.BusinessLayer.Repository
                 TicketAutoCompleted = false,
                 RepoKey = repoKey,
                 IsTerminal = isTerminal,
-                BroadcastPayload = broadcastPayload,
+                RepoId = ticket?.RepoId,
+            BroadcastPayload = broadcastPayload,
             };
         }
 
@@ -1403,6 +1404,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         : null,
                 IssueId = dto.IssueId,
                 RepoKey = ticketStatus.RepoKey,
+                RepoId = ticketStatus.RepoId,
                 IsTerminal = ticketStatus.IsTerminal,
                 BroadcastPayload = ticketStatus.BroadcastPayload,
             };

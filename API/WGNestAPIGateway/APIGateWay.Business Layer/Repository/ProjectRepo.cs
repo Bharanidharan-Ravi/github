@@ -141,25 +141,25 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Project creation failed. Everything was rolled back safely.", ex);
             }
 
-            if (finalProjectData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "Project",
-                        Action = "Create",
-                        Payload = finalProjectData,
-                        KeyField = "Id",
-                        RepoKey = finalProjectData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast project creation: {ex.Message}");
-                }
-            }
+            //if (finalProjectData != null)
+            //{
+            //    try
+            //    {
+            //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+            //        {
+            //            Entity = "Project",
+            //            Action = "Create",
+            //            Payload = finalProjectData,
+            //            KeyField = "Id",
+            //            RepoKey = finalProjectData.RepoKey,
+            //            Timestamp = DateTime.UtcNow
+            //        });
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine($"Failed to broadcast project creation: {ex.Message}");
+            //    }
+            //}
 
             return finalProjectData;
         }
@@ -261,25 +261,25 @@ namespace APIGateWay.BusinessLayer.Repository
                 fallbackData: finalProjectData,
                 lastSync: null);
 
-            if (richProjectData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "Project",
-                        Action = "Update",
-                        Payload = richProjectData,
-                        KeyField = "Id",
-                        RepoKey = richProjectData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast project update: {ex.Message}");
-                }
-            }
+            //if (richProjectData != null)
+            //{
+            //    try
+            //    {
+            //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+            //        {
+            //            Entity = "Project",
+            //            Action = "Update",
+            //            Payload = richProjectData,
+            //            KeyField = "Id",
+            //            RepoKey = richProjectData.RepoKey,
+            //            Timestamp = DateTime.UtcNow
+            //        });
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine($"Failed to broadcast project update: {ex.Message}");
+            //    }
+            //}
 
             return richProjectData;
         }
@@ -330,25 +330,25 @@ namespace APIGateWay.BusinessLayer.Repository
                 fallbackData: finalProjectData,
                 lastSync: null);
 
-            if (richProjectData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "ProjectList",
-                        Action = "StatusUpdate",
-                        Payload = richProjectData,
-                        KeyField = "Id",
-                        RepoKey = richProjectData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast project status update: {ex.Message}");
-                }
-            }
+            //if (richProjectData != null)
+            //{
+            //    try
+            //    {
+            //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+            //        {
+            //            Entity = "ProjectList",
+            //            Action = "StatusUpdate",
+            //            Payload = richProjectData,
+            //            KeyField = "Id",
+            //            RepoKey = richProjectData.RepoKey,
+            //            Timestamp = DateTime.UtcNow
+            //        });
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine($"Failed to broadcast project status update: {ex.Message}");
+            //    }
+            //}
 
             return finalProjectData;
         }

@@ -80,19 +80,19 @@ namespace APIGateWay.BusinessLayer.Repository
                 await BroadcastThreadCreatedAsync(
                     issueId: dto.IssueId,
                     threadId: response.ThreadId.Value,
-                    repoKey: response.RepoKey
+                    repoId: response.RepoId
                 );
             }
 
             // ── Step 3: ticket status broadcast (always fires) ────────────────
             await BroadcastTicketStatusAsync(response);
 
-            await BroadcastTicketDetailAsync(dto.IssueId, response.RepoKey);
+            await BroadcastTicketDetailAsync(dto.IssueId, response.RepoId);
 
             if (dto.TicketOverallPercentage.HasValue || !string.IsNullOrWhiteSpace(dto.TicketStatusSummary))
             {
                 // Add dto.TicketStatusSummary here 👇
-                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoKey, response.TicketOverallPct, dto.TicketStatusSummary);
+                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoId, response.TicketOverallPct, dto.TicketStatusSummary);
             }
 
             return response;
@@ -282,9 +282,9 @@ namespace APIGateWay.BusinessLayer.Repository
         private async Task BroadcastThreadCreatedAsync(
             Guid issueId,
             long threadId,
-            string repoKey)
+            Guid? repoId)
         {
-            if (string.IsNullOrEmpty(repoKey)) return;
+            if (string.IsNullOrEmpty(repoId.ToString())) return;
 
             // Fetch rich thread data via SP — same SP used by ThreadRepo
             ThreadList? freshThread = null;
@@ -343,7 +343,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Payload = freshThread,     // rich SP data with all joined fields
                     KeyField = "ThreadId",
                     IssueId = issueId,
-                    RepoKey = repoKey,
+                    RepoKey = repoId.ToString(),
                     Timestamp = DateTime.UtcNow,
                 });
             }
@@ -379,7 +379,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Payload = response.BroadcastPayload,  // pre-built by service
                     KeyField = "Issue_Id",
                     IssueId = response.IssueId,
-                    RepoKey = response.RepoKey,
+                    RepoKey = response.RepoId.ToString(),
                     Timestamp = DateTime.UtcNow,
                 });
             }
@@ -391,9 +391,9 @@ namespace APIGateWay.BusinessLayer.Repository
             }
         }
 
-        private async Task BroadcastTicketDetailAsync(Guid issueId, string repoKey)
+        private async Task BroadcastTicketDetailAsync(Guid issueId, Guid? repoKey)
         {
-            if (string.IsNullOrEmpty(repoKey)) return;
+            //if (string.IsNullOrEmpty(repoKey)) return;
 
             GetTickets? richTicketData = null;
 
@@ -430,7 +430,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Payload = richTicketData,    // full rich data — workstreams, labels, assignees
                     KeyField = "Issue_Id",
                     IssueId = issueId,
-                    RepoKey = richTicketData.RepoKey ?? repoKey,
+                    RepoKey = richTicketData.RepoKey ?? repoKey.ToString(),
                     Timestamp = DateTime.UtcNow,
                 });
             }
@@ -446,9 +446,9 @@ namespace APIGateWay.BusinessLayer.Repository
         //
         // Broadcasts when a TicketProgressLog is explicitly inserted or updated.
         // =====================================================================
-        private async Task BroadcastTicketProgressAsync(Guid issueId, string repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
+        private async Task BroadcastTicketProgressAsync(Guid issueId, Guid? repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
         {
-            if (string.IsNullOrEmpty(repoKey)) return;
+            if (string.IsNullOrEmpty(repoKey.ToString())) return;
 
             try
             {
@@ -465,7 +465,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     },
                     KeyField = "IssueId",
                     IssueId = issueId,
-                    RepoKey = repoKey,
+                    RepoKey = repoKey.ToString(),
                     Timestamp = DateTime.UtcNow,
                 });
             }

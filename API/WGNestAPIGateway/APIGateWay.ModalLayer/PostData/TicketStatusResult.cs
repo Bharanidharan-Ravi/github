@@ -21,6 +21,7 @@ namespace APIGateWay.ModalLayer.PostData
         // ── Broadcast data — resolved inside service, consumed by Business Layer ──
         // Service reads RepoKey from DB so the repo doesn't need to do a second lookup
         public string RepoKey { get; set; } = string.Empty;
+        public Guid? RepoId { get; set; }
 
         // True when ticket was already Closed/Cancelled before this update
         // Business Layer uses this to skip the broadcast

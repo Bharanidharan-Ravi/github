@@ -32,8 +32,9 @@ namespace APIGateWay.BusinessLayer.Auth
                 // Role 3 completely blocked; Role 2 gets their own repos
                 ["RepoList"] = new SyncKeyRule
                 {
-                    AllowedRoles = AppRoles.AdminManager,
-                    IsRepoScoped = false
+                    AllowedRoles = AppRoles.All,
+                    IsRepoScoped = true,
+                    RepoParamKey = "repoId"
                 },
 
                 // All roles — Role 2 + 3 get scoped automatically
@@ -47,7 +48,7 @@ namespace APIGateWay.BusinessLayer.Auth
                 ["ProjectList"] = new SyncKeyRule
                 {
                     AllowedRoles = AppRoles.All,
-                    IsRepoScoped = false,
+                    IsRepoScoped = true,
                     RepoParamKey = "repoId"
                 },
 

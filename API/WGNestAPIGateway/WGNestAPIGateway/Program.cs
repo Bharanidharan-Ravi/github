@@ -71,6 +71,7 @@ builder.Services.AddScoped<ILabelRepo, LabelRepo>();
 builder.Services.AddScoped<IDailyPlanRepo, DailyPlanRepo>();
 builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
 builder.Services.AddScoped<IEmployeeRepo, EmployeeRepo>();
+builder.Services.AddScoped<ICustomerRepo, CustomerRepo>();
 builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
 
 // ─────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ builder.Services.AddScoped<IDashBoardDataService, DashBoardDataService>();
 builder.Services.AddScoped<IWorkStreamService, WorkStreamService>();
 builder.Services.AddScoped<IRequestStepContext, RequestStepContext>();
 builder.Services.AddScoped<IApiLoggerService, ApiLoggerService>();
+builder.Services.AddScoped<ICustomersService, CustomerService>();
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure

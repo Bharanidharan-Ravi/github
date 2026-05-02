@@ -82,6 +82,7 @@ public class RepoScopeHandler : AuthorizationHandler<RepoScopeRequirement>
         // Fetch allowed repos
         // ================================
         var allowedRepos = await _repoAccessService.GetUserRepoGuidsAsync(userId);
+        httpContext.Items["AllowedRepos"] = allowedRepos;
         var allowedRepoIds = allowedRepos.Select(x => x.RepoId).ToList();
 
         var requestedRepoId = await ExtractRepoId(httpContext);

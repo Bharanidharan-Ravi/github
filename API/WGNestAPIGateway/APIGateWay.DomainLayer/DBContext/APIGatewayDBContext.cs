@@ -92,6 +92,8 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<TicketProgressLog> TicketProgressLogs { get; set; }
         public DbSet<TicketProgressLogDto> TicketProgressLogDtos { get; set; }
         public DbSet<ThreadCoContributor> ThreadCoContributors { get; set; }
+        public DbSet<GetCustomerDto> GetCustomerDto { get; set; }
+        public DbSet<GetRepoUserData> GetRepoUserData{ get; set; }
 
         #region SaveChanges Override (Audit)
 

@@ -45,9 +45,12 @@ namespace APIGateWay.BusinessLayer.SignalRHub
 
             await Task.WhenAll(tasks);
 
-            _logger.LogDebug(
-                "[RealtimeNotifier] Sent {Entity} {Action} → repo:{RepoKey}",
-                message.Entity, message.Action, message.RepoKey ?? "none");
+            _logger.LogInformation(
+                 "[RealtimeNotifier] Sent {Entity} {Action} → repo:{RepoKey}",
+                 message.Entity,
+                 message.Action,
+                 message.RepoKey ?? "none"
+             );
         }
     }
 }

@@ -28,49 +28,49 @@ namespace APIGateWay.BusinessLayer.SignalRHub.Middleware
                 action: RealtimeActions.Update,
                 config: RealtimeBroadcastRegistry.Ticket)
 
-            .Register<GetTickets>(
-                method: "DELETE",
-                routePattern: "/api/Ticket/DeleteTicket/{id}",
-                action: RealtimeActions.Delete,
-                config: RealtimeBroadcastRegistry.Ticket)
+            //.Register<GetTickets>(
+            //    method: "DELETE",
+            //    routePattern: "/api/Ticket/DeleteTicket/{id}",
+            //    action: RealtimeActions.Delete,
+            //    config: RealtimeBroadcastRegistry.Ticket)
 
             // ── Thread (comments) ─────────────────────────────────────────────
-            .Register<ThreadList>(
-                method: "POST",
-                routePattern: "/api/Thread/CreateThread",
-                action: RealtimeActions.Create,
-                config: RealtimeBroadcastRegistry.Thread)
+            //.Register<ThreadList>(
+            //    method: "POST",
+            //    routePattern: "/api/WorkStream",
+            //    action: RealtimeActions.Create,
+            //    config: RealtimeBroadcastRegistry.Thread)
 
-            .Register<ThreadList>(
-                method: "PUT",
-                routePattern: "/api/Thread/UpdateThread/{id}",
-                action: RealtimeActions.Update,
-                config: RealtimeBroadcastRegistry.Thread)
+            //.Register<ThreadList>(
+            //    method: "PUT",
+            //    routePattern: "/api/Thread/{threadId}",
+            //    action: RealtimeActions.Update,
+            //    config: RealtimeBroadcastRegistry.Thread)
 
-            .Register<ThreadList>(
-                method: "DELETE",
-                routePattern: "/api/Thread/DeleteThread/{id}",
-                action: RealtimeActions.Delete,
-                config: RealtimeBroadcastRegistry.Thread)
+            //.Register<ThreadList>(
+            //    method: "DELETE",
+            //    routePattern: "/api/Thread/DeleteThread/{id}",
+            //    action: RealtimeActions.Delete,
+            //    config: RealtimeBroadcastRegistry.Thread)
 
             // ── Project ───────────────────────────────────────────────────────
             .Register<GetProject>(
                 method: "POST",
-                routePattern: "/api/Project/CreateProject",
+                routePattern: "/api/Project/PostProject",
                 action: RealtimeActions.Create,
                 config: RealtimeBroadcastRegistry.Project)
 
             .Register<GetProject>(
                 method: "PUT",
-                routePattern: "/api/Project/UpdateProject/{id}",
+                routePattern: "/api/Project/{id}",
                 action: RealtimeActions.Update,
                 config: RealtimeBroadcastRegistry.Project)
 
-            .Register<GetProject>(
-                method: "DELETE",
-                routePattern: "/api/Project/DeleteProject/{id}",
-                action: RealtimeActions.Delete,
-                config: RealtimeBroadcastRegistry.Project)
+            //.Register<GetProject>(
+            //    method: "DELETE",
+            //    routePattern: "/api/Project/DeleteProject/{id}",
+            //    action: RealtimeActions.Delete,
+            //    config: RealtimeBroadcastRegistry.Project)
 
             // ── Employee ──────────────────────────────────────────────────────
             .Register<GetEmployee>(

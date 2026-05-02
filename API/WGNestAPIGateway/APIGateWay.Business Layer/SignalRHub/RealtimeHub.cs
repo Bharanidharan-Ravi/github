@@ -57,9 +57,9 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                     break;
 
                 case "3":
-                    var repoIds = await _repoAccess.GetUserRepoIdsAsync(userId);
+                    var repoIds = await _repoAccess.GetUserRepoGuidsAsync(userId);
                     var joinTasks = repoIds.Select(id =>
-                        Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id}"));
+                        Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id.RepoId}"));
                     await Task.WhenAll(joinTasks);
 
                     _logger.LogInformation(

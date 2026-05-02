@@ -207,23 +207,23 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (freshThreadData != null && issueRepoInfo != null)
             {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "ThreadsList",
-                        Action = "Create",
-                        Payload = freshThreadData,
-                        KeyField = "ThreadId",
-                        IssueId = threadDto.Issue_Id,
-                        RepoKey = issueRepoInfo.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast Thread creation: {ex.Message}");
-                }
+                //try
+                //{
+                //    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                //    {
+                //        Entity = "ThreadsList",
+                //        Action = "Create",
+                //        Payload = freshThreadData,
+                //        KeyField = "ThreadId",
+                //        IssueId = threadDto.Issue_Id,
+                //        RepoKey = issueRepoInfo.RepoKey,
+                //        Timestamp = DateTime.UtcNow
+                //    });
+                //}
+                //catch (Exception ex)
+                //{
+                //    Console.WriteLine($"Failed to broadcast Thread creation: {ex.Message}");
+                //}
             }
 
             return freshThreadData;
@@ -450,23 +450,23 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (freshThreadData != null && issueRepoInfo != null)
             {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "ThreadsList",
-                        Action = "Update",
-                        Payload = freshThreadData,
-                        KeyField = "ThreadId",
-                        IssueId = finalThreadData.Issue_Id,
-                        RepoKey = issueRepoInfo.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast Thread update: {ex.Message}");
-                }
+                //try
+                //{
+                //    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                //    {
+                //        Entity = "ThreadsList",
+                //        Action = "Update",
+                //        Payload = freshThreadData,
+                //        KeyField = "ThreadId",
+                //        IssueId = finalThreadData.Issue_Id,
+                //        RepoKey = issueRepoInfo.RepoKey,
+                //        Timestamp = DateTime.UtcNow
+                //    });
+                //}
+                //catch (Exception ex)
+                //{
+                //    Console.WriteLine($"Failed to broadcast Thread update: {ex.Message}");
+                //}
             }
 
             return freshThreadData ?? finalThreadData;
