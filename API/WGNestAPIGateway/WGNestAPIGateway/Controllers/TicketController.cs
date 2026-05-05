@@ -23,11 +23,11 @@ namespace APIGateway.Controllers
         [HttpPost("CreateTicket")]
         public async Task<IActionResult> CreateTicket([FromBody] PostTicketDto dto)
         {
-            if (dto == null)
-                return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Request body is required." });
+            //if (dto == null)
+            //    return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Request body is required." });
 
-            if (!dto.RepoId.HasValue)
-                return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "RepoId is required." });
+            //if (!dto.RepoId.HasValue)
+            //    return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "RepoId is required." });
 
             var result = await _ticketRepo.CreateTicketAsync(dto);
             return Ok(ApiResponseHelper.Success(result, "Ticket Created Successfully."));

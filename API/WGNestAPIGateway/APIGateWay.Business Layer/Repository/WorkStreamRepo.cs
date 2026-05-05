@@ -1,5 +1,6 @@
 ﻿using APIGateWay.Business_Layer.Helper;
 using APIGateWay.Business_Layer.Interface;
+using APIGateWay.Business_Layer.SignalRHub;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -446,35 +447,64 @@ namespace APIGateWay.BusinessLayer.Repository
         //
         // Broadcasts when a TicketProgressLog is explicitly inserted or updated.
         // =====================================================================
-        private async Task BroadcastTicketProgressAsync(Guid issueId, Guid? repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
+        //private async Task BroadcastTicketProgressAsync(Guid issueId, Guid? repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
+        //{
+        //    if (string.IsNullOrEmpty(repoKey.ToString())) return;
+
+        //    try
+        //    {
+        //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+        //        {
+        //            Entity = "TicketProgress",
+        //            Action = "Update",
+        //            Payload = new
+        //            {
+        //                IssueId = issueId,
+        //                Percentage = newPercentage,
+        //                Summary = statusSummary, // 👈 Added to payload
+        //                UpdatedAt = DateTime.UtcNow
+        //            },
+        //            KeyField = "IssueId",
+        //            IssueId = issueId,
+        //            RepoKey = repoKey.ToString(),
+        //            Timestamp = DateTime.UtcNow,
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"[WorkStreamRepo] TicketProgress broadcast failed for {issueId}: {ex.Message}");
+        //    }
+        //}
+        private async Task BroadcastTicketProgressAsync(
+        Guid issueId,
+        Guid? repoId,
+        decimal? overallPct,
+        string? statusSummary
+)
         {
-            if (string.IsNullOrEmpty(repoKey.ToString())) return;
+            if (repoId == null) return;
 
-            try
+            var payload = new
             {
-                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                {
-                    Entity = "TicketProgress",
-                    Action = "Update",
-                    Payload = new
-                    {
-                        IssueId = issueId,
-                        Percentage = newPercentage,
-                        Summary = statusSummary, // 👈 Added to payload
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    KeyField = "IssueId",
-                    IssueId = issueId,
-                    RepoKey = repoKey.ToString(),
-                    Timestamp = DateTime.UtcNow,
-                });
-            }
-            catch (Exception ex)
+                Issue_Id = issueId,
+                Percentage = overallPct,
+                StatusSummary = statusSummary,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var message = new RealtimeMessage
             {
-                Console.WriteLine($"[WorkStreamRepo] TicketProgress broadcast failed for {issueId}: {ex.Message}");
-            }
+                Entity = "TicketProgress",   // 🔥 new entity
+                Action = RealtimeActions.Update,
+                Payload = payload,
+                KeyField = "Issue_Id",
+                RepoKey = repoId.ToString(),
+                IssueId = issueId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _realtimeNotifier.BroadcastAsync(message);
         }
-
     }
 }
 

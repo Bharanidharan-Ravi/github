@@ -25,6 +25,9 @@ namespace APIGateWay.ModalLayer.PostData
         public string? CurrentStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public DateTime? TargetDate { get; set; }
+        public string? Development { get; set; }
+        public string? Testing { get; set; }
+        public string? Client { get; set; }
     }
 
     public class ResourceIds
@@ -51,6 +54,9 @@ namespace APIGateWay.ModalLayer.PostData
         public int? StreamStatus { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
+        public string? Development { get; set; }
+        public string? Testing { get; set; }
+        public string? Client { get; set; }
 
         // Same shape as PostTicketDto.labelId — full replacement list on update
         // null   → labels not touched

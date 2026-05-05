@@ -297,25 +297,47 @@ namespace APIGateWay.BusinessLayer.Repository
                 fallbackData: finalTicketData,
                 lastSync: null);
 
-            if (richTicketData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "Ticket",
-                        Action = "Create",
-                        Payload = richTicketData,
-                        KeyField = "Issue_Id",
-                        RepoKey = richTicketData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast Ticket creation: {ex.Message}");
-                }
-            }
+            //var richTicketData = new GetTickets
+            //{
+            //    Issue_Id = Guid.Parse("79b6a174-5e13-49ef-9396-eaf046b1d020"),
+            //    Title = "Fix SignalR realtime update issue",
+            //    Description = "Realtime updates are not reflecting properly in UI",
+            //    HtmlDesc = "<p>Realtime updates are not reflecting properly in UI</p>",
+            //    Issuer_Name = "BharaniDharan",
+
+            //    CreatedAt = DateTime.UtcNow.AddDays(-2),
+            //    CreatedBy = Guid.Parse("74b04de5-64ec-4178-8d80-08de49b84ca3"),
+            //    UpdatedBy = Guid.Parse("74b04de5-64ec-4178-8d80-08de49b84ca3"),
+            //    UpdatedAt = DateTime.UtcNow,
+
+            //    ReopenedBy = null,
+
+            //    Project_Id = Guid.Parse("64d532a0-f99c-4fb8-1655-08dea052f671"),
+            //    RepoId = Guid.Parse("fa119923-909e-4478-886b-390c8a05f37b"),
+            //    RepoKey = "R16",
+
+            //    CompletionPct = 40,
+            //    Assignee_Id = Guid.Parse("74b04de5-64ec-4178-8d80-08de49b84ca3"),
+            //    Assignee_Name = "BharaniDharan",
+
+            //    All_Assignees = "[{\"Assignee_Id\":\"74b04de5-64ec-4178-8d80-08de49b84ca3\",\"Assignee_Name\":\"BharaniDharan\",\"Assignee_Team\":1,\"Assignee_TeamName\":\"Development\",\"Assignee_Type\":\"Main Assignee\"}]",
+
+            //    Priority = "High",
+            //    Due_Date = DateTime.UtcNow.AddDays(5),
+
+            //    StatusId = 2,
+            //    Issue_Code = "T101",
+            //    Hours = "6:30",
+
+            //    Labels_JSON = "[{\"LABEL_ID\":1,\"LABEL_TITLE\":\"Bug\",\"LABEL_COLOR\":\"#ef4444\"},{\"LABEL_ID\":2,\"LABEL_TITLE\":\"Realtime\",\"LABEL_COLOR\":\"#3b82f6\"}]",
+
+            //    //Attachment_JSON = "[{\"AttachmentId\":101,\"FileName\":\"error_log.txt\",\"PublicUrl\":\"https://example.com/files/error_log.txt\",\"RelativePath\":\"uploads/error_log.txt\"}]",
+
+            //    //OverallPercentage = 45,
+            //    //CurrentStatusSummary = "In Progress",
+
+            //    //IsCloseRequested = false
+            //};
 
             return richTicketData;
         }
@@ -402,6 +424,18 @@ namespace APIGateWay.BusinessLayer.Repository
                         .Set("Hours",
                             existingTicket.Hours, dto.Hours,
                             (e, v) => e.Hours = v)
+
+                        .Set("Devlopment",
+                            existingTicket.Development, dto.Development,
+                            (e, v) => e.Development = v)
+                        
+                        .Set("Testing",
+                            existingTicket.Testing, dto.Testing,
+                            (e, v) => e.Testing = v)
+                        
+                        .Set("Client",
+                            existingTicket.Client, dto.Client,
+                            (e, v) => e.Client = v)
 
                         .Set("Assignee",
                             existingTicket.Assignee_Id, dto.Assignee_Id,
@@ -690,25 +724,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 fallbackData: finalTicketData,
                 lastSync: null);
 
-            if (richTicketData != null)
-            {
-                try
-                {
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                    {
-                        Entity = "Ticket",
-                        Action = "StatusUpdate",
-                        Payload = richTicketData,
-                        KeyField = "Issue_Id",
-                        RepoKey = richTicketData.RepoKey,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to broadcast Ticket status update: {ex.Message}");
-                }
-            }
+            
 
             return richTicketData;
         }

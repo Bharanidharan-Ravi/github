@@ -49,6 +49,11 @@ namespace APIGateWay.Business_Layer.SignalRHub
             public const string Entity = "RepoList";
             public const string KeyField = "Repo_Id";
         }
+        public static class TicketProgress
+        {
+            public const string Entity = "TicketProgress";
+            public const string KeyField = "Issue_Id";
+        }
 
         // ── Future entities — add here when needed ────────────────────────
         // public static class DailyPlan

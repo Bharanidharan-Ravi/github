@@ -10,6 +10,8 @@ using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
+using Microsoft.Data.SqlClient;
+using System.Xml.Linq;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -59,6 +61,36 @@ namespace APIGateWay.BusinessLayer.Repository
         {
             ProcessedAttachmentResult attachmentResult = null;
             GetProject finalProjectData = null;
+
+           // var dbName = _loginContext.databaseName;
+
+           // var parameters = new SqlParameter[]
+           //{
+           //     new SqlParameter("@DbName", dbName),
+           //     new SqlParameter("@projId", "15a2d127-3bf9-40c6-7820-08de57fa5611")
+           //};
+
+           // //var project = await _commonService.ExecuteGetItemAsyc<GetProject>("GetAllProjData", parameters);
+           // var project = new GetProject
+           // {
+           //     Id = Guid.Parse("e3f9b7c1-9c3a-4b2a-8c77-1a2b3c4d5e6f"),
+           //     Project_Name = "SignalR Test Project",
+           //     Description = "Manual test payload",
+           //     HtmlDesc = "<p>Manual test payload</p>",
+           //     ProjectKey = "P999",
+           //     Repo_Id = Guid.Parse("fa119923-909e-4478-886b-390c8a05f37b"),
+           //     RepoKey = "R15",
+           //     Repo_Name = "Test Repo",
+           //     Status = "New",
+           //     Responsible = Guid.Parse("36c6d571-f633-4628-8d7a-08de49b84ca3"),
+           //     EmployeeName = "BharaniDharan",
+           //     DueDate = DateTime.UtcNow.AddDays(10),
+           //     StartDate = DateTime.UtcNow,
+           //     CreatedAt = DateTime.UtcNow,
+           //     CreatedBy = "BharaniDharan",
+           //     UpdatedAt = DateTime.UtcNow,
+           //     UpdatedBy = "BharaniDharan"
+           // };
 
             try
             {
@@ -130,6 +162,8 @@ namespace APIGateWay.BusinessLayer.Repository
                     if (projectDto.temp?.temps != null && projectDto.temp.temps.Any())
                         await _attachmentService.CleanupTempFiles(projectDto.temp);
 
+                    //return fullProject;
+
                     return _mapper.Map<GetProject>(projectMaster);
                 });
             }
@@ -141,27 +175,22 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Project creation failed. Everything was rolled back safely.", ex);
             }
 
-            //if (finalProjectData != null)
-            //{
-            //    try
-            //    {
-            //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-            //        {
-            //            Entity = "Project",
-            //            Action = "Create",
-            //            Payload = finalProjectData,
-            //            KeyField = "Id",
-            //            RepoKey = finalProjectData.RepoKey,
-            //            Timestamp = DateTime.UtcNow
-            //        });
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Console.WriteLine($"Failed to broadcast project creation: {ex.Message}");
-            //    }
-            //}
+            var dbName = _loginContext.databaseName;
 
-            return finalProjectData;
+            // 🔥 OUTSIDE transaction
+            var parameters = new SqlParameter[]
+            {
+                new SqlParameter("@DbName", dbName),
+                new SqlParameter("@projId", finalProjectData.Id)
+            };
+
+            var project = await _commonService.ExecuteGetItemAsyc<GetProject>(
+                "GetAllProjData",
+                parameters
+            );
+
+
+            return project.FirstOrDefault();
         }
 
         // ─────────────────────────────────────────────────────────────────────

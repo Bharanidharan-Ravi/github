@@ -38,6 +38,9 @@ namespace APIGateWay.ModalLayer.GETData
         public decimal? OverallPercentage { get; set; }
         public string? CurrentStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
+        public string? Development { get; set; }
+        public string? Testing { get; set; }
+        public string? Client { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }
         //public List<GetAttachForIssues> Attachment_JSON { get; set; }
     }

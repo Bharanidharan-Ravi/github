@@ -15,7 +15,7 @@ namespace APIGateWay.Business_Layer.SignalRHub.Middleware
         {
             SyncConfigKey = "TicketsList",
             BuildSyncParams = dto => new Dictionary<string, string>
-                                     { { "IssueId", dto.Issue_Id.ToString() } },
+                                     { { "Issue_Id", dto.Issue_Id.ToString() } },
             MatchPredicate = (rich, base_) => rich.Issue_Id == base_.Issue_Id,
             Entity = RealtimeEntities.Ticket.Entity,
             KeyField = RealtimeEntities.Ticket.KeyField,

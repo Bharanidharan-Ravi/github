@@ -122,7 +122,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                 return new PostWorkStreamResponse
                                 {
                                     IssueId = dto.IssueId,
-
+                                    RepoId = ticketStatus.RepoId,
                                     // 👇 ADDED: Map Old/New status here too just in case progress update triggers status change
                                     OldTicketStatus = ticketStatus.OldStatusId,
                                     NewTicketStatus = ticketStatus.ComputedStatusId,
