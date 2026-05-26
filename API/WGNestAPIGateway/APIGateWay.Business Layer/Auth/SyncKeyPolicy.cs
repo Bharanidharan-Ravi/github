@@ -55,15 +55,15 @@ namespace APIGateWay.BusinessLayer.Auth
                 // Not scoped — all roles get the global list
                 ["EmployeeList"] = new SyncKeyRule
                 {
-                    AllowedRoles = AppRoles.All,
+                    AllowedRoles = AppRoles.AdminManager,
                     IsRepoScoped = false
                 },
 
-                ["LabelMaster"] = new SyncKeyRule
-                {
-                    AllowedRoles = AppRoles.All,
-                    IsRepoScoped = false
-                },
+                //["LabelMaster"] = new SyncKeyRule
+                //{
+                //    AllowedRoles = AppRoles.All,
+                //    IsRepoScoped = false
+                //},
             };
     }
 }

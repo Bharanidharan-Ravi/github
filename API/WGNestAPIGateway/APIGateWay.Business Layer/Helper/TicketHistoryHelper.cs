@@ -8,6 +8,11 @@ using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Helper
 {
+    public class HistoryLabelDto
+    {
+        public long id { get; set; }
+        public string name { get; set; }
+    }
     public static class TicketHistoryHelper
     {
         // ─────────────────────────────────────────────────────────────────────
@@ -52,12 +57,14 @@ namespace APIGateWay.Business_Layer.Helper
         }
 
         public static TicketHistoryEntry StatusChanged(
-            Guid issueId,
-            string oldStatusName,
-            string newStatusName,
-            Guid actorId,
-            string actorName,
-            bool isAutoComputed = false)
+        Guid issueId,
+        int? oldStatusId,           // 🔥 Reordered to keep ID and Name together
+        string oldStatusName,
+        int? newStatusId,           // 🔥 Added newStatusId
+        string newStatusName,
+        Guid actorId,
+        string actorName,
+        bool isAutoComputed = false)
         {
             var summary = isAutoComputed
                 ? $"Status auto-updated from '{oldStatusName}' to '{newStatusName}'"
@@ -73,12 +80,24 @@ namespace APIGateWay.Business_Layer.Helper
                 NewValue = newStatusName,
                 ActorId = actorId,
                 ActorName = actorName,
-                Meta = new { IsAutoComputed = isAutoComputed }
+                // 🔥 NEW: Rich JSON payload for the UI to render badges perfectly
+                Meta = new
+                {
+                    previousState = new { id = oldStatusId, name = oldStatusName },
+                    newState = new { id = newStatusId, name = newStatusName },
+                    isAutoComputed = isAutoComputed
+                }
             };
         }
+        // Add inside TicketHistoryHelper.cs
 
-        public static TicketHistoryEntry TicketClosed(
+        public static TicketHistoryEntry TicketClosedWithContext(
             Guid issueId,
+            int? oldStatusId,
+            string oldStatusName,
+            int? newStatusId,
+            string newStatusName,
+            long? threadId, // Will be null if closed from Edit screen
             Guid actorId,
             string actorName)
         {
@@ -86,27 +105,55 @@ namespace APIGateWay.Business_Layer.Helper
             {
                 IssueId = issueId,
                 EventType = HistoryEventType.TicketClosed,
-                Summary = "Ticket closed",
+                Summary = threadId.HasValue ? "Ticket closed with comment" : "Ticket closed directly",
+                FieldName = "Status",
+                OldValue = oldStatusName,
+                NewValue = "Closed",
+                ThreadId = threadId,
                 ActorId = actorId,
-                ActorName = actorName
+                ActorName = actorName,
+                // 🔥 Rich JSON for Timesheet
+                Meta = new
+                {
+                    action = "closed",
+                    closedAt = DateTime.UtcNow,
+                    hasThread = threadId.HasValue,
+                    threadId = threadId,
+                    previousState = new { id = oldStatusId, name = oldStatusName },
+                    newState = new { id = newStatusId, name = newStatusName }
+                }
             };
         }
 
-        public static TicketHistoryEntry TicketCancelled(
+        public static TicketHistoryEntry TicketReopened(
             Guid issueId,
-            string? reason,
+            int? newStatusId,
+            string newStatusName,
+            long? threadId,
             Guid actorId,
             string actorName)
         {
             return new TicketHistoryEntry
             {
                 IssueId = issueId,
-                EventType = HistoryEventType.TicketCancelled,
-                Summary = string.IsNullOrEmpty(reason)
-                    ? "Ticket cancelled"
-                    : $"Ticket cancelled: {reason}",
+                // If you don't have HistoryEventType.TicketReopened, use HistoryEventType.StatusChanged
+                EventType = HistoryEventType.StatusChanged,
+                Summary = "Ticket reopened",
+                FieldName = "Status",
+                OldValue = "Closed",
+                NewValue = newStatusName,
+                ThreadId = threadId,
                 ActorId = actorId,
-                ActorName = actorName
+                ActorName = actorName,
+                // 🔥 Rich JSON for Timesheet
+                Meta = new
+                {
+                    action = "reopened",
+                    reopenedAt = DateTime.UtcNow,
+                    hasThread = threadId.HasValue,
+                    threadId = threadId,
+                    newState = new { id = newStatusId, name = newStatusName }
+                }
             };
         }
 
@@ -157,50 +204,88 @@ namespace APIGateWay.Business_Layer.Helper
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // LABELS
+        //  LABELS
         // ─────────────────────────────────────────────────────────────────────
-
-        public static TicketHistoryEntry LabelAdded(
-            Guid? issueId,
-            //string labelName,
-            long labelId,
-            Guid actorId,
-            string actorName)
+        #region LABELS
+        public static TicketHistoryEntry LabelsUpdated(
+        Guid? issueId,
+        List<HistoryLabelDto> added,
+        List<HistoryLabelDto> removed,
+        List<HistoryLabelDto> previousState,
+        List<HistoryLabelDto> newState,
+        Guid actorId,
+        string actorName)
         {
+            string oldValString = previousState != null && previousState.Any()
+                ? string.Join(", ", previousState.Select(l => l.name))
+                : "None";
+
+            string newValString = newState != null && newState.Any()
+                ? string.Join(", ", newState.Select(l => l.name))
+                : "None";
+
+            // 🔥 NEW: Make the summary smart and readable!
+            string dynamicSummary = oldValString == "None"
+                ? $"Labels set to '{newValString}'"
+                : $"Labels changed from '{oldValString}' to '{newValString}'";
+
             return new TicketHistoryEntry
             {
                 IssueId = issueId ?? Guid.Empty,
-                EventType = HistoryEventType.LabelAdded,
-                Summary = $"Label '{labelId}' added",
-                TargetEntityId = labelId.ToString(),
+                EventType = HistoryEventType.TicketUpdated,
+                Summary = dynamicSummary,                  // 🔥 Updated
+                FieldName = "Labels",
+                OldValue = oldValString,
+                NewValue = newValString,
                 TargetEntityType = "Label",
                 ActorId = actorId,
-                ActorName = actorName
+                ActorName = actorName,
+                Meta = new { added, removed, previousState, newState }
             };
         }
 
-        public static TicketHistoryEntry LabelRemoved(
-            Guid issueId,
-            string labelName,
-            long labelId,
-            Guid actorId,
-            string actorName)
-        {
-            return new TicketHistoryEntry
-            {
-                IssueId = issueId,
-                EventType = HistoryEventType.LabelRemoved,
-                Summary = $"Label '{labelName}' removed",
-                TargetEntityId = labelId.ToString(),
-                TargetEntityType = "Label",
-                ActorId = actorId,
-                ActorName = actorName
-            };
-        }
+        //public static TicketHistoryEntry LabelAdded(
+        //    Guid? issueId,
+        //    //string labelName,
+        //    long labelId,
+        //    Guid actorId,
+        //    string actorName)
+        //{
+        //    return new TicketHistoryEntry
+        //    {
+        //        IssueId = issueId ?? Guid.Empty,
+        //        EventType = HistoryEventType.LabelAdded,
+        //        Summary = $"Label '{labelId}' added",
+        //        TargetEntityId = labelId.ToString(),
+        //        TargetEntityType = "Label",
+        //        ActorId = actorId,
+        //        ActorName = actorName
+        //    };
+        //}
+
+        //public static TicketHistoryEntry LabelRemoved(
+        //    Guid issueId,
+        //    string labelName,
+        //    long labelId,
+        //    Guid actorId,
+        //    string actorName)
+        //{
+        //    return new TicketHistoryEntry
+        //    {
+        //        IssueId = issueId,
+        //        EventType = HistoryEventType.LabelRemoved,
+        //        Summary = $"Label '{labelName}' removed",
+        //        TargetEntityId = labelId.ToString(),
+        //        TargetEntityType = "Label",
+        //        ActorId = actorId,
+        //        ActorName = actorName
+        //    };
+        //}
 
         // ─────────────────────────────────────────────────────────────────────
         // WORKSTREAMS (Subtasks)
         // ─────────────────────────────────────────────────────────────────────
+        #endregion
 
         public static TicketHistoryEntry WorkStreamCreated(
             Guid? issueId,

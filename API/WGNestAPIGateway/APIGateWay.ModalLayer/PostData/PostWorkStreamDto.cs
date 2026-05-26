@@ -81,10 +81,15 @@ namespace APIGateWay.ModalLayer.PostData
         public string? TicketStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public List<CoContributorItemDto>? CoContributors { get; set; }
+        public bool PriorityRequest { get; set; }
+        public bool FuncResponse { get; set; }
+        public bool? ToClient { get; set; }
 
         // Set this to true from the UI if the user is ONLY submitting 
         // the overall progress and NOT updating their subtask/comments.
         public bool IsTicketProgressOnly { get; set; }
+        public bool IsSupport { get; set; }
+
     }
     public class CoContributorItemDto
     {

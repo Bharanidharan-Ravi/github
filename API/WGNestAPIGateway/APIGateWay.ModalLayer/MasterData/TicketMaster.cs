@@ -34,7 +34,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         public string Title { get; set; }
         //public string RepoKey { get; set; }
-        public string Hours { get; set; }
+        public string? Hours { get; set; }
         public string? Priority { get; set; }
         public string? StatusName { get; set; }
         public decimal? CompletionPct { get; set; }
@@ -47,6 +47,10 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? Project_Id { get; set; }
         public DateTime? Due_Date { get; set; }
         public Guid? RepoId { get; set; }
+        public bool PriorityRequest { get; set; }
+        public bool FuncResponse { get; set; }
+        public bool RaiseToClient { get; set; }
+       
         //public Guid? StreamId { get; set; }
         //public Guid? ResourceId { get; set; }
 
@@ -61,8 +65,9 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
+        public string? Technical { get; set; }
+        public string? Functional { get; set; }
         public string? Development { get; set; }
-        public string? Testing { get; set; }
         public string? Client { get; set; }
 
     }

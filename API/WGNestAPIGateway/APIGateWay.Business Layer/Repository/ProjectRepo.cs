@@ -62,35 +62,35 @@ namespace APIGateWay.BusinessLayer.Repository
             ProcessedAttachmentResult attachmentResult = null;
             GetProject finalProjectData = null;
 
-           // var dbName = _loginContext.databaseName;
+            // var dbName = _loginContext.databaseName;
 
-           // var parameters = new SqlParameter[]
-           //{
-           //     new SqlParameter("@DbName", dbName),
-           //     new SqlParameter("@projId", "15a2d127-3bf9-40c6-7820-08de57fa5611")
-           //};
+            // var parameters = new SqlParameter[]
+            //{
+            //     new SqlParameter("@DbName", dbName),
+            //     new SqlParameter("@projId", "15a2d127-3bf9-40c6-7820-08de57fa5611")
+            //};
 
-           // //var project = await _commonService.ExecuteGetItemAsyc<GetProject>("GetAllProjData", parameters);
-           // var project = new GetProject
-           // {
-           //     Id = Guid.Parse("e3f9b7c1-9c3a-4b2a-8c77-1a2b3c4d5e6f"),
-           //     Project_Name = "SignalR Test Project",
-           //     Description = "Manual test payload",
-           //     HtmlDesc = "<p>Manual test payload</p>",
-           //     ProjectKey = "P999",
-           //     Repo_Id = Guid.Parse("fa119923-909e-4478-886b-390c8a05f37b"),
-           //     RepoKey = "R15",
-           //     Repo_Name = "Test Repo",
-           //     Status = "New",
-           //     Responsible = Guid.Parse("36c6d571-f633-4628-8d7a-08de49b84ca3"),
-           //     EmployeeName = "BharaniDharan",
-           //     DueDate = DateTime.UtcNow.AddDays(10),
-           //     StartDate = DateTime.UtcNow,
-           //     CreatedAt = DateTime.UtcNow,
-           //     CreatedBy = "BharaniDharan",
-           //     UpdatedAt = DateTime.UtcNow,
-           //     UpdatedBy = "BharaniDharan"
-           // };
+            // //var project = await _commonService.ExecuteGetItemAsyc<GetProject>("GetAllProjData", parameters);
+            // var project = new GetProject
+            // {
+            //     Id = Guid.Parse("e3f9b7c1-9c3a-4b2a-8c77-1a2b3c4d5e6f"),
+            //     Project_Name = "SignalR Test Project",
+            //     Description = "Manual test payload",
+            //     HtmlDesc = "<p>Manual test payload</p>",
+            //     ProjectKey = "P999",
+            //     Repo_Id = Guid.Parse("fa119923-909e-4478-886b-390c8a05f37b"),
+            //     RepoKey = "R15",
+            //     Repo_Name = "Test Repo",
+            //     Status = "New",
+            //     Responsible = Guid.Parse("36c6d571-f633-4628-8d7a-08de49b84ca3"),
+            //     EmployeeName = "BharaniDharan",
+            //     DueDate = DateTime.UtcNow.AddDays(10),
+            //     StartDate = DateTime.UtcNow,
+            //     CreatedAt = DateTime.UtcNow,
+            //     CreatedBy = "BharaniDharan",
+            //     UpdatedAt = DateTime.UtcNow,
+            //     UpdatedBy = "BharaniDharan"
+            // };
 
             try
             {
@@ -729,7 +729,7 @@ namespace APIGateWay.BusinessLayer.Repository
 //            }
 
 //            var richProjectData = await _syncExecutionService.FetchRichDataAsync<GetProject>(
-                
+
 //                configKey: "ProjectList",
 //                syncParams: new Dictionary<string, string> { { "ProjectId", finalProjectData.Id.ToString() } },
 //                matchPredicate: p => p.Id == finalProjectData.Id,
@@ -760,4 +760,4 @@ namespace APIGateWay.BusinessLayer.Repository
 //        }
 //    }   
 //}
-#endregion 
+#endregion

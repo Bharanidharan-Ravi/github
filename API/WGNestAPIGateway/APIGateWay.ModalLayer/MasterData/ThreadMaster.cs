@@ -17,7 +17,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public long ThreadId { get; set; }
         public int? FailedHandoffId { get; set; }
 
-        [IgnoreMapping] 
+        [IgnoreMapping]
         public string? RepoKey { get; set; }
         [IgnoreMapping]
         public string? IssueTitle { get; set; }
@@ -29,10 +29,11 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? HtmlDesc { get; set; }
         public string? CommentText { get; set; }
         public string? Hours { get; set; }
-        public decimal? CompletionPct { get; set; }     
+        public decimal? CompletionPct { get; set; }
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
         public int? HandsOffId { get; set; }
+        public bool? toClient { get; set; }
 
         // --------------------------------------------------------
         // 🛡️ AUDIT FIELDS (Handled dynamically)

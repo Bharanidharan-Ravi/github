@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -10,8 +11,9 @@ namespace APIGateWay.ModalLayer.GETData
     public class DashBoardTimeSheetData
     {
         [Key]
-        public long ThreadId { get; set; }
-        public Guid Issue_Id { get; set; }
+        public long? RowNum { get; set; }
+        public long? ThreadId { get; set; }
+        public Guid? Issue_Id { get; set; }
         public Guid? EmployeeId { get; set; }
 
         public string? EmployeeName { get; set; }
@@ -46,7 +48,9 @@ namespace APIGateWay.ModalLayer.GETData
         public int? ThreadStatusId { get; set; }
         public decimal? OverallPercentage { get; set; }
         public string? CurrentStatusSummary { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
+
+        public string? CreatedByName { get; set; }
     }
 }

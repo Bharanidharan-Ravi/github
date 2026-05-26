@@ -32,7 +32,7 @@ namespace APIGateWay.BusinessLayer.Helper
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure= "GETALLREPO",
+                StoredProcedure = "GETALLREPO",
                 EntityType = typeof(GetRepo),
                 SourceName = "SyncExecutionService",
 
@@ -56,6 +56,7 @@ namespace APIGateWay.BusinessLayer.Helper
                 Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
+
             },
 
             ["EmployeeList"] = new SyncRepositoryConfig
@@ -92,7 +93,7 @@ namespace APIGateWay.BusinessLayer.Helper
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "DashBoardTimesheetData",
+                StoredProcedure = "DashBoardTimesheetdataTest",
                 EntityType = typeof(DashBoardTimeSheetData),
                 SourceName = "SyncExecutionService",
 

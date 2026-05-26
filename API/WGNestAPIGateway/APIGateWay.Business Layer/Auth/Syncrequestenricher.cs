@@ -52,6 +52,14 @@ namespace APIGateWay.BusinessLayer.Auth
                 {
                     request.Timestamps.TryGetValue(key, out var ts);
                     request.Params.TryGetValue(key, out var p);
+
+                    // 🔥 Inject role for ThreadsList even for Admin/Manager if needed
+                    if (key == "ThreadsList" || key == "TicketsList")
+                    {
+                        p ??= new Dictionary<string, string>();
+                        p["Role"] = role.ToString();
+                    }
+
                     enriched.Units.Add(Unit(key, ts, p ?? new()));
                 }
                 return enriched;
@@ -71,6 +79,12 @@ namespace APIGateWay.BusinessLayer.Auth
                 // Unknown key — let SyncRepositoryV2 return INVALID_CONFIG_KEY
                 if (!SyncKeyPolicy.Rules.TryGetValue(key, out var rule))
                 {
+                    // 🔥 Inject role for ThreadsList
+                    if (key == "ThreadsList" || key == "TicketsList")
+                    {
+                        baseParams["Role"] = role.ToString();
+                    }
+
                     enriched.Units.Add(Unit(key, lastSync, baseParams));
                     continue;
                 }
@@ -97,13 +111,17 @@ namespace APIGateWay.BusinessLayer.Auth
                         {
                             [rule.RepoParamKey] = repo.RepoId.ToString()
                         };
+
+                        // 🔥 Inject Role for ThreadsList here too
+                        if (key == "ThreadsList" || key == "TicketsList")
+                        {
+                            unitParams["Role"] = role.ToString();
+                        }
+
                         enriched.Units.Add(Unit(key, lastSync, unitParams));
                     }
-                    continue;
-                }
 
-                // Not repo-scoped — pass through
-                enriched.Units.Add(Unit(key, lastSync, baseParams));
+                }
             }
 
             return enriched;

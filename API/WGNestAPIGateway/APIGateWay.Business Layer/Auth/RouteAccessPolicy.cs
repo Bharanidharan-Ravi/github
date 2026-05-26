@@ -29,7 +29,7 @@ namespace APIGateWay.BusinessLayer.Auth
 
             // ── Repository ────────────────────────────────────────────────────
             new() { PathPrefix = "/api/repo",
-                    Methods = new[] { "GET" },     AllowedRoles = AppRoles.AdminManager, ValidateRepoScope = true  },
+                    Methods = new[] { "GET" },     AllowedRoles = AppRoles.All, ValidateRepoScope = true  },
             new() { PathPrefix = "/api/repo",
                     Methods = new[] { "POST","PUT","DELETE" }, AllowedRoles = AppRoles.AdminOnly, ValidateRepoScope = false },
 

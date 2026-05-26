@@ -1,7 +1,9 @@
-﻿using APIGateWay.DomainLayer.CommonSevice;
+﻿
+using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
@@ -241,11 +243,26 @@ namespace APIGateWay.BusinessLayer.Repository
                     WorkStream stream = null;
                     bool isTerminalAction = targetStatusId == StatusId.Closed || targetStatusId == StatusId.Cancelled;
 
-                    if (!isTerminalAction)
+                    if (!isTerminalAction && AppRoles.AdminManager.Contains(_loginContext.role))
                     {
+                        if (!dto.IsSupport)
+                        {
+                            stream = await UpsertStreamAsync(
+                                dto, posterId, targetStatusId, threadId, resolvedStreamName);
+                        }
+                        else
+                        {
+                            stream = new WorkStream
+                            {
+                                StreamId = Guid.Empty,
+                                ResourceId = posterId,
+                                StreamStatus = targetStatusId,
+                                CompletionPct = 0,
+                            };
+                        }
                         // ── WorkStream upsert ─────────────────────────────────
-                        stream = await UpsertStreamAsync(
-                            dto, posterId, targetStatusId, threadId, resolvedStreamName);
+                        //stream = await UpsertStreamAsync(
+                        //    dto, posterId, targetStatusId, threadId, resolvedStreamName);
 
                         if (handoffToUpdate != null)
                         {
@@ -367,7 +384,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             }
                         }
 
-                        if (threadId > 0 && stream?.StreamId != Guid.Empty)
+                        if (threadId > 0 && stream?.StreamId != Guid.Empty && AppRoles.AdminManager.Contains(_loginContext.role))
                         {
                             // ── ThreadMaster back-link update ─────────────────
                             var timer = _stepContext.StartStep();
@@ -418,8 +435,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             foreach (var subtask in activeSubtasks)
                             {
                                 subtask.StreamStatus = targetStatusId;
-                                if (targetStatusId == StatusId.Closed) subtask.CompletionPct = 100;
-                                //if (targetStatusId == 14) subtask.CompletionPct = 100;
+                                if (targetStatusId == 14) subtask.CompletionPct = 100;
                             }
                             await _db.SaveChangesAsync();
 
@@ -439,7 +455,9 @@ namespace APIGateWay.BusinessLayer.Repository
                           isTerminalAction ? targetStatusId : null,
                           dto.IsReopenRequest, // Pass the flag from UI
                           dto.IsReopenRequest ? posterId : null,
-                          dto.IsCloseRequested
+                          dto.IsCloseRequested,
+                          dto.PriorityRequest,
+                          dto.FuncResponse
                       );
 
                     return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
@@ -501,6 +519,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Issue_Id = dto.IssueId,
                     HtmlDesc = finalHtml,
                     HandsOffId = HandsoffId,
+                    toClient = dto.ToClient ?? false,
                     CommentText = HtmlUtilities.ConvertToPlainText(finalHtml),
                     CompletionPct = dto.CompletionPct,
                     From_Time = dto.From_Time,
@@ -537,6 +556,25 @@ namespace APIGateWay.BusinessLayer.Repository
                         // Insert them into the database
                         await _db.Set<ThreadCoContributor>().AddRangeAsync(coContributorRecords);
                         await _db.SaveChangesAsync();
+                    }
+
+                    if (dto.IsSupport)
+                    {
+                        var indiaTimeZone =  TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+                        var indiaTime = TimeZoneInfo.ConvertTimeFromUtc( DateTime.UtcNow,indiaTimeZone);
+                        bool alreadyAdded = dto.CoContributors?.Any(c => c.id == posterId) ?? false;
+                        if (!alreadyAdded)
+                        {
+                            var selfContributor = new ThreadCoContributor()
+                            {
+                                ThreadId = threadId,
+                                EmployeeId = posterId,
+                                CreatedAt = indiaTime
+                            };
+
+                            await _db.Set<ThreadCoContributor>().AddAsync(selfContributor);
+                            await _db.SaveChangesAsync();
+                        }
                     }
 
                     _stepContext.Success("ThreadMaster", "INSERT", threadId.ToString(), timer);
@@ -812,7 +850,7 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
        Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
-        bool isCloseRequested = false)
+        bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -935,15 +973,21 @@ namespace APIGateWay.BusinessLayer.Repository
                                 t.ReopenCount += 1;
                                 t.ReopenedBy = reopenedBy;
                             }
-                            if (isCloseRequested)
-                            {
-                                t.IsCloseRequested = true;
-                            }
+                            //if (isCloseRequested)
+                            //{
+                            //    t.IsCloseRequested = true;
+                            //}
+
+                            t.IsCloseRequested = isCloseRequested;
+                            t.PriorityRequest = PriorityRequest;
+                            t.FuncResponse = FuncResponse;
 
                             // Clear the flag if the owner actually closes or cancels the ticket
                             if (isExplicitlyClosed || isExplicitlyCancelled)
                             {
                                 t.IsCloseRequested = false;
+                                t.PriorityRequest = false;
+                                t.FuncResponse = false;
                             }
                         });
 
@@ -1000,7 +1044,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 RepoKey = repoKey,
                 IsTerminal = isTerminal,
                 RepoId = ticket?.RepoId,
-            BroadcastPayload = broadcastPayload,
+                BroadcastPayload = broadcastPayload,
             };
         }
 
@@ -1404,7 +1448,6 @@ namespace APIGateWay.BusinessLayer.Repository
                         : null,
                 IssueId = dto.IssueId,
                 RepoKey = ticketStatus.RepoKey,
-                RepoId = ticketStatus.RepoId,
                 IsTerminal = ticketStatus.IsTerminal,
                 BroadcastPayload = ticketStatus.BroadcastPayload,
             };

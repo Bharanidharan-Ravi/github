@@ -57,7 +57,7 @@ namespace APIGateWay.DomainLayer.DBContext
 
         #endregion
         //public DbSet<LOGIN_MASTER> lOGIN_MASTER { get; set; }
-        public DbSet<GetUserModel> getUserModels { get; set; }  
+        public DbSet<GetUserModel> getUserModels { get; set; }
         public DbSet<LOGIN_MASTER> LOGIN_MASTER { get; set; }
         public DbSet<EMPLOYEEMASTER> eMPLOYEEMASTERs { get; set; }
         public DbSet<ClientMaster> clientMasters { get; set; }
@@ -71,7 +71,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
         public DbSet<SequenceResult> sequenceResults { get; set; }
-        public DbSet<ProjectMaster> ProjectMasters  { get; set; }
+        public DbSet<ProjectMaster> ProjectMasters { get; set; }
         public DbSet<AttachmentMaster> AttachmentMaster { get; set; }
         public DbSet<IssueLabel> ISSUE_LABELS { get; set; }
         public DbSet<TicketMaster> ISSUEMASTER { get; set; }
@@ -93,7 +93,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<TicketProgressLogDto> TicketProgressLogDtos { get; set; }
         public DbSet<ThreadCoContributor> ThreadCoContributors { get; set; }
         public DbSet<GetCustomerDto> GetCustomerDto { get; set; }
-        public DbSet<GetRepoUserData> GetRepoUserData{ get; set; }
+        public DbSet<GetRepoUserData> GetRepoUserData { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -200,7 +200,7 @@ namespace APIGateWay.DomainLayer.DBContext
             modelBuilder.Entity<TicketMaster>()
                 .Property(t => t.CompletionPct)
                 .HasColumnType("decimal(5, 2)");
-            
+
             modelBuilder.Entity<ThreadMaster>()
                 .Property(t => t.CompletionPct)
                 .HasColumnType("decimal(5, 2)");

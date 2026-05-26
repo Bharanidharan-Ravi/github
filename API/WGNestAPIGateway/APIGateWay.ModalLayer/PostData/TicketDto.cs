@@ -10,7 +10,7 @@ namespace APIGateWay.ModalLayer.PostData
     {
         public string Title { get; set; }
         public string Description { get; set; }
-        public string Hours { get; set; }
+        public string? Hours { get; set; }
         public Guid? Project_Id { get; set; }
 
         public DateTime? Due_Date { get; set; }
@@ -26,8 +26,11 @@ namespace APIGateWay.ModalLayer.PostData
         public bool IsCloseRequested { get; set; }
         public DateTime? TargetDate { get; set; }
         public string? Development { get; set; }
-        public string? Testing { get; set; }
+        public string? Technical { get; set; }
+        public string? Functional { get; set; }
         public string? Client { get; set; }
+        public bool RaiseToClient { get; set; }
+
     }
 
     public class ResourceIds
@@ -55,8 +58,10 @@ namespace APIGateWay.ModalLayer.PostData
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
         public string? Development { get; set; }
-        public string? Testing { get; set; }
+        public string? Technical { get; set; }
+        public string? Functional { get; set; }
         public string? Client { get; set; }
+        public bool? RaiseToClient { get; set; }
 
         // Same shape as PostTicketDto.labelId — full replacement list on update
         // null   → labels not touched

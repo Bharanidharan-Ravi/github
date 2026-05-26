@@ -39,7 +39,7 @@ namespace APIGateway.Middleware
             {
                 var endpoint = context.GetEndpoint();
                 var allowAnonymous = endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>() != null;
-               
+
                 if (!allowAnonymous)
                 {
                     string token = null;

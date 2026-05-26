@@ -56,6 +56,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     "GetTeamMaster",
                     "GetTicketProgressLogsByIssueId",
                     "GetRepoUser",
+                    "DashBoardTimesheetdataTest"
                 };
 
                 if (!validProcedureNames.Contains(storedProcedure))

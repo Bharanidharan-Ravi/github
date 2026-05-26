@@ -39,8 +39,12 @@ namespace APIGateWay.ModalLayer.GETData
         public string? CurrentStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public string? Development { get; set; }
-        public string? Testing { get; set; }
+        public bool PriorityRequest { get; set; }
+        public bool FuncResponse { get; set; }
+        public string? Technical { get; set; }
+        public string? Functional { get; set; }
         public string? Client { get; set; }
+        public bool? RaiseToClient { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }
         //public List<GetAttachForIssues> Attachment_JSON { get; set; }
     }
@@ -70,7 +74,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? CommentText { get; set; }
         public string? HtmlDesc { get; set; }
         public Guid Issue_Id { get; set; }
-        public int? HandsOffId  { get; set; }
+        public int? HandsOffId { get; set; }
         public Guid CreatedId { get; set; }
         public Guid? WorkStreamId { get; set; }
         public string? CreatedBy { get; set; }
@@ -83,6 +87,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? To_Time { get; set; }
         public string? Hours { get; set; }
         public int? team { get; set; }
+        public bool? toClient { get; set; }
     }
 
     public class IssueRepositoryInfo

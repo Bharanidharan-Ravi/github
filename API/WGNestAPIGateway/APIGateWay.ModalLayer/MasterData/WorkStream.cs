@@ -135,7 +135,7 @@ namespace APIGateWay.ModalLayer.MasterData
 // =============================================================================
 // WHAT UI SENDS FOR EACH SCENARIO
 // =============================================================================
- 
+
 // SCENARIO 1: Developer posts normal progress
 // POST /api/workstream
 // {
@@ -146,14 +146,14 @@ namespace APIGateWay.ModalLayer.MasterData
 //   "UseLastThread": false,
 //   "Comment":      "Fixed auth module, 80% done"
 // }
- 
+
 // SCENARIO 2: Developer marks DevCompleted (normal path, no block)
 // {
 //   "StreamStatus": 6,              // DevelopmentCompleted
 //   "CompletionPct": 100,
 //   ...
 // }
- 
+
 // SCENARIO 3: Tester reports failure (blocks developer A)
 // {
 //   "StreamStatus":            8,   // FunctionalTesting (tester's own status)
@@ -164,7 +164,7 @@ namespace APIGateWay.ModalLayer.MasterData
 //   "PercentageDrop":          30,  // drop dev by 30%
 //   ...
 // }
- 
+
 // SCENARIO 4: Tester clears failure (unblocks developer)
 // {
 //   "StreamStatus":            8,   // FunctionalTesting (tester's own status)
@@ -173,7 +173,7 @@ namespace APIGateWay.ModalLayer.MasterData
 //   "TargetDeveloperResourceId": "developer-A-guid",
 //   ...
 // }
- 
+
 // SCENARIO 5: Developer marks DevCompleted after being unblocked
 // {
 //   "StreamStatus": 6,   // DevelopmentCompleted — now allowed since block cleared

@@ -25,7 +25,7 @@ namespace APIGateWay.DomainLayer.Service
             IHttpContextAccessor httpContextAccessor,
             ILoginContextService loginContext,
             IServiceScopeFactory serviceScopeFactory
-            )
+        )
         {
             _httpClient = httpClient;
             _Service = commonService;
@@ -33,8 +33,12 @@ namespace APIGateWay.DomainLayer.Service
             _loginContext = loginContext;
             _scopeFactory = serviceScopeFactory;
         }
+
         public async Task<RawSyncResult> ExecuteRemoteAsync(
-            string endpoint, DateTimeOffset? lastSync, Dictionary<string, string> parameters, string source)
+            string endpoint,
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters,
+            string source)
         {
             try
             {
@@ -68,15 +72,11 @@ namespace APIGateWay.DomainLayer.Service
 
                 object data;
 
-                // ✅ CASE 1: Wrapped response { data: ... }
-                if (root.ValueKind == JsonValueKind.Object &&
-                    root.TryGetProperty("data", out var dataProp))
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("data", out var dataProp))
                 {
                     data = dataProp.Clone();
                 }
-                // ✅ CASE 2: Raw array or object
-                else if (root.ValueKind == JsonValueKind.Array ||
-                         root.ValueKind == JsonValueKind.Object)
+                else if (root.ValueKind == JsonValueKind.Array || root.ValueKind == JsonValueKind.Object)
                 {
                     data = root.Clone();
                 }
@@ -122,23 +122,22 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
 
-
         public async Task<RawSyncResult> ExecuteLocalAsync<T>(
-     string databaseName,
-     string storedProcedure,
-     DateTimeOffset? lastSync,
-     Dictionary<string, string> parameters,
-     string source)
-     where T : class
+            string databaseName,
+            string storedProcedure,
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters,
+            string source)
+            where T : class
         {
             try
             {
                 var dbName = _loginContext.databaseName;
 
                 var sqlParams = new List<SqlParameter>
-{
-    new SqlParameter("@DbName", dbName ?? (object)DBNull.Value)
-};
+                {
+                    new SqlParameter("@DbName", dbName ?? (object)DBNull.Value)
+                };
 
                 if (parameters != null)
                 {
@@ -184,12 +183,11 @@ namespace APIGateWay.DomainLayer.Service
 
                                             if (!string.IsNullOrEmpty(relativePath))
                                             {
-                                                // Safely encode folder and file names containing '#', spaces, or special characters
-                                                // while keeping the forward slashes intact.
                                                 var encodedRelativePath = string.Join("/", relativePath
-                                                    .Replace("\\", "/") // Normalize slashes just in case they are backslashes
+                                                    .Replace("\\", "/")
                                                     .Split('/')
-                                                    .Select(segment => Uri.EscapeDataString(segment)));
+                                                    .Select(segment => Uri.EscapeDataString(segment))
+                                                );
 
                                                 emp.PreviewUrl = _Service.GeneratePreviewUrl(encodedRelativePath);
                                             }
@@ -237,8 +235,8 @@ namespace APIGateWay.DomainLayer.Service
 
 
         private static string BuildQuery(
-    DateTimeOffset? lastSync,
-    Dictionary<string, string> parameters)
+            DateTimeOffset? lastSync,
+            Dictionary<string, string> parameters)
         {
             var query = new List<string>();
 
@@ -254,6 +252,4 @@ namespace APIGateWay.DomainLayer.Service
             return query.Count > 0 ? "?" + string.Join("&", query) : string.Empty;
         }
     }
-
 }
-

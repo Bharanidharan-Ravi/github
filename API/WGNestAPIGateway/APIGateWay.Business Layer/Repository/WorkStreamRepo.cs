@@ -112,45 +112,54 @@ namespace APIGateWay.BusinessLayer.Repository
                     response.NewTicketStatus.HasValue &&
                     response.OldTicketStatus.Value != response.NewTicketStatus.Value)
                 {
-                    string oldStatusName = await GetStatusNameAsync(response.OldTicketStatus.Value);
-                    string newStatusName = await GetStatusNameAsync(response.NewTicketStatus.Value);
-
-                    var statusChangeLog = TicketHistoryHelper.TicketUpdated(
-                        issueId: dto.IssueId,
-                        fieldName: "Status",
-                        oldValue: response.OldTicketStatus.Value.ToString(),
-                        newValue: response.NewTicketStatus.Value.ToString(),
-                        actorId: actorId,
-                        actorName: actorName
-                    );
-
-                    // 👇 CUSTOM SUMMARY LOGIC
                     int oldId = response.OldTicketStatus.Value;
                     int newId = response.NewTicketStatus.Value;
 
-                    if (newId == StatusId.Cancelled) // 16
+                    string oldStatusName = await GetStatusNameAsync(oldId);
+                    string newStatusName = await GetStatusNameAsync(newId);
+
+                    // Define your terminal statuses (e.g., Closed, Cancelled)
+                    var closedStatusIds = new[] { 14, 15, 16, 17 };
+
+                    bool wasClosed = closedStatusIds.Contains(oldId);
+                    bool isNowClosed = closedStatusIds.Contains(newId);
+
+                    if (!wasClosed && isNowClosed)
                     {
-                        statusChangeLog.Summary = $"{actorName} cancelled this ticket";
+                        // 🔥 TICKET CLOSED (Passes ThreadId if they used the comment box!)
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketClosedWithContext(
+                            issueId: dto.IssueId,
+                            oldStatusId: oldId,
+                            oldStatusName: oldStatusName,
+                            threadId: response.ThreadId,
+                            newStatusId: newId,
+                            newStatusName: newStatusName,
+                            actorId: actorId,
+                            actorName: actorName));
                     }
-                    else if ((oldId == StatusId.Closed || oldId == StatusId.Cancelled) &&
-                             (newId != StatusId.Closed && newId != StatusId.Cancelled))
+                    else if (wasClosed && !isNowClosed)
                     {
-                        // Moving from Terminal (15/16) to Active -> REOPEN
-                        statusChangeLog.Summary = $"{actorName} reopened this ticket";
-                    }
-                    else if (newId == StatusId.Closed) // 15
-                    {
-                        statusChangeLog.Summary = $"{actorName} closed this ticket";
+                        // 🔥 TICKET REOPENED
+                        await _historyRepository.LogAsync(TicketHistoryHelper.TicketReopened(
+                            issueId: dto.IssueId,
+                            newStatusId: newId,
+                            newStatusName: newStatusName,
+                            threadId: response.ThreadId,
+                            actorId: actorId,
+                            actorName: actorName));
                     }
                     else
                     {
-                        // Default fallback for normal status changes (e.g. Assigned -> In Development)
-                        statusChangeLog.Summary = $"Status changed from '{oldStatusName}' to '{newStatusName}'";
+                        // 🔥 STANDARD STATUS CHANGE
+                        await _historyRepository.LogAsync(TicketHistoryHelper.StatusChanged(
+                            issueId: dto.IssueId,
+                            oldStatusId: oldId,
+                            oldStatusName: oldStatusName,
+                            newStatusId: newId,
+                            newStatusName: newStatusName,
+                            actorId: actorId,
+                            actorName: actorName));
                     }
-
-                    statusChangeLog.ThreadId = response.ThreadId;
-
-                    await _historyRepository.LogAsync(statusChangeLog);
                 }
 
                 // ── 2. LOG WORKSTREAM SPECIFIC CHANGES ──
@@ -160,9 +169,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                 if (isCompletedByPct || isCompletedByStatus)
                 {
-                    // 👇 FIX: Prevent duplicate row! 
-                    // Only log "completed this ticket" if we aren't already logging a Close (15) or Cancel (16) action in Block 1.
-                    if (response.NewTicketStatus != StatusId.Closed && response.NewTicketStatus != StatusId.Cancelled)
+                    if (response.NewTicketStatus != 14 && response.NewTicketStatus != 15 && response.NewTicketStatus != 16)
                     {
                         var assigneeName = await GetEmployeeNameAsync(response.ResourceId);
                         await _historyRepository.LogAsync(TicketHistoryHelper.WorkStreamCompleted(
@@ -178,11 +185,10 @@ namespace APIGateWay.BusinessLayer.Repository
                         ));
                     }
 
-                    if (!isRoutingToOthers)
-                        return;
+                    if (!isRoutingToOthers) return;
                 }
 
-                // ── SCENARIO 1: SELF-ASSIGNMENT (Working on the ticket) ──
+                // ── SCENARIO 1: SELF-ASSIGNMENT ──
                 if (!dto.AssignOnly && !isCompletedByPct && !isCompletedByStatus && !isRoutingToOthers)
                 {
                     var stream = await _db.WorkStreams
@@ -208,7 +214,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
                 }
 
-                // ── SCENARIO 2: HANDOFF (Routing to someone else) ──
+                // ── SCENARIO 2: HANDOFF ──
                 if (isRoutingToOthers)
                 {
                     var assigneeIds = dto.NextAssignees.Select(a => a.Id).ToList();
@@ -224,12 +230,11 @@ namespace APIGateWay.BusinessLayer.Repository
                         if (string.Equals(assignee.Id.ToString(), actorId.ToString(), StringComparison.OrdinalIgnoreCase)) continue;
 
                         var assigneeName = employeeNames.GetValueOrDefault(assignee.Id, "Unknown");
-
                         var assigneeStream = await _db.WorkStreams
                             .Where(ws => ws.IssueId == dto.IssueId && ws.ResourceId == assignee.Id)
-                         .OrderByDescending(ws => ws.CreatedAt)
-                         .Select(ws => new { ws.StreamId })
-                         .FirstOrDefaultAsync();
+                            .OrderByDescending(ws => ws.CreatedAt)
+                            .Select(ws => new { ws.StreamId })
+                            .FirstOrDefaultAsync();
 
                         if (assigneeStream == null) continue;
 
@@ -395,7 +400,6 @@ namespace APIGateWay.BusinessLayer.Repository
         private async Task BroadcastTicketDetailAsync(Guid issueId, Guid? repoKey)
         {
             //if (string.IsNullOrEmpty(repoKey)) return;
-
             GetTickets? richTicketData = null;
 
             try
@@ -447,34 +451,7 @@ namespace APIGateWay.BusinessLayer.Repository
         //
         // Broadcasts when a TicketProgressLog is explicitly inserted or updated.
         // =====================================================================
-        //private async Task BroadcastTicketProgressAsync(Guid issueId, Guid? repoKey, decimal? newPercentage, string statusSummary) // 👈 Added parameter
-        //{
-        //    if (string.IsNullOrEmpty(repoKey.ToString())) return;
 
-        //    try
-        //    {
-        //        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-        //        {
-        //            Entity = "TicketProgress",
-        //            Action = "Update",
-        //            Payload = new
-        //            {
-        //                IssueId = issueId,
-        //                Percentage = newPercentage,
-        //                Summary = statusSummary, // 👈 Added to payload
-        //                UpdatedAt = DateTime.UtcNow
-        //            },
-        //            KeyField = "IssueId",
-        //            IssueId = issueId,
-        //            RepoKey = repoKey.ToString(),
-        //            Timestamp = DateTime.UtcNow,
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"[WorkStreamRepo] TicketProgress broadcast failed for {issueId}: {ex.Message}");
-        //    }
-        //}
         private async Task BroadcastTicketProgressAsync(
         Guid issueId,
         Guid? repoId,
