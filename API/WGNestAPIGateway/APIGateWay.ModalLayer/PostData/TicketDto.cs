@@ -25,7 +25,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? CurrentStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public DateTime? TargetDate { get; set; }
-        public string? Development { get; set; }
+        public string? Web { get; set; }
         public string? Technical { get; set; }
         public string? Functional { get; set; }
         public string? Client { get; set; }
@@ -57,7 +57,7 @@ namespace APIGateWay.ModalLayer.PostData
         public int? StreamStatus { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? TargetDate { get; set; }
-        public string? Development { get; set; }
+        public string? Web { get; set; }
         public string? Technical { get; set; }
         public string? Functional { get; set; }
         public string? Client { get; set; }

@@ -434,9 +434,9 @@ namespace APIGateWay.BusinessLayer.Repository
                             existingTicket.Hours, dto.Hours,
                             (e, v) => e.Hours = v)
 
-                        .Set("Devlopment",
-                            existingTicket.Development, dto.Development,
-                            (e, v) => e.Development = v)
+                        .Set("Web",
+                            existingTicket.Web, dto.Web,
+                            (e, v) => e.Web = v)
 
                         .Set("Technical",
                             existingTicket.Technical, dto.Technical,

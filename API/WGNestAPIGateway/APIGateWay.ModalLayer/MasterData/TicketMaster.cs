@@ -67,7 +67,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? UpdatedBy { get; set; }
         public string? Technical { get; set; }
         public string? Functional { get; set; }
-        public string? Development { get; set; }
+        public string? Web { get; set; }
         public string? Client { get; set; }
 
     }
