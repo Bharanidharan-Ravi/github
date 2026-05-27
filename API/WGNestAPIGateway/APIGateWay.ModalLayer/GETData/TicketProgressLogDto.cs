@@ -20,5 +20,6 @@ namespace APIGateWay.ModalLayer.GETData
 
         // The joined field from the SP
         public string AssigneeName { get; set; }
+        public string? Flag { get; set; }
     }
 }

@@ -9,6 +9,7 @@ namespace APIGateWay.ModalLayer.GETData
     public class GetDailyPlan
     {
         public int Id { get; set; }
+        public string? Checked_Person { get; set; }
         public Guid TicketId { get; set; }
         public string? ProjKey { get; set; }
         public string? RepoKey { get; set; }

@@ -89,7 +89,7 @@ namespace APIGateWay.ModalLayer.PostData
         // the overall progress and NOT updating their subtask/comments.
         public bool IsTicketProgressOnly { get; set; }
         public bool IsSupport { get; set; }
-
+        public string? Flag { get; set; }
     }
     public class CoContributorItemDto
     {

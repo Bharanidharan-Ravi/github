@@ -1,5 +1,4 @@
-﻿
-using APIGateWay.DomainLayer.CommonSevice;
+﻿using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
@@ -58,8 +57,8 @@ namespace APIGateWay.BusinessLayer.Repository
                         {
                             // 1. Fetch the currently active log(s)
                             var activeLogs = await _db.Set<TicketProgressLog>()
-             .Where(log => log.Issue_Id == dto.IssueId && log.IsActive && log.Assignee_Id == posterId)
-             .ToListAsync();
+                           .Where(log => log.Issue_Id == dto.IssueId && log.IsActive && log.Assignee_Id == posterId)
+                           .ToListAsync();
                             var currentLog = activeLogs.FirstOrDefault();
                             decimal newPercentage = dto.TicketOverallPercentage ?? currentLog?.Percentage ?? 0;
                             string actionType = "";
@@ -71,6 +70,30 @@ namespace APIGateWay.BusinessLayer.Repository
                                     DateTime.UtcNow,
                                     indiaTimeZone
                                 );
+
+                            var flagMasters = await _db.Set<FlagMaster>().ToListAsync();
+                            var flagIds = new List<int>();
+                            if (dto.IsCloseRequested)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Close Request");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
+
+                            if (dto.PriorityRequest)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Priority");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
+
+                            if (dto.FuncResponse)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Notify Functional");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
+
+                            string flagValue = flagIds.Any() ? string.Join(",", flagIds) : null;
+
+
                             // 2. Logic: Insert New Row OR Update Existing Row
                             if (!string.IsNullOrWhiteSpace(dto.TicketStatusSummary) || currentLog == null)
                             {
@@ -88,7 +111,8 @@ namespace APIGateWay.BusinessLayer.Repository
                                     Percentage = newPercentage,
                                     StatusSummary = dto.TicketStatusSummary,
                                     IsActive = true,
-                                    CreatedAt = indiaTime
+                                    CreatedAt = indiaTime,
+                                    Flag = flagValue
                                 };
 
                                 await _db.Set<TicketProgressLog>().AddAsync(newLog);
@@ -98,7 +122,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             {
                                 // UPDATE EXISTING ROW: Only Percentage was provided
                                 currentLog.Percentage = newPercentage;
-
+                                currentLog.Flag = flagValue;
                                 // Optional: Update who changed the percentage last
                                 currentLog.Assignee_Id = posterId;
                                 actionType = "UPDATE";
@@ -125,10 +149,8 @@ namespace APIGateWay.BusinessLayer.Repository
                                 {
                                     IssueId = dto.IssueId,
                                     RepoId = ticketStatus.RepoId,
-                                    // 👇 ADDED: Map Old/New status here too just in case progress update triggers status change
                                     OldTicketStatus = ticketStatus.OldStatusId,
                                     NewTicketStatus = ticketStatus.ComputedStatusId,
-
                                     TicketOverallPct = newPercentage, // Use the new manual percentage
                                     TicketStatusId = ticketStatus.ComputedStatusId,
                                     TicketStatusName = ticketStatus.ComputedStatusName,
@@ -180,11 +202,9 @@ namespace APIGateWay.BusinessLayer.Repository
                             CompletionPct = 0,
                             ThreadCreated = false,
                             ThreadId = null,
-
                             // Optional addition here as well for pure assignment:
                             OldTicketStatus = ticketStatus.OldStatusId,
                             NewTicketStatus = ticketStatus.ComputedStatusId,
-
                             TicketStatusId = ticketStatus.ComputedStatusId,
                             TicketStatusName = ticketStatus.ComputedStatusName,
                             TicketOverallPct = ticketStatus.OverallPct,
@@ -245,6 +265,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     if (!isTerminalAction && AppRoles.AdminManager.Contains(_loginContext.role))
                     {
+                        //checkbox - D
                         if (!dto.IsSupport)
                         {
                             stream = await UpsertStreamAsync(
@@ -257,12 +278,29 @@ namespace APIGateWay.BusinessLayer.Repository
                                 StreamId = Guid.Empty,
                                 ResourceId = posterId,
                                 StreamStatus = targetStatusId,
-                                CompletionPct = 0,
+                                CompletionPct = 0
                             };
                         }
+
                         // ── WorkStream upsert ─────────────────────────────────
                         //stream = await UpsertStreamAsync(
                         //    dto, posterId, targetStatusId, threadId, resolvedStreamName);
+
+                        //if (!dto.IsSupport)
+                        //{
+                        //    stream = await UpsertStreamAsync(
+                        //        dto, posterId, targetStatusId, threadId, resolvedStreamName);
+                        //}
+                        //else if (stream == null)
+                        //{
+                        //    stream = new WorkStream()
+                        //    {
+                        //        StreamId = Guid.Empty,
+                        //        ResourceId = posterId,
+                        //        StreamStatus = targetStatusId,
+                        //        CompletionPct = 0
+                        //    };
+                        //}
 
                         if (handoffToUpdate != null)
                         {
@@ -420,7 +458,6 @@ namespace APIGateWay.BusinessLayer.Repository
                             StreamName = targetStatusId == StatusId.Closed ? "Ticket Closed" : "Ticket Cancelled",
                             StreamStatus = targetStatusId,
                             // 👇 FIX: Use StatusId.Closed here
-                            CompletionPct = targetStatusId == StatusId.Closed ? 100 : 0
                         };
 
                         var activeSubtasks = await _db.WorkStreams
@@ -560,12 +597,12 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     if (dto.IsSupport)
                     {
-                        var indiaTimeZone =  TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-                        var indiaTime = TimeZoneInfo.ConvertTimeFromUtc( DateTime.UtcNow,indiaTimeZone);
+                        var indiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+                        var indiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indiaTimeZone);
                         bool alreadyAdded = dto.CoContributors?.Any(c => c.id == posterId) ?? false;
                         if (!alreadyAdded)
                         {
-                            var selfContributor = new ThreadCoContributor()
+                            var selfContributor = new ThreadCoContributor
                             {
                                 ThreadId = threadId,
                                 EmployeeId = posterId,
@@ -926,7 +963,6 @@ namespace APIGateWay.BusinessLayer.Repository
             }
 
             var ticket = await _db.Set<TicketMaster>().FirstOrDefaultAsync(t => t.Issue_Id == issueId);
-
             // 👇 ADDED: CAPTURE THE OLD STATUS BEFORE IT CHANGES
             int? oldTicketStatus = ticket?.Status;
 
@@ -2143,12 +2179,8 @@ namespace APIGateWay.BusinessLayer.Repository
 
 //            await _domainService.SaveEntityWithAttachmentsAsync(newRow, null);
 //            await EnsureTicketAssignedAsync(issueId);
-
 //            return newRow;
 //        }
-//        #endregion
-
-
 
 //        // =====================================================================
 //        // COMPUTE AND UPDATE TICKET STATUS

@@ -94,6 +94,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ThreadCoContributor> ThreadCoContributors { get; set; }
         public DbSet<GetCustomerDto> GetCustomerDto { get; set; }
         public DbSet<GetRepoUserData> GetRepoUserData { get; set; }
+        public DbSet<FlagMaster> FlagMasters { get; set; }
 
         #region SaveChanges Override (Audit)
 

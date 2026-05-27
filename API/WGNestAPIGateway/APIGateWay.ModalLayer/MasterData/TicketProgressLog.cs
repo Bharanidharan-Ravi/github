@@ -19,5 +19,6 @@ namespace APIGateWay.ModalLayer.MasterData
 
         public bool IsActive { get; set; } // True for the CURRENT status, false for history
         public DateTime CreatedAt { get; set; }
+        public string? Flag { get; set; }
     }
 }
