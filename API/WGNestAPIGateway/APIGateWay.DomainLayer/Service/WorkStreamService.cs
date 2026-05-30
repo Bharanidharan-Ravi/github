@@ -90,6 +90,21 @@ namespace APIGateWay.BusinessLayer.Repository
                                 var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Notify Functional");
                                 if (flag != null) flagIds.Add(flag.Id);
                             }
+                            if (dto.AdminResponse)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Notify Admin");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
+                            if (dto.WebResponse)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Notify Web");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
+                            if (dto.TechnicalResponse)
+                            {
+                                var flag = flagMasters.FirstOrDefault(f => f.FlagName == "Notify Technical");
+                                if (flag != null) flagIds.Add(flag.Id);
+                            }
 
                             string flagValue = flagIds.Any() ? string.Join(",", flagIds) : null;
 
@@ -494,7 +509,10 @@ namespace APIGateWay.BusinessLayer.Repository
                           dto.IsReopenRequest ? posterId : null,
                           dto.IsCloseRequested,
                           dto.PriorityRequest,
-                          dto.FuncResponse
+                          dto.FuncResponse,
+                          dto.WebResponse,
+                          dto.TechnicalResponse,
+                          dto.AdminResponse
                       );
 
                     return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
@@ -556,7 +574,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Issue_Id = dto.IssueId,
                     HtmlDesc = finalHtml,
                     HandsOffId = HandsoffId,
-                    toClient = dto.ToClient ?? false,
+                    toClient = dto.toClient ?? false,
                     CommentText = HtmlUtilities.ConvertToPlainText(finalHtml),
                     CompletionPct = dto.CompletionPct,
                     From_Time = dto.From_Time,
@@ -887,7 +905,8 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
        Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
-        bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false)
+        bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false, 
+        bool TechnicalResponse = false, bool AdminResponse = false)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -1017,6 +1036,9 @@ namespace APIGateWay.BusinessLayer.Repository
                             t.IsCloseRequested = isCloseRequested;
                             t.PriorityRequest = PriorityRequest;
                             t.FuncResponse = FuncResponse;
+                            t.WebResponse = WebResponse;
+                            t.TechnicalResponse = TechnicalResponse;
+                            t.AdminResponse = AdminResponse;
 
                             // Clear the flag if the owner actually closes or cancels the ticket
                             if (isExplicitlyClosed || isExplicitlyCancelled)
@@ -1024,6 +1046,9 @@ namespace APIGateWay.BusinessLayer.Repository
                                 t.IsCloseRequested = false;
                                 t.PriorityRequest = false;
                                 t.FuncResponse = false;
+                                t.WebResponse = false;
+                                t.TechnicalResponse = false;
+                                t.AdminResponse = false;
                             }
                         });
 
@@ -1484,6 +1509,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         : null,
                 IssueId = dto.IssueId,
                 RepoKey = ticketStatus.RepoKey,
+                RepoId = ticketStatus.RepoId,
                 IsTerminal = ticketStatus.IsTerminal,
                 BroadcastPayload = ticketStatus.BroadcastPayload,
             };

@@ -36,6 +36,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? Hours { get; set; }
         public List<NextAssigneeDto>? NextAssignees { get; set; }
         public Guid? WorkStreamId { get; set; }
+        public bool? toClient { get; set; }
 
         // Workstream / Assignee Tracking
         // Note: Adjust Guid? to string? if your ResourceId is string-based

@@ -43,6 +43,7 @@ namespace APIGateWay.ModalLayer.PostData
     public class PostWorkStreamDto
     {
         public Guid IssueId { get; set; }
+        public List<ResourceIds>? resourceIds { get; set; }
         public Guid? ResourceId { get; set; }
         public int? handsoffId { get; set; }
         public bool AssignOnly { get; set; } = false;
@@ -83,7 +84,10 @@ namespace APIGateWay.ModalLayer.PostData
         public List<CoContributorItemDto>? CoContributors { get; set; }
         public bool PriorityRequest { get; set; }
         public bool FuncResponse { get; set; }
-        public bool? ToClient { get; set; }
+        public bool WebResponse { get; set; }
+        public bool TechnicalResponse { get; set; }
+        public bool AdminResponse { get; set; }
+        public bool? toClient { get; set; }
 
         // Set this to true from the UI if the user is ONLY submitting 
         // the overall progress and NOT updating their subtask/comments.

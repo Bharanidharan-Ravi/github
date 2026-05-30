@@ -17,7 +17,7 @@ namespace APIGateWay.Business_Layer.SignalRHub
         public static class ThreadsList
         {
             public const string Entity = "ThreadsList";
-            public const string KeyField = "Thread_Id";
+            public const string KeyField = "ThreadId";
         }
 
         public static class TicketHistory

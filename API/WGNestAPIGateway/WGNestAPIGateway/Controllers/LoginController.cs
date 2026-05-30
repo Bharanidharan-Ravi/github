@@ -5,6 +5,7 @@ using APIGateWay.ModalLayer.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using static APIGateWay.BusinessLayer.Repository.LoginRepository;
 
 namespace WGNestAPIGateway.Controllers
 {
@@ -40,13 +41,28 @@ namespace WGNestAPIGateway.Controllers
         }
         #endregion
 
-        //#region Get employee master 
-        //[HttpGet("GetEmployeeMaster")]
-        //public async Task<IActionResult> GetEmployeeMaster()
-        //{
-        //    var response = await _loginRepository.GetEmployeeMaster();
-        //    return Ok(ApiResponseHelper.Success(response));
-        //}
-        //#endregion
+        #region Logout session
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(
+        SessionDTO request)
+        {
+            await _loginRepository.LogoutSession(
+                request.SessionId);
+
+            return Ok();
+        }
+        #endregion
+        [HttpPost("heartbeat")]
+        public async Task<IActionResult> Heartbeat(
+        [FromBody] SessionDTO request)
+        {
+            await _loginRepository.UpdateHeartbeat(
+                request.SessionId);
+
+            return Ok(new
+            {
+                success = true
+            });
+        }
     }
 }

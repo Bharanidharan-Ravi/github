@@ -6,6 +6,7 @@ using APIGateway.Swagger;
 using APIGateWay.Business_Layer.Helper;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.Repository;
+using APIGateWay.Business_Layer.Session;
 using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Helpers.ilog;
@@ -73,6 +74,9 @@ builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
 builder.Services.AddScoped<IEmployeeRepo, EmployeeRepo>();
 builder.Services.AddScoped<ICustomerRepo, CustomerRepo>();
 builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
+builder.Services.AddScoped<
+    ISessionTrackingService,
+    SessionTrackingService>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer

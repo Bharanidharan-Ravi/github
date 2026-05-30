@@ -70,7 +70,7 @@ namespace APIGateWay.DomainLayer.Service
                 throw new Exceptionlist.LoginException("Invalid username or password.", username, deviceInfo, password);
             }
 
-            await SaveUserSession(user.UserId, user.UserName, user.DBName, deviceInfo, DateTime.Now, "0");
+            //await SaveUserSession(user.UserId, user.UserName, user.DBName, deviceInfo, DateTime.Now, "0");
 
             return userList;
         }
@@ -94,21 +94,21 @@ namespace APIGateWay.DomainLayer.Service
         #endregion
 
         #region save the login data
-        private async Task SaveUserSession(Guid userId, string userName, string databaseName, string deviceInfo, DateTime loginTimestamp, string autoLogout)
-        {
-            var parameters = new[]
-            {
-                new SqlParameter("@userid", userId.ToString()),
-                new SqlParameter("@username", userName),
-                new SqlParameter("@database", "databaseName"),
-                new SqlParameter("@device", deviceInfo),
-                new SqlParameter("@login", loginTimestamp),
-                new SqlParameter("@logout", DBNull.Value)
-            };
+        //private async Task SaveUserSession(Guid userId, string userName, string databaseName, string deviceInfo, DateTime loginTimestamp, string autoLogout)
+        //{
+        //    var parameters = new[]
+        //    {
+        //        new SqlParameter("@userid", userId.ToString()),
+        //        new SqlParameter("@username", userName),
+        //        new SqlParameter("@database", "databaseName"),
+        //        new SqlParameter("@device", deviceInfo),
+        //        new SqlParameter("@login", loginTimestamp),
+        //        new SqlParameter("@logout", DBNull.Value)
+        //    };
 
-            // Execute the stored procedure INSERTUSERLOG
-            await _commonService.ExecuteNonModalAsync("INSERTUSERLOG", parameters);
-        }
+        //    // Execute the stored procedure INSERTUSERLOG
+        //    await _commonService.ExecuteNonModalAsync("INSERTUSERLOG", parameters);
+        //}
         #endregion
 
         #region User Login register 

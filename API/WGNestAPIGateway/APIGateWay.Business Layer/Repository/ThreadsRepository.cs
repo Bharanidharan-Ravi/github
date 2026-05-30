@@ -355,6 +355,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                     if (dto.From_Time.HasValue) entity.From_Time = dto.From_Time.Value;
                                     if (dto.To_Time.HasValue) entity.To_Time = dto.To_Time.Value;
                                     if (dto.CompletionPct.HasValue) entity.CompletionPct = dto.CompletionPct.Value;
+                                    if (dto.toClient.HasValue) entity.toClient = dto.toClient.Value;
                                     if (!string.IsNullOrEmpty(dto.Hours)) entity.Hours = dto.Hours;
                                 },
                                 attachmentResult?.Attachments);

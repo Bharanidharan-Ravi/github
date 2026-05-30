@@ -8,6 +8,9 @@ using APIGateWay.ModalLayer.GETData;
 using System;
 using System.Text.Json;
 using APIGateWay.DomainLayer.CommonSevice;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
+using APIGateWay.Business_Layer.Session;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -17,15 +20,23 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly TokenGeneration _tokenGeneration;
         private readonly DecodeHelpers _decodeHelpers;
         private readonly APIGateWayCommonService _service;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ISessionTrackingService _sessionTracking;
 
         public static readonly Dictionary<Guid, string> _activeJwtTokens = new Dictionary<Guid, string>();
-
-        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service)
+ 
+        public class SessionDTO
+        {
+            public Guid SessionId { get; set; }
+        }
+        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service, IHttpContextAccessor httpContextAccessor, ISessionTrackingService sessionTracking)
         {
             _loginService = loginService;
             _tokenGeneration = tokenGeneration;
             _decodeHelpers = decodeHelpers;
             _service = service;
+            _httpContextAccessor = httpContextAccessor;
+            _sessionTracking = sessionTracking;
         }
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
@@ -57,50 +68,92 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
                 }
             }
+            var sessionId = Guid.NewGuid();
+            var jwtId = Guid.NewGuid();
 
-            var token = _tokenGeneration.GenerateJwtToken(
+            var indiaTimeZone =
+              TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+            var indiaTime =
+                TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow,
+                    indiaTimeZone
+                );
+
+
+            var tokenIssuedAt = indiaTime;
+            var tokenExpiresAt = tokenIssuedAt.AddDays(1);
+            var browserInfo = deviceInfo;
+            var ip =
+             _httpContextAccessor.HttpContext?
+             .Request.Headers["X-Forwarded-For"]
+             .FirstOrDefault()
+             ??
+             _httpContextAccessor.HttpContext?
+             .Connection.RemoteIpAddress?
+             .ToString();
+            var parameters = new[]
+           {
+                new SqlParameter("@SessionId", sessionId),
+                new SqlParameter("@UserId", user.UserId),
+                new SqlParameter("@JwtId", jwtId),
+
+                new SqlParameter("@TokenIssuedAt", tokenIssuedAt),
+                new SqlParameter("@TokenExpiresAt", tokenExpiresAt),
+
+                new SqlParameter("@DeviceInfo",
+                    (object?)deviceInfo ?? DBNull.Value),
+
+                new SqlParameter("@BrowserInfo",
+                    (object?)browserInfo ?? DBNull.Value),
+
+                new SqlParameter("@IpAddress",
+                    (object?)ip ?? DBNull.Value)
+            };
+            await _service.ExecuteReturnAsync(
+                "USP_CreateUserSession",
+                parameters
+            );
+
+            var token =
+            _tokenGeneration.GenerateJwtToken(
                 user.UserId,
                 user.UserName,
                 user.Role,
                 user.DBName,
-                user.Team.ToString(),
-                user?.PreviewUrl
+                user.Team?.ToString(),
+                user.PreviewUrl,
+
+                sessionId,
+                jwtId,
+                tokenIssuedAt,
+                tokenExpiresAt
             );
 
+           
+           
             return token;
         }
+        public async Task LogoutSession(Guid sessionId)
+        {
+            await _service.ExecuteReturnAsync(
+                "USP_LogoutSession",
+                new[]
+                {
+            new SqlParameter("@SessionId", sessionId),
+            new SqlParameter("@LogoutReason", "ManualLogout")
+                }
+            );
+        }
 
-        //public async Task<string> GetUserinfo(string username, string password, string deviceInfo)
-        //{
-        //    //var userList = await _LoginService.GetUser(username, password, deviceInfo);
-        //    var userList = await _loginService.GetUser(username, password, deviceInfo);
-        //    var userInfos = new List<UserInfo>();
-        //    foreach (var user in userList)
-        //    {
-        //        var userInfo = new UserInfo
-        //        {
-        //            UserId = user.UserId,
-        //            UserName = user.UserName,
-        //            DBName = user.DBName,
-        //            Status = user.Status,
-        //            Role = user.Role,
-        //        };
-
-        //        Guid userid = userInfo.UserId;
-        //        userInfo.JwtToken = _tokenGeneration.GenerateJwtToken(userid, userInfo.UserName, userInfo.Role, userInfo.DBName);
-        //        _activeJwtTokens[userid] = userInfo.JwtToken;
-        //        userInfos.Add(userInfo);
-        //    }
-        //    var serializedUserInfos = JsonSerializer.Serialize(userInfos);
-        //    var encryptionUser = _decodeHelpers.EncryptUserInfo(serializedUserInfos);
-        //    var firstUser = userList[0];
-        //    return (serializedUserInfos);
-        //}
-
-        //public async Task<List<GetEmployee>> GetEmployeeMaster()
-        //{
-        //    var response = await _loginService.GetEmployeeMaster();
-        //    return response;
-        //}
+        public async Task UpdateHeartbeat(Guid sessionId)
+        {
+            await _service.ExecuteReturnAsync(
+                "USP_UpdateHeartbeat",
+                new[]
+                {
+            new SqlParameter("@SessionId", sessionId)
+                });
+        }
     }
 }

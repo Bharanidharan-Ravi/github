@@ -93,7 +93,7 @@ namespace APIGateWay.BusinessLayer.Repository
             if (dto.TicketOverallPercentage.HasValue || !string.IsNullOrWhiteSpace(dto.TicketStatusSummary))
             {
                 // Add dto.TicketStatusSummary here 👇
-                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoId, response.TicketOverallPct, dto.TicketStatusSummary);
+                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoId, dto.TicketOverallPercentage, dto.TicketStatusSummary);
             }
 
             return response;
@@ -264,8 +264,6 @@ namespace APIGateWay.BusinessLayer.Repository
                 .FirstOrDefaultAsync();
             return emp?.Name ?? "Unknown";
         }
-
-
         private async Task<string> GetStatusNameAsync(int? statusId)
         {
             if (statusId == null) return "None";
@@ -298,7 +296,8 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 var syncParams = new Dictionary<string, string>
                 {
-                    { "IssuesId", issueId.ToString() }
+                    { "IssuesId", issueId.ToString() },
+                    { "Role", _loginContextService.role.ToString() }
                 };
 
                 var syncResponse = await _syncExecutionService.ExecuteLocalAsync<ThreadList>(
@@ -380,8 +379,8 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                 {
-                    Entity = "TicketsList",
-                    Action = "StatusUpdate",
+                    Entity = "Ticket",
+                    Action = "Update",
                     Payload = response.BroadcastPayload,  // pre-built by service
                     KeyField = "Issue_Id",
                     IssueId = response.IssueId,
@@ -408,7 +407,8 @@ namespace APIGateWay.BusinessLayer.Repository
                     configKey: "TicketsList",
                     syncParams: new Dictionary<string, string>
                     {
-                { "IssueId", issueId.ToString() }
+                        { "IssueId", issueId.ToString() },
+                        { "Role", _loginContextService.role.ToString() }
                     },
                     matchPredicate: p => p.Issue_Id == issueId,
                     fallbackData: null,  // null = don't broadcast if SP fails
@@ -452,35 +452,88 @@ namespace APIGateWay.BusinessLayer.Repository
         // Broadcasts when a TicketProgressLog is explicitly inserted or updated.
         // =====================================================================
 
-        private async Task BroadcastTicketProgressAsync(
-        Guid issueId,
-        Guid? repoId,
-        decimal? overallPct,
-        string? statusSummary
-)
+private async Task BroadcastTicketProgressAsync(
+    Guid issueId,
+    Guid? repoId,
+    decimal? overallPct,
+    string? statusSummary)
         {
             if (repoId == null) return;
 
-            var payload = new
-            {
-                Issue_Id = issueId,
-                Percentage = overallPct,
-                StatusSummary = statusSummary,
-                UpdatedAt = DateTime.UtcNow
-            };
+            TicketProgressLogDto? latestProgress = null;
 
-            var message = new RealtimeMessage
+            try
             {
-                Entity = "TicketProgress",   // 🔥 new entity
-                Action = RealtimeActions.Update,
-                Payload = payload,
-                KeyField = "Issue_Id",
-                RepoKey = repoId.ToString(),
-                IssueId = issueId,
-                Timestamp = DateTime.UtcNow
-            };
+                var syncParams = new Dictionary<string, string>
+        {
+            { "IssueId", issueId.ToString() }
+        };
 
-            await _realtimeNotifier.BroadcastAsync(message);
+                var syncResponse =
+                    await _syncExecutionService.ExecuteLocalAsync<TicketProgressLogDto>(
+                        databaseName: "",
+                        storedProcedure: "GetTicketProgressLogsByIssueId",
+                        lastSync: null,
+                        parameters: syncParams,
+                        source: "WorkStreamRepo"
+                    );
+
+                if (syncResponse.Ok && syncResponse.Data != null)
+                {
+                    var logs = syncResponse.Data as IEnumerable<TicketProgressLogDto>;
+
+                    // fallback for JsonElement
+                    if (logs == null &&
+                        syncResponse.Data is System.Text.Json.JsonElement jsonElement)
+                    {
+                        logs =
+                            System.Text.Json.JsonSerializer.Deserialize<List<TicketProgressLogDto>>(
+                                jsonElement.GetRawText(),
+                                new System.Text.Json.JsonSerializerOptions
+                                {
+                                    PropertyNameCaseInsensitive = true
+                                });
+                    }
+
+                    // newest row
+                    latestProgress = logs?
+                        .OrderByDescending(x => x.CreatedAt)
+                        .FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[WorkStreamRepo] TicketProgress fetch failed: {ex.Message}");
+                return;
+            }
+
+            if (latestProgress == null) return;
+
+            try
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "TicketProgress",
+
+                    // IMPORTANT
+                    Action = RealtimeActions.Create,
+
+                    Payload = latestProgress,
+
+                    // IMPORTANT
+                    KeyField = "LogId",
+
+                    RepoKey = repoId.ToString(),
+                    IssueId = issueId,
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[WorkStreamRepo] TicketProgress broadcast failed: {ex.Message}");
+            }
         }
     }
 }

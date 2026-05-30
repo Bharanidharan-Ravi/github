@@ -41,6 +41,9 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Web { get; set; }
         public bool PriorityRequest { get; set; }
         public bool FuncResponse { get; set; }
+        public bool WebResponse { get; set; }
+        public bool TechnicalResponse { get; set; }
+        public bool AdminResponse { get; set; }
         public string? Technical { get; set; }
         public string? Functional { get; set; }
         public string? Client { get; set; }

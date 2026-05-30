@@ -8,6 +8,7 @@ namespace APIGateWay.BusinessLayer.Interface
     {
         Task<GetUserList> RegisterUserAsync(RegisterRequestDto request);
         Task<string> GetUserinfo(string username, string password, string deviceInfo);
-        //Task<List<GetEmployee>> GetEmployeeMaster();
+        Task LogoutSession(Guid sessionId);
+        Task UpdateHeartbeat(Guid sessionId);
     }
 }

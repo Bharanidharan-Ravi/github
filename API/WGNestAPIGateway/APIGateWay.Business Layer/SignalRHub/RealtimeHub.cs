@@ -1,5 +1,6 @@
 ﻿// RealtimeHub.cs
 using System.Security.Claims;
+using APIGateWay.Business_Layer.Session;
 using APIGateWay.DomainLayer.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -25,15 +26,29 @@ namespace APIGateWay.BusinessLayer.SignalRHub
     {
         private readonly IRepoAccessService _repoAccess;
         private readonly ILogger<RealtimeHub> _logger;
+        private readonly ISessionTrackingService _sessionTracking;
 
         public RealtimeHub(
             IRepoAccessService repoAccess,
-            ILogger<RealtimeHub> logger)
+            ILogger<RealtimeHub> logger,
+            ISessionTrackingService sessionTracking)
         {
             _repoAccess = repoAccess;
             _logger = logger;
+            _sessionTracking = sessionTracking;
         }
 
+        private Guid? GetSessionId()
+        {
+            var value =
+                Context.User?
+                    .FindFirst("SessionId")
+                    ?.Value;
+
+            return Guid.TryParse(value, out var id)
+                ? id
+                : null;
+        }
         public override async Task OnConnectedAsync()
         {
             var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
@@ -46,6 +61,14 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                 Context.Abort();
                 return;
             }
+            var sessionId = GetSessionId();
+
+            if (sessionId.HasValue)
+            {
+                await _sessionTracking.UpdateConnectionAsync(
+                    sessionId.Value,
+                    Context.ConnectionId);
+            }
 
             switch (role)
             {
@@ -54,10 +77,26 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                     await Groups.AddToGroupAsync(Context.ConnectionId, "global-admin");
                     _logger.LogInformation(
                         "[RealtimeHub] Admin connected. UserId={UserId}", userId);
+                    if (sessionId.HasValue)
+                    {
+                        await _sessionTracking.SignalRConnectedAsync(
+                            sessionId.Value,
+                            userId,
+                            Context.ConnectionId,
+                            0);
+                    }
                     break;
 
                 case "3":
                     var repoIds = await _repoAccess.GetUserRepoGuidsAsync(userId);
+                    if (sessionId.HasValue)
+                    {
+                        await _sessionTracking.SignalRConnectedAsync(
+                            sessionId.Value,
+                            userId,
+                            Context.ConnectionId,
+                            repoIds.Count());
+                    }
                     var joinTasks = repoIds.Select(id =>
                         Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id.RepoId}"));
                     await Task.WhenAll(joinTasks);
@@ -78,16 +117,33 @@ namespace APIGateWay.BusinessLayer.SignalRHub
             await base.OnConnectedAsync();
         }
 
-        public override async Task OnDisconnectedAsync(Exception? exception)
+        public override async Task OnDisconnectedAsync(
+        Exception? exception)
         {
+            try
+            {
+                await _sessionTracking.SignalRDisconnectedAsync(
+                    Context.ConnectionId,
+                    exception?.Message ?? "Disconnected");
+            }
+            catch
+            {
+                // Never break disconnect pipeline
+            }
+
             if (exception is not null)
-                _logger.LogWarning(exception,
+            {
+                _logger.LogWarning(
+                    exception,
                     "[RealtimeHub] Disconnected with error. UserId={UserId}",
                     Context.UserIdentifier);
+            }
             else
+            {
                 _logger.LogInformation(
                     "[RealtimeHub] Disconnected cleanly. UserId={UserId}",
                     Context.UserIdentifier);
+            }
 
             await base.OnDisconnectedAsync(exception);
         }

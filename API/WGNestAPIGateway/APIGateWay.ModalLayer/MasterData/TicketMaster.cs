@@ -49,8 +49,10 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? RepoId { get; set; }
         public bool PriorityRequest { get; set; }
         public bool FuncResponse { get; set; }
+        public bool WebResponse { get; set; }
+        public bool TechnicalResponse { get; set; }
+        public bool AdminResponse { get; set; }
         public bool RaiseToClient { get; set; }
-       
         //public Guid? StreamId { get; set; }
         //public Guid? ResourceId { get; set; }
 

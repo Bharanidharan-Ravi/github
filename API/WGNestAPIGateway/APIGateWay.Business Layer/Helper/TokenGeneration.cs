@@ -15,7 +15,19 @@ namespace APIGateWay.BusinessLayer.Helpers.token
         {
             _configuration = configuration;
         }
-        public string GenerateJwtToken(Guid userId, string userName, int? role, string dbName, string? Team, string? PreviewUrl)
+        public string GenerateJwtToken(
+             Guid userId,
+             string userName,
+             int? role,
+             string dbName,
+             string? Team,
+             string? PreviewUrl,
+
+             Guid sessionId,
+             Guid jwtId,
+             DateTime tokenIssuedAt,
+             DateTime tokenExpiresAt
+         )
         {
             var securityKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
@@ -34,14 +46,18 @@ namespace APIGateWay.BusinessLayer.Helpers.token
                 new Claim("Team", Team.ToString()),
                 new Claim("DbName", dbName ?? ""),
                 new Claim("PreviewUrl", PreviewUrl ?? ""),
+                new Claim("SessionId", sessionId.ToString()),
+                new Claim("JwtId", jwtId.ToString()),
+                new Claim("TokenIssuedAt", tokenIssuedAt.ToString("O")),
+                new Claim("TokenExpiresAt", tokenExpiresAt.ToString("O")),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
             var token = new JwtSecurityToken(
                 issuer: "WG",
-                audience: "Dental_App",
+                audience: "WGNest",
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(1),
+                expires: tokenExpiresAt,
                 signingCredentials: credentials
             );
 
