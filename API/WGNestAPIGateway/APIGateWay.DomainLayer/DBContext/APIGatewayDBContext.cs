@@ -1,5 +1,6 @@
 ﻿using System;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
@@ -17,12 +18,15 @@ namespace APIGateWay.DomainLayer.DBContext
     {
         private readonly ILoginContextService _loginContext;
         private readonly IConfiguration _configuration;
+        private readonly IEnvironmentRoutingService _envRouting;
 
         public APIGatewayDBContext(DbContextOptions<APIGatewayDBContext> options, ILoginContextService loginContext,
-            IConfiguration configuration) : base(options)
+            IConfiguration configuration,
+    IEnvironmentRoutingService envRouting) : base(options)
         {
             _loginContext = loginContext;
             _configuration = configuration;
+            _envRouting = envRouting;
         }
 
 
@@ -32,8 +36,9 @@ namespace APIGateWay.DomainLayer.DBContext
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var baseConnString =
-                    _configuration.GetConnectionString("DefaultConnection");
+                //var baseConnString =
+                //    _configuration.GetConnectionString("DefaultConnection");
+                var baseConnString = _envRouting.GetBaseConnectionString();
 
                 var dynamicDBName = _loginContext.databaseName;
 
@@ -95,6 +100,9 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetCustomerDto> GetCustomerDto { get; set; }
         public DbSet<GetRepoUserData> GetRepoUserData { get; set; }
         public DbSet<FlagMaster> FlagMasters { get; set; }
+        public DbSet<NotificationMaster> NotificationMaster { get; set; }
+        public DbSet<NotificationAudience> NotificationAudience { get; set; }
+        public DbSet<NotificationUserState> NotificationUserState { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -104,13 +112,16 @@ namespace APIGateWay.DomainLayer.DBContext
         {
             var currentUserId = _loginContext.userId;
 
+            //var entries = ChangeTracker
+            //    .Entries()
+            //    .Where(e =>
+            //        e.Entity is IAuditableEntity &&
+            //        (e.State == EntityState.Added ||
+            //         e.State == EntityState.Modified)
+            //    );
             var entries = ChangeTracker
-                .Entries()
-                .Where(e =>
-                    e.Entity is IAuditableEntity &&
-                    (e.State == EntityState.Added ||
-                     e.State == EntityState.Modified)
-                );
+            .Entries()
+            .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
 
             var indiaTimeZone =
                 TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
@@ -124,23 +135,44 @@ namespace APIGateWay.DomainLayer.DBContext
             foreach (var entry in entries)
             {
                 // DATE AUDIT
-                if (entry.Entity is IAuditableEntity auditableDate)
+                if (entry.Entity is IHasCreatedAt hasCreatedAt)
                 {
                     if (entry.State == EntityState.Added)
                     {
-                        auditableDate.CreatedAt = indiaTime;
-                        auditableDate.UpdatedAt =
-                            auditableDate.CreatedAt;
+                        hasCreatedAt.CreatedAt = indiaTime;
                     }
                     else if (entry.State == EntityState.Modified)
                     {
-                        auditableDate.UpdatedAt = indiaTime;
-
-                        entry.Property(nameof(IAuditableEntity.CreatedAt))
-                             .IsModified = false;
+                        // Ensure CreatedAt is never overwritten during an update
+                        entry.Property(nameof(IHasCreatedAt.CreatedAt)).IsModified = false;
                     }
                 }
 
+                // 2. Check for UpdatedAt
+                if (entry.Entity is IHasUpdatedAt hasUpdatedAt)
+                {
+                    if (entry.State == EntityState.Added)
+                    {
+                        hasUpdatedAt.UpdatedAt = indiaTime;
+                    }
+                    else if (entry.State == EntityState.Modified)
+                    {
+                        hasUpdatedAt.UpdatedAt = indiaTime;
+                    }
+                }
+
+                if (entry.Entity is IHasLastSeen hasLastSeen)
+                {
+                    if (entry.State == EntityState.Added)
+                    {
+                        hasLastSeen.LastSeenAt = indiaTime;
+                    }
+                    else if (entry.State == EntityState.Modified)
+                    {
+                        // Ensure CreatedAt is never overwritten during an update
+                        entry.Property(nameof(IHasLastSeen.LastSeenAt)).IsModified = false;
+                    }
+                }
                 // USER AUDIT
                 if (entry.Entity is IAuditableUser auditableUser)
                 {

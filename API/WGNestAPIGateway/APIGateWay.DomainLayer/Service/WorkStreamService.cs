@@ -60,7 +60,7 @@ namespace APIGateWay.BusinessLayer.Repository
                            .Where(log => log.Issue_Id == dto.IssueId && log.IsActive && log.Assignee_Id == posterId)
                            .ToListAsync();
                             var currentLog = activeLogs.FirstOrDefault();
-                            decimal newPercentage = dto.TicketOverallPercentage ?? currentLog?.Percentage ?? 0;
+                            decimal newPercentage = dto.TicketOverallPercentage ?? 0;
                             string actionType = "";
                             var indiaTimeZone =
                                 TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");

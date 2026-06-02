@@ -22,6 +22,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly APIGateWayCommonService _service;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ISessionTrackingService _sessionTracking;
+        private readonly INotificationRepository _notificationRepository;
 
         public static readonly Dictionary<Guid, string> _activeJwtTokens = new Dictionary<Guid, string>();
  
@@ -29,7 +30,8 @@ namespace APIGateWay.BusinessLayer.Repository
         {
             public Guid SessionId { get; set; }
         }
-        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service, IHttpContextAccessor httpContextAccessor, ISessionTrackingService sessionTracking)
+        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service, IHttpContextAccessor httpContextAccessor, 
+            ISessionTrackingService sessionTracking, INotificationRepository notificationRepository)
         {
             _loginService = loginService;
             _tokenGeneration = tokenGeneration;
@@ -37,6 +39,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _service = service;
             _httpContextAccessor = httpContextAccessor;
             _sessionTracking = sessionTracking;
+            _notificationRepository = notificationRepository;
         }
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
@@ -114,6 +117,9 @@ namespace APIGateWay.BusinessLayer.Repository
                 "USP_CreateUserSession",
                 parameters
             );
+            await _notificationRepository
+            .EnsureUserStateAsync(
+                 user.UserId);
 
             var token =
             _tokenGeneration.GenerateJwtToken(

@@ -31,6 +31,13 @@ namespace APIGateWay.BusinessLayer.Configuration
         public string Strategy { get; set; }    // merge | replace
         public string IdKey { get; set; }        // projectId, repoId
         public bool DeltaEnabled { get; set; }  // incremental sync
+        public string NotificationTitle { get; set; }
+
+        public string NotificationMessage { get; set; }
+
+        public string SignalREntity { get; set; }
+
+        public string SignalRAction { get; set; }
     }
 
 

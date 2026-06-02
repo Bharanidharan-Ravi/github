@@ -1,4 +1,5 @@
 ﻿using APIGateWay.ModalLayer.PostData;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq.Expressions;
 
@@ -37,5 +38,16 @@ namespace APIGateWay.DomainLayer.Interface
         int id,
         Action<TEntity> mutator)
         where TEntity : class;
+
+       Task SaveEntitiesAsync<TEntity>(
+       List<TEntity> entities)
+       where TEntity : class;
+
+        Task SaveEntityAsync<TEntity>(
+       TEntity entity)
+       where TEntity : class;
+
+        IQueryable<TEntity> Query<TEntity>()
+     where TEntity : class;
     }
 }

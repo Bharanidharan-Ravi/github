@@ -4,6 +4,8 @@ using APIGateway.Middleware;
 using APIGateway.Proxy;
 using APIGateway.Swagger;
 using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Helper.Events.Interface;
+using APIGateWay.Business_Layer.Helper.Events.Services;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.Repository;
 using APIGateWay.Business_Layer.Session;
@@ -20,6 +22,7 @@ using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
+using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.Middelware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -74,10 +77,12 @@ builder.Services.AddScoped<IWorkStreamRepo, WorkStreamRepo>();
 builder.Services.AddScoped<IEmployeeRepo, EmployeeRepo>();
 builder.Services.AddScoped<ICustomerRepo, CustomerRepo>();
 builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
+builder.Services.AddScoped<ISessionTrackingService, SessionTrackingService>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IEventCenter, EventCenter>();
 builder.Services.AddScoped<
-    ISessionTrackingService,
-    SessionTrackingService>();
-
+    IEventContextProvider,
+    ApiGatewayEventContextProvider>();
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
 // ─────────────────────────────────────────────────────────────
@@ -93,6 +98,8 @@ builder.Services.AddScoped<IWorkStreamService, WorkStreamService>();
 builder.Services.AddScoped<IRequestStepContext, RequestStepContext>();
 builder.Services.AddScoped<IApiLoggerService, ApiLoggerService>();
 builder.Services.AddScoped<ICustomersService, CustomerService>();
+builder.Services.AddScoped<IEnvironmentRoutingService, EnvironmentRoutingService>();
+
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure

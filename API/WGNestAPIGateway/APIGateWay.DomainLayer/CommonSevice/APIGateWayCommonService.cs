@@ -114,7 +114,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
             try
             {
                 // Create a connection to the database (e.g., SAP HANA or SQL Server)
-                using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+                //using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+                using (var connection = new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString))
                 {
                     await connection.OpenAsync();
 
@@ -163,7 +164,9 @@ namespace APIGateWay.DomainLayer.CommonSevice
             {
                 throw new ArgumentException("Invalid stored procedure name", (storedProcedureName));
             }
-            using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+            //using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+            // This automatically inherits the Live/Test routing AND the Tenant DB routing
+            using (var connection = new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString))
             {
                 await connection.OpenAsync();
 

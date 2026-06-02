@@ -237,5 +237,43 @@ namespace APIGateWay.DomainLayer.Service
             await _dBContext.SaveChangesAsync();
             return entity;
         }
+
+        public async Task SaveEntitiesAsync<TEntity>(
+        List<TEntity> entities)
+        where TEntity : class
+        {
+            _dBContext.Set<TEntity>().AddRange(entities);
+
+            await _dBContext.SaveChangesAsync();
+        }
+        public async Task SaveEntityAsync<TEntity>(
+    TEntity entity)
+    where TEntity : class
+        {
+            try
+            {
+                _dBContext.Set<TEntity>().Add(entity);
+
+                await _dBContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                var actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Failed to save changes for {typeof(TEntity).Name}. Detail: {actualError}", ex);
+            }
+        }
+        public IQueryable<TEntity> Query<TEntity>()
+        where TEntity : class
+        {
+            try
+            {
+                return _dBContext.Set<TEntity>();
+            }
+            catch (Exception ex)
+            {
+                var actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Failed to Get a data for {typeof(TEntity).Name}. Detail: {actualError}", ex);
+            }
+        }
     }
 }

@@ -1,5 +1,8 @@
 ﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Helper.Events.EventFactory;
+using APIGateWay.Business_Layer.Helper.Events.Interface;
 using APIGateWay.Business_Layer.Interface;
+using APIGateWay.Business_Layer.Session;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -37,8 +40,8 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IWorkStreamService _workStreamService;
         private readonly APIGatewayDBContext _db;
         private readonly ITicketHistoryRepository _historyRepository;
-        private readonly IRequestStepContext _stepContext;              // ← ADDED
-
+        private readonly IRequestStepContext _stepContext;    
+        private readonly IEventCenter _eventCenter;
         public TicketRepo(
             IDomainService domainService,
             APIGateWayCommonService service,
@@ -51,7 +54,8 @@ namespace APIGateWay.BusinessLayer.Repository
             IWorkStreamService workStreamService,
             APIGatewayDBContext dBContext,
             ITicketHistoryRepository historyRepository,
-            IRequestStepContext stepContext)                            // ← ADDED
+            IRequestStepContext stepContext,
+            IEventCenter eventCenter)                            // ← ADDED
         {
             _domainService = domainService;
             _commonService = service;
@@ -64,7 +68,8 @@ namespace APIGateWay.BusinessLayer.Repository
             _workStreamService = workStreamService;
             _db = dBContext;
             _historyRepository = historyRepository;
-            _stepContext = stepContext;                                 // ← ADDED
+            _stepContext = stepContext; 
+            _eventCenter = eventCenter;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -129,6 +134,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             var attachmentIds = string.Join(",",
                                 attachmentResult.Attachments.Select(a => a.AttachmentId));
                             _stepContext.Success("AttachmentMaster", "INSERT", attachmentIds, timer);
+                           
                         }
                         catch (Exception ex)
                         {
@@ -279,7 +285,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                         actorName: _loginContext.userName));
                                 }
                             }
-
+                            
                             var streamIds = string.Join(",", createResourceIds);
                             _stepContext.Success("WorkStream", "INSERT", streamIds, timer);
                         }
@@ -305,51 +311,19 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception($"Ticket creation failed. Everything was rolled back safely.{ex}", ex);
             }
 
-            var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
-                configKey: "TicketsList",
-                syncParams: new Dictionary<string, string> 
-                { 
-                    { "IssueId", finalTicketData.Issue_Id.ToString() },
-                    { "Role", _loginContext.role.ToString() } 
-                },
-                matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
-                fallbackData: finalTicketData,
-                lastSync: null);
+            /*  _ = Task.Run(async () =>
+              {
+                  await _eventCenter.PublishAsync(
+                      TicketFactory.TicketCreated(
+                          finalTicketData.Issue_Id
+                      ));
+              });*/
+            await _eventCenter.PublishAsync(
+              TicketFactory.TicketCreated(
+                  finalTicketData.Issue_Id
+              ));
 
-            if (richTicketData != null)
-            {
-                try
-                {
-                    if (richTicketData.RaiseToClient == true)
-                    {
-                        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                        {
-                            Entity = "Ticket",
-                            Action = "Create",
-                            Payload = richTicketData,
-                            KeyField = "Issue_Id",
-                            RepoKey = $"repo-{richTicketData.RepoKey}",
-                            Timestamp = DateTime.UtcNow
-
-                        });
-                    }
-
-                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage()
-                    {
-                        Entity = "Ticket",
-                        Action = "Create",
-                        Payload = richTicketData,
-                        KeyField = "Issue_Id",
-                        RepoKey = "global-admin",
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.Write($"Failed to broadcast Ticket Creation: {ex.Message}");
-                }
-            }
-            return richTicketData;
+            return finalTicketData;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -634,11 +608,12 @@ namespace APIGateWay.BusinessLayer.Repository
                         var incomingIds = dto.resourceIds.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToList();
 
                         var activeInDb = await _db.WorkStreams
-                            .Where(ws => ws.IssueId == ticketId
-                                      && ws.StreamStatus != StatusId.Inactive
-                                      && ws.StreamStatus != StatusId.Cancelled)
-                            .Select(ws => ws.ResourceId!.Value)
-                            .ToListAsync();
+                           .Where(ws => ws.IssueId == ticketId
+                                     && ws.StreamStatus != StatusId.Inactive
+                                     && ws.StreamStatus != StatusId.Cancelled
+                                     && ws.ResourceId.HasValue) // <-- ADD THIS LINE
+                           .Select(ws => ws.ResourceId!.Value)
+                           .ToListAsync();
 
                         var toDeactivate = activeInDb.Except(incomingIds).ToList();
                         var toUpsert = incomingIds.ToList();

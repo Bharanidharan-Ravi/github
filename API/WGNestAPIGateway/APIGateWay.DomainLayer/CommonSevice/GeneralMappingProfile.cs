@@ -18,7 +18,9 @@ namespace APIGateWay.DomainLayer.CommonSevice
             CreateMap<PostTicketDto, TicketMaster>().ApplyDynamicIgnores();
             CreateMap<PostThreadsDto, ThreadMaster>().ApplyDynamicIgnores();
             CreateMap<CreateLabelDto, LabelMaster>().ApplyDynamicIgnores();
+            CreateMap<CreateNotificationRequest, NotificationMaster>();
 
+            CreateMap<NotificationAudienceDto, NotificationAudience>();
             CreateMap<ProjectMaster, GetProject>()
                 .ForMember(dest => dest.Project_Name, opt => opt.MapFrom(src => src.Title));
            

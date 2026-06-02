@@ -8,10 +8,24 @@ namespace APIGateWay.ModalLayer.Helper
 {
     public class PostHelper
     {
-        public interface IAuditableEntity
+        public interface IHasCreatedAt
         {
             DateTime? CreatedAt { get; set; }
+        }
+
+        // 2. New interface just for updates
+        public interface IHasUpdatedAt
+        {
             DateTime? UpdatedAt { get; set; }
+        }
+        public interface IHasLastSeen
+        {
+            DateTime? LastSeenAt { get; set; }
+        }
+
+        // 3. Keep the old one exactly the same for older models!
+        public interface IAuditableEntity : IHasCreatedAt, IHasUpdatedAt
+        {
         }
 
         public interface IAuditableUser

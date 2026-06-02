@@ -55,7 +55,14 @@ namespace APIGateWay.BusinessLayer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "repoId",
-                DeltaEnabled = true
+                DeltaEnabled = true,
+                NotificationTitle = "Ticket",
+
+                NotificationMessage = "Ticket Created",
+
+                SignalREntity = "Ticket",
+
+                SignalRAction = "Create"
 
             },
 
