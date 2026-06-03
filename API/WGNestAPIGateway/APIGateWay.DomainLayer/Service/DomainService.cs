@@ -204,20 +204,6 @@ namespace APIGateWay.DomainLayer.Service
 
             await _dBContext.SaveChangesAsync();
         }
-        //public async Task UpdateLabelAsync(Guid id, List<IssueLabel> labels)
-        //{
-        //    var existing = _dBContext.ISSUE_LABELS
-        //        .Where(x => x.Issue_Id == id)
-        //        .ToList();
-
-        //    if (existing.Any())
-        //        _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
-
-        //    if (labels != null && labels.Any())
-        //        await _dBContext.ISSUE_LABELS.AddRangeAsync(labels);
-
-        //    await _dBContext.SaveChangesAsync();
-        //}
 
         public async Task<TEntity> UpdateEntityByIntIdAsync<TEntity>(
             int id,
@@ -273,6 +259,27 @@ namespace APIGateWay.DomainLayer.Service
             {
                 var actualError = ex.InnerException?.Message ?? ex.Message;
                 throw new Exception($"Failed to Get a data for {typeof(TEntity).Name}. Detail: {actualError}", ex);
+            }
+        }
+
+        public async Task UpdateEntityAsync<TEntity>(
+            TEntity entity)
+            where TEntity : class
+        {
+            try
+            {
+                _dBContext
+                    .Entry(entity)
+                    .State =
+                        EntityState.Modified;
+
+                await _dBContext
+                    .SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                var actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Failed to update a data for {typeof(TEntity).Name}. Detail: {actualError}", ex);
             }
         }
     }

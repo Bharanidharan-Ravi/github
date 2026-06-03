@@ -11,6 +11,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string Title { get; set; }
         public string Description { get; set; }
         public string? Hours { get; set; }
+        public int Status { get; set; }
         public Guid? Project_Id { get; set; }
 
         public DateTime? Due_Date { get; set; }

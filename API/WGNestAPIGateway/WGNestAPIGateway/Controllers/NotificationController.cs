@@ -41,5 +41,14 @@ namespace APIGateway.Controllers
                 await _notificationRepository.GetNotificationsAsync(_loginContext.userId);
            return Ok( count );
         }
+        [HttpPost("mark-seen")]
+        public async Task<IActionResult> MarkSeen()
+        {
+            await _notificationRepository
+                .MarkSeenAsync(
+                    _loginContext.userId);
+
+            return Ok();
+        }
     }
 }

@@ -95,7 +95,6 @@ namespace APIGateWay.BusinessLayer.Repository
                 {
                     var ticketMaster = _mapper.Map<TicketMaster>(ticketDto);
                     ticketMaster.Issue_Id = Guid.NewGuid();
-                    ticketMaster.Status = 1;
                     ticketMaster.ReopenCount = 0;
 
                     if (!ticketDto.RepoId.HasValue)

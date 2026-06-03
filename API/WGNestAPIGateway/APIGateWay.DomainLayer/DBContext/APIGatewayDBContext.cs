@@ -169,8 +169,7 @@ namespace APIGateWay.DomainLayer.DBContext
                     }
                     else if (entry.State == EntityState.Modified)
                     {
-                        // Ensure CreatedAt is never overwritten during an update
-                        entry.Property(nameof(IHasLastSeen.LastSeenAt)).IsModified = false;
+                        hasLastSeen.LastSeenAt = indiaTime;
                     }
                 }
                 // USER AUDIT

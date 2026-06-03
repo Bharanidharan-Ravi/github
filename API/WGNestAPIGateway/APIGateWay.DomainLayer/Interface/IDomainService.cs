@@ -49,5 +49,8 @@ namespace APIGateWay.DomainLayer.Interface
 
         IQueryable<TEntity> Query<TEntity>()
      where TEntity : class;
+        Task UpdateEntityAsync<TEntity>(
+        TEntity entity)
+        where TEntity : class;
     }
 }

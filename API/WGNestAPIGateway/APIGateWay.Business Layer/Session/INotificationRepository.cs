@@ -16,5 +16,6 @@ namespace APIGateWay.Business_Layer.Session
         Task EnsureUserStateAsync(
         Guid userId);
         Task<List<NotificationListResponse>> GetNotificationsAsync(Guid userId);
+        Task MarkSeenAsync(Guid userId);
     }
 }

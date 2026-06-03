@@ -195,9 +195,70 @@ namespace APIGateWay.Business_Layer.Session
                             n.EntityId.ToString(),
 
                         CreatedAt =
-                            n.CreatedAt
+                            n.CreatedAt 
                     })
                 .ToListAsync();
+        }
+
+        public async Task MarkSeenAsync(
+    Guid userId)
+        {
+            try
+            {
+                var exists =
+                    await _domainService
+                        .Query<NotificationUserState>()
+                        .AnyAsync(
+                            x => x.UserId == userId);
+
+                if (!exists)
+                {
+                    await _domainService
+                        .SaveEntityAsync(
+                            new NotificationUserState
+                            {
+                                UserId = userId,
+
+                                LastSeenAt = DateTime.UtcNow,
+
+                                UpdatedAt = DateTime.UtcNow
+                            });
+
+                    return;
+                }
+
+                await _domainService
+                    .UpdateTrackedEntityAsync<
+                        NotificationUserState>(
+                        x => x.UserId == userId,
+                        x =>
+                        {
+                            x.LastSeenAt =
+                                DateTime.UtcNow;
+
+                            x.UpdatedAt =
+                                DateTime.UtcNow;
+                        });
+
+            }
+            catch (Exception ex)
+            {
+                var current = ex;
+                var messages = new List<string>();
+
+                while (current != null)
+                {
+                    messages.Add(current.Message);
+
+                    current =
+                        current.InnerException;
+                }
+
+                throw new Exception(
+                    string.Join(
+                        " --> ",
+                        messages));
+            }
         }
     }
 }
