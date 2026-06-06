@@ -7,69 +7,52 @@ using Microsoft.EntityFrameworkCore;
 using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
+using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Utilities;
+using Microsoft.AspNetCore.Connections;
 
 namespace APIGateWay.DomainLayer.CommonSevice
 {
     public class APIGateWayCommonService
     {
-        private readonly SqlConnection sqlConnection;
-        private readonly IConfiguration _configuration;
         private readonly APIGatewayDBContext _dbContext;
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IDbConnectionFactory _connectionFactory;
 
-        public APIGateWayCommonService(APIGatewayDBContext dbContext, IConfiguration configuration, IServiceScopeFactory serviceScopeFactory
-            , IHttpContextAccessor httpContext)
+        public APIGateWayCommonService(APIGatewayDBContext dbContext,
+        IServiceScopeFactory scopeFactory,
+        IDbConnectionFactory connectionFactory)
         {
             _dbContext = dbContext;
-            _configuration = configuration;
-            _scopeFactory = serviceScopeFactory;
-            _httpContextAccessor = httpContext;
+            _scopeFactory = scopeFactory;
+            _connectionFactory = connectionFactory;
         }
 
         public async Task<List<T>> ExecuteGetItemAsyc<T>(
-           string storedProcedure,
-           params SqlParameter[] parameters
-       ) where T : class
+        string storedProcedure,
+        params SqlParameter[] parameters)
+        where T : class
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
+                using var scope =
+                    _scopeFactory.CreateScope();
 
-                var dbContext = scope.ServiceProvider
-                    .GetRequiredService<APIGatewayDBContext>();  // ✅ FIXED
+                var dbContext =
+                    scope.ServiceProvider
+                         .GetRequiredService<APIGatewayDBContext>();
 
-                var validProcedureNames = new[]
-                {
-                    "VALIDATEUSER",
-                    "GetEmployeeMaster",
-                    "GetAllProjData",
-                    "GETALLREPO",
-                    "GetIssuesByID",
-                    "GETLABELMASTER",
-                    "GetNextNumber",
-                    "DashBoardTimesheetData",
-                    "GETTHREADLIST",
-                    "GetStatusMaster",
-                    "getdailyplan",
-                    "GetTicketHistory",
-                    "GetTeamMaster",
-                    "GetTicketProgressLogsByIssueId",
-                    "GetRepoUser",
-                    "DashBoardTimesheetdataTest"
-                };
-
-                if (!validProcedureNames.Contains(storedProcedure))
-                    throw new ArgumentException("Invalid stored procedure name");
-
-                var sqlCommand = $"EXEC {storedProcedure} " +
-                    $"{string.Join(", ",
-                        parameters.Select(p =>
+                var sqlCommand =
+                    $"EXEC {storedProcedure} " +
+                    string.Join(
+                        ", ",
+                        parameters.Select(
+                            p =>
                             $"{p.ParameterName} = @{p.ParameterName.TrimStart('@')}"
-                        )
-                    )}";
+                        ));
 
-                return await dbContext.Set<T>()
+                return await dbContext
+                    .Set<T>()
                     .FromSqlRaw(sqlCommand, parameters)
                     .AsNoTracking()
                     .ToListAsync();
@@ -79,80 +62,54 @@ namespace APIGateWay.DomainLayer.CommonSevice
                 throw new InvalidDataException(ex.Message);
             }
         }
-        //public async Task<List<T>> ExecuteGetItemAsyc<T>(string StoredProcedure, params SqlParameter[] parameters) where T : class
-        //{
-        //    try
-        //    {
-        //        using var scope = _scopeFactory.CreateScope();
-
-        //        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
-        //        var validProcedureNames = new[] { "VALIDATEUSER","GETEMPLOYEEMASTER", "GetAllProjData", "GETALLREPO", "GetIssuesByID" };
-        //        if (!validProcedureNames.Contains(StoredProcedure))
-        //        {
-        //            throw new ArgumentException("Invalid stored procedure name", nameof(StoredProcedure));
-        //        }
-        //        var sqlCommand = $"EXEC {StoredProcedure} " +
-        //                  $"{string.Join(", ", parameters.Select(p => $"{p.ParameterName} = @{p.ParameterName.TrimStart('@')}"))}";
-
-        //        return await dbContext.Set<T>()
-        //            .FromSqlRaw(sqlCommand, parameters)
-        //            .AsNoTracking()
-        //            .ToListAsync();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log the exception
-        //        Console.Error.WriteLine($"An error occurred while executing the stored procedure: {ex.Message}");
-        //        // Handle or rethrow the exception as needed
-        //        throw new InvalidDataException(ex.Message);
-        //    }
-        //}
-        public async Task<DataSet> ExecuteReturnAsync(string storedProcedureName, SqlParameter[] parameters)
+        public async Task<DataSet> ExecuteReturnAsync(
+            string storedProcedureName,
+            SqlParameter[] parameters)
         {
             var dataSet = new DataSet();
 
             try
             {
-                // Create a connection to the database (e.g., SAP HANA or SQL Server)
-                //using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
-                using (var connection = new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString))
+                using var connection =
+                    _connectionFactory.CreateConnection();
+
+                await connection.OpenAsync();
+
+                using var command =
+                    new SqlCommand(
+                        storedProcedureName,
+                        connection);
+
+                command.CommandType =
+                    CommandType.StoredProcedure;
+
+                if (parameters?.Length > 0)
                 {
-                    await connection.OpenAsync();
-
-                    // Create a command to execute the stored procedure
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = storedProcedureName;
-                        command.CommandType = CommandType.StoredProcedure;
-
-                        // Add parameters to the command
-                        foreach (var param in parameters)
-                        {
-                            var parameter = command.CreateParameter();
-                            parameter.ParameterName = param.ParameterName;
-                            parameter.Value = param.Value;
-                            command.Parameters.Add(parameter);
-                        }
-
-                        // Execute the command asynchronously and fill the dataset
-                        using (var dataAdapter = new SqlDataAdapter(command))
-                        {
-                            await Task.Run(() => dataAdapter.Fill(dataSet)); // Fill the dataset asynchronously
-                        }
-                    }
+                    command.Parameters.AddRange(parameters);
                 }
-                bool allTablesEmpty = dataSet.Tables.Count == 0 || dataSet.Tables.Cast<DataTable>().All(table => table.Rows.Count == 0);
+
+                using var adapter =
+                    new SqlDataAdapter(command);
+
+                await Task.Run(() =>
+                    adapter.Fill(dataSet));
+
+                bool allTablesEmpty =
+                    dataSet.Tables.Count == 0 ||
+                    dataSet.Tables
+                           .Cast<DataTable>()
+                           .All(t => t.Rows.Count == 0);
 
                 if (allTablesEmpty)
                 {
-                    throw new Exceptionlist.DataNotFoundException("No data found for the provided parameters.");
+                    throw new Exceptionlist.DataNotFoundException(
+                        "No data found for the provided parameters.");
                 }
 
-                return dataSet; // Return the filled dataset
+                return dataSet;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error executing stored procedure: {ex.Message}");
                 throw;
             }
         }
@@ -186,19 +143,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
                     await command.ExecuteNonQueryAsync();
                 }
             }
-        }
 
-        public string GeneratePreviewUrl(string filePath)
-        {
-            // Define the base URL that corresponds to where your images are publicly accessible
-            var request = _httpContextAccessor.HttpContext.Request;
-            string baseUrl = $"{request.Scheme}://{request.Host}";
-            string fileName = Path.GetFileName(filePath);
-
-            var publicUrl = $"{baseUrl}/Uploads/{filePath}";
-
-            // Return both URL and MIME type as a tuple
-            return publicUrl;
         }
     }
 }

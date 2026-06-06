@@ -94,8 +94,28 @@ namespace APIGateWay.BusinessLayer.Repository
                 finalTicketData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
                     var ticketMaster = _mapper.Map<TicketMaster>(ticketDto);
-                    ticketMaster.Issue_Id = Guid.NewGuid();
+                    //ticketMaster.Issue_Id = Guid.NewGuid();
                     ticketMaster.ReopenCount = 0;
+                    bool hasHours =
+                        !string.IsNullOrWhiteSpace(ticketDto.Client) ||
+                        !string.IsNullOrWhiteSpace(ticketDto.Web) ||
+                        !string.IsNullOrWhiteSpace(ticketDto.Technical) ||
+                        !string.IsNullOrWhiteSpace(ticketDto.Functional);
+
+                    // 1. NEW: Check for Due Date 
+                    // (Note: Change 'TargetDate' to 'DueDate' if that is what it is called in your PostTicketDto)
+                    bool hasDueDate = ticketDto.Due_Date.HasValue;
+
+                    bool hasAssignee = ticketDto.Assignee_Id.HasValue;
+
+                    bool hasResources = ticketDto.resourceIds?.Any() ?? false;
+
+                    // 2. UPDATED: Hours AND Due Date AND (Assignee OR Resources)
+                    bool isReady = hasHours && hasDueDate && (hasAssignee || hasResources);
+
+                    ticketMaster.Status = isReady
+                        ? ticketDto.Status
+                        : 18; // InQueue
 
                     if (!ticketDto.RepoId.HasValue)
                         throw new Exception("Repo_Id is required to create a Ticket.");
@@ -317,12 +337,11 @@ namespace APIGateWay.BusinessLayer.Repository
                           finalTicketData.Issue_Id
                       ));
               });*/
-            await _eventCenter.PublishAsync(
-              TicketFactory.TicketCreated(
-                  finalTicketData.Issue_Id
-              ));
+            var richData = await _eventCenter.PublishAsync<GetTickets>(
+                TicketFactory.TicketCreated(finalTicketData.Issue_Id)
+            );
 
-            return finalTicketData;
+            return richData;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -340,6 +359,8 @@ namespace APIGateWay.BusinessLayer.Repository
         {
             ProcessedAttachmentResult attachmentResult = null;
             GetTickets finalTicketData = null;
+            var changedFields = new List<string>();
+            string updatedStatusName = null;
 
             try
             {
@@ -447,6 +468,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         var timer = _stepContext.StartStep();
                         try
                         {
+                            changedFields.AddRange(patcher.Changes.Select(c => c.FieldName));
                             patcher.Apply();   // ← mutates existingTicket
 
                             updatedTicket = await _domainService.UpdateEntityWithAttachmentsAsync<TicketMaster>(
@@ -480,6 +502,8 @@ namespace APIGateWay.BusinessLayer.Repository
 
                                 if (statusMap.ContainsKey(oldStatusId)) oldValue = statusMap[oldStatusId];
                                 if (statusMap.ContainsKey(newStatusId)) newValue = statusMap[newStatusId];
+
+                                updatedStatusName = newValue;
 
                                 // Define your "Closed" state IDs based on your UI Config (e.g., 15=Closed, 16=Cancelled, 17=Inactive)
                                 var closedStatusIds = new[] { 15, 16, 17 };
@@ -561,6 +585,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                         if (!incomingLabelIds.SequenceEqual(existingLabelIds))
                         {
+                            changedFields.Add("Labels");
                             var timer = _stepContext.StartStep();
                             try
                             {
@@ -622,6 +647,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                         if (assigneesChanged)
                         {
+                            changedFields.Add("Assignees");
                             var timer = _stepContext.StartStep();
                             try
                             {
@@ -699,16 +725,33 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception($"Ticket update failed. Everything was rolled back safely. {ex}", ex);
             }
 
-            var richTicketData = await _syncExecutionService.FetchRichDataAsync<GetTickets>(
-                configKey: "TicketsList",
-                syncParams: new Dictionary<string, string>
-                {
-            { "IssueId", finalTicketData.Issue_Id.ToString() },
-            { "Role", _loginContext.role.ToString() }
-                },
-                matchPredicate: p => p.Issue_Id == finalTicketData.Issue_Id,
-                fallbackData: finalTicketData,
-                lastSync: null);
+            GetTickets richTicketData = null;
+
+            // ── Call 1: CLIENT NOTIFICATION (ONLY if Status Changed) ──
+            if (!string.IsNullOrEmpty(updatedStatusName))
+            {
+                // Tell the client exactly what the status changed to. 
+                // NotifyRepo: true, NotifyUsers: false
+                var reqClient = TicketFactory.TicketUpdated(ticketId, $"Status changed to {updatedStatusName}", true, false);
+
+                // signalR: false here because we will fire the Live UI sync in Call 2 below
+                richTicketData = await _eventCenter.PublishAsync<GetTickets>(reqClient, notify: true, signalR: false);
+            }
+
+            // ── Call 2: EMPLOYEE NOTIFICATION (If ANYTHING changed) ──
+            if (changedFields.Any())
+            {
+                string empSummary = "updated";
+                if (changedFields.Count == 1) empSummary = $"{changedFields[0]} updated";
+                else if (changedFields.Count == 2) empSummary = $"{changedFields[0]} and {changedFields[1]} updated";
+                else empSummary = $"{changedFields[0]} and {changedFields.Count - 1} more fields updated";
+
+                // NotifyRepo: false, NotifyUsers: true
+                var reqEmp = TicketFactory.TicketUpdated(ticketId, empSummary, false, true);
+
+                // signalR: true here ensures the LIVE SCREEN updates for everyone instantly!
+                richTicketData = await _eventCenter.PublishAsync<GetTickets>(reqEmp, notify: true, signalR: true) ?? richTicketData;
+            }
 
             return richTicketData;
         }

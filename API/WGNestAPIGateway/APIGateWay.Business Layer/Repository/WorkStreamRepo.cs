@@ -1,4 +1,5 @@
 ﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Helper.Events.Interface;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.SignalRHub;
 using APIGateWay.BusinessLayer.Interface;
@@ -34,6 +35,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly ISyncExecutionService _syncExecutionService;
         private readonly ITicketHistoryRepository _historyRepository;
         private readonly IApiLoggerService _apiLogger;
+        private readonly IEventCenter _eventCenter;
 
         // Update your constructor to include IApiLoggerService
         public WorkStreamRepo(
@@ -46,7 +48,8 @@ namespace APIGateWay.BusinessLayer.Repository
             IWorkStreamService workStream,
             ISyncExecutionService syncExecutionService,
             ITicketHistoryRepository historyRepository,
-            IApiLoggerService apiLogger) // <--- ADDED HERE
+            IApiLoggerService apiLogger,
+            IEventCenter eventCenter) // <--- ADDED HERE
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -57,7 +60,8 @@ namespace APIGateWay.BusinessLayer.Repository
             _workStream = workStream;
             _syncExecutionService = syncExecutionService;
             _historyRepository = historyRepository;
-            _apiLogger = apiLogger; // <--- ADDED HERE
+            _apiLogger = apiLogger;
+            _eventCenter = eventCenter;
         }
 
 

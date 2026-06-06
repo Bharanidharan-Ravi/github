@@ -80,9 +80,8 @@ builder.Services.AddScoped<ITicketHistoryRepository, TicketHistoryRepository>();
 builder.Services.AddScoped<ISessionTrackingService, SessionTrackingService>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IEventCenter, EventCenter>();
-builder.Services.AddScoped<
-    IEventContextProvider,
-    ApiGatewayEventContextProvider>();
+builder.Services.AddScoped<IVersionRepo, VersionRepo>();
+builder.Services.AddScoped<IEventContextProvider, ApiGatewayEventContextProvider>();
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
 // ─────────────────────────────────────────────────────────────
@@ -99,13 +98,14 @@ builder.Services.AddScoped<IRequestStepContext, RequestStepContext>();
 builder.Services.AddScoped<IApiLoggerService, ApiLoggerService>();
 builder.Services.AddScoped<ICustomersService, CustomerService>();
 builder.Services.AddScoped<IEnvironmentRoutingService, EnvironmentRoutingService>();
-
+builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 
 // ─────────────────────────────────────────────────────────────
 // Infrastructure
 // ─────────────────────────────────────────────────────────────
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<APIGateWayCommonService>();
+builder.Services.AddScoped<GenerateHelper>();
 builder.Services.AddScoped<DecodeHelpers>();
 builder.Services.AddScoped<IlogHelper, LogHelper>();
 builder.Services.AddScoped<TokenGeneration>();

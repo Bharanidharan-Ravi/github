@@ -56,34 +56,30 @@ namespace APIGateWay.BusinessLayer.SignalRHub
 
             if (!Guid.TryParse(userIdString, out var userId))
             {
-                _logger.LogWarning(
-                    "[RealtimeHub] Rejected — invalid UserId: {Id}", userIdString);
+                _logger.LogWarning("[RealtimeHub] Rejected — invalid UserId: {Id}", userIdString);
                 Context.Abort();
                 return;
             }
+
             var sessionId = GetSessionId();
 
             if (sessionId.HasValue)
             {
-                await _sessionTracking.UpdateConnectionAsync(
-                    sessionId.Value,
-                    Context.ConnectionId);
+                await _sessionTracking.UpdateConnectionAsync(sessionId.Value, Context.ConnectionId);
             }
+
+            // 🔥 NEW: Add every user to their own personal targeted group!
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
 
             switch (role)
             {
                 case "1":
                 case "2":
                     await Groups.AddToGroupAsync(Context.ConnectionId, "global-admin");
-                    _logger.LogInformation(
-                        "[RealtimeHub] Admin connected. UserId={UserId}", userId);
+                    _logger.LogInformation("[RealtimeHub] Admin connected. UserId={UserId}", userId);
                     if (sessionId.HasValue)
                     {
-                        await _sessionTracking.SignalRConnectedAsync(
-                            sessionId.Value,
-                            userId,
-                            Context.ConnectionId,
-                            0);
+                        await _sessionTracking.SignalRConnectedAsync(sessionId.Value, userId, Context.ConnectionId, 0);
                     }
                     break;
 
@@ -91,25 +87,16 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                     var repoIds = await _repoAccess.GetUserRepoGuidsAsync(userId);
                     if (sessionId.HasValue)
                     {
-                        await _sessionTracking.SignalRConnectedAsync(
-                            sessionId.Value,
-                            userId,
-                            Context.ConnectionId,
-                            repoIds.Count());
+                        await _sessionTracking.SignalRConnectedAsync(sessionId.Value, userId, Context.ConnectionId, repoIds.Count());
                     }
-                    var joinTasks = repoIds.Select(id =>
-                        Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id.RepoId}"));
+                    var joinTasks = repoIds.Select(id => Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id.RepoId}"));
                     await Task.WhenAll(joinTasks);
 
-                    _logger.LogInformation(
-                        "[RealtimeHub] User connected. UserId={UserId} Repos={Count}",
-                        userId, repoIds.Count());
+                    _logger.LogInformation("[RealtimeHub] User connected. UserId={UserId} Repos={Count}", userId, repoIds.Count());
                     break;
 
                 default:
-                    _logger.LogWarning(
-                        "[RealtimeHub] Unknown role '{Role}' for UserId={UserId}. Aborting.",
-                        role, userId);
+                    _logger.LogWarning("[RealtimeHub] Unknown role '{Role}' for UserId={UserId}. Aborting.", role, userId);
                     Context.Abort();
                     return;
             }

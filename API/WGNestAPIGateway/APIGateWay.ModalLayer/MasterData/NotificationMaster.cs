@@ -23,7 +23,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public Guid? ActorId { get; set; }
         public string ActorName { get; set; }
 
-        public List<NotificationAudienceDto> Audiences { get; set; }
+        public List<NotificationAudience> Audiences { get; set; }
     }
 
     public class NotificationAudienceDto

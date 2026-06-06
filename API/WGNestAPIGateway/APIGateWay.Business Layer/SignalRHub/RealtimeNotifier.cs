@@ -1,7 +1,9 @@
 ﻿using APIGateWay.ModalLayer.Hub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace APIGateWay.BusinessLayer.SignalRHub
 {
@@ -22,34 +24,43 @@ namespace APIGateWay.BusinessLayer.SignalRHub
         {
             var tasks = new List<Task>();
 
-            // 1. Admins always receive everything
-            tasks.Add(_hub.Clients
-                .Group("global-admin")
-                .SendAsync("EntityChanged", message));
+            // 1. Admins receive data updates (Tickets) to keep UI fresh, 
+            // BUT they DO NOT receive personal Bell Notifications meant for others.
+            if (message.Entity != "Notification")
+            {
+                tasks.Add(_hub.Clients
+                    .Group("global-admin")
+                    .SendAsync("EntityChanged", message));
+            }
 
             // 2. Repo-scoped users
             if (!string.IsNullOrWhiteSpace(message.RepoKey))
             {
+                // Ensure we don't accidentally send to "repo-repo-id"
+                var groupName = message.RepoKey.StartsWith("repo-") ? message.RepoKey : $"repo-{message.RepoKey}";
+
                 tasks.Add(_hub.Clients
-                    .Group($"repo-{message.RepoKey}")
+                    .Group(groupName)
                     .SendAsync("EntityChanged", message));
             }
 
-            // 3. Personal delivery (assignment / mention notifications)
+            // 3. Personal delivery (assignment / resourceIds notifications)
             if (message.TargetUserId.HasValue && message.TargetUserId != Guid.Empty)
             {
+                // Target the exact user group registered in RealtimeHub.cs
                 tasks.Add(_hub.Clients
-                    .User(message.TargetUserId.Value.ToString())
+                    .Group($"user-{message.TargetUserId.Value}")
                     .SendAsync("EntityChanged", message));
             }
 
             await Task.WhenAll(tasks);
 
             _logger.LogInformation(
-                 "[RealtimeNotifier] Sent {Entity} {Action} → repo:{RepoKey}",
+                 "[RealtimeNotifier] Sent {Entity} {Action} → Repo: {RepoKey}, User: {User}",
                  message.Entity,
                  message.Action,
-                 message.RepoKey ?? "none"
+                 message.RepoKey ?? "none",
+                 message.TargetUserId?.ToString() ?? "none"
              );
         }
     }

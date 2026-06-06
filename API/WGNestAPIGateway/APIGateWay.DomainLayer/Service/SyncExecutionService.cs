@@ -7,6 +7,7 @@ using System;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using APIGateWay.ModalLayer.GETData;
+using APIGateWay.DomainLayer.Utilities;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -18,13 +19,15 @@ namespace APIGateWay.DomainLayer.Service
         private readonly APIGateWayCommonService _Service;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILoginContextService _loginContext;
+        private readonly GenerateHelper _generateHelper;
 
         public SyncExecutionService(
             HttpClient httpClient,
             APIGateWayCommonService commonService,
             IHttpContextAccessor httpContextAccessor,
             ILoginContextService loginContext,
-            IServiceScopeFactory serviceScopeFactory
+            IServiceScopeFactory serviceScopeFactory,
+            GenerateHelper generateHelper
         )
         {
             _httpClient = httpClient;
@@ -32,6 +35,7 @@ namespace APIGateWay.DomainLayer.Service
             _httpContextAccessor = httpContextAccessor;
             _loginContext = loginContext;
             _scopeFactory = serviceScopeFactory;
+            _generateHelper = generateHelper;
         }
 
         public async Task<RawSyncResult> ExecuteRemoteAsync(
@@ -189,7 +193,7 @@ namespace APIGateWay.DomainLayer.Service
                                                     .Select(segment => Uri.EscapeDataString(segment))
                                                 );
 
-                                                emp.PreviewUrl = _Service.GeneratePreviewUrl(encodedRelativePath);
+                                                emp.PreviewUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
                                             }
                                         }
                                     }

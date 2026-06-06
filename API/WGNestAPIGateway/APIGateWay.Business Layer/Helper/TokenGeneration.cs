@@ -43,7 +43,7 @@ namespace APIGateWay.BusinessLayer.Helpers.token
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, userName),
                 new Claim(ClaimTypes.Role, role.ToString()),
-                new Claim("Team", Team.ToString()),
+                new Claim("Team", Team ?? ""),
                 new Claim("DbName", dbName ?? ""),
                 new Claim("PreviewUrl", PreviewUrl ?? ""),
                 new Claim("SessionId", sessionId.ToString()),

@@ -23,7 +23,6 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? RepoKey { get; set; }
         public string? ProjKey { get; set; }
 
-        [IgnoreMapping] // Hardcoded to 1 (Active) in Business Layer
         public int? Status { get; set; }
 
         [IgnoreMapping] // Handled strictly by HtmlUtilities.ConvertToPlainText()

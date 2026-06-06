@@ -103,6 +103,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationMaster> NotificationMaster { get; set; }
         public DbSet<NotificationAudience> NotificationAudience { get; set; }
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
+        public DbSet<AppSetting> AppSettings { get; set; }
 
         #region SaveChanges Override (Audit)
 

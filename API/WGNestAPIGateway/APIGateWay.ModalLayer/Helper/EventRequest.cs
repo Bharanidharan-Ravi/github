@@ -27,8 +27,12 @@ namespace APIGateWay.ModalLayer.Helper
         public string CodeField { get; set; }
 
         public string MessageTemplate { get; set; }
+        public bool NotifyRepo { get; set; } = true;
+        public bool NotifyUsers { get; set; } = true;
 
         public Type ResponseType { get; set; }
+        public string? AssigneeField { get; set; }
+        public string? ResourceIdsField { get; set; }
 
         public Dictionary<string, string> ContextMappings { get; set; }
             = new();

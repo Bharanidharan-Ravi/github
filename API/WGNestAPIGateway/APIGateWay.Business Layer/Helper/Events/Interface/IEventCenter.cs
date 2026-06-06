@@ -9,7 +9,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Interface
 {
     public interface IEventCenter
     {
-        Task PublishAsync(
+        Task<T?> PublishAsync<T>(
             EventRequest request,
             bool notify = true,
             bool signalR = true);

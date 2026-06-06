@@ -232,6 +232,14 @@ namespace APIGateWay.DomainLayer.Service
 
             await _dBContext.SaveChangesAsync();
         }
+        public async Task UpdateAsync<T>(
+            T entity)
+            where T : class
+        {
+            _dBContext.Set<T>().Update(entity);
+
+            await _dBContext.SaveChangesAsync();
+        }
         public async Task SaveEntityAsync<TEntity>(
     TEntity entity)
     where TEntity : class

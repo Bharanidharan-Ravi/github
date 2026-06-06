@@ -42,7 +42,9 @@ namespace APIGateWay.DomainLayer.Interface
        Task SaveEntitiesAsync<TEntity>(
        List<TEntity> entities)
        where TEntity : class;
-
+        Task UpdateAsync<T>(
+            T entity)
+            where T : class;
         Task SaveEntityAsync<TEntity>(
        TEntity entity)
        where TEntity : class;

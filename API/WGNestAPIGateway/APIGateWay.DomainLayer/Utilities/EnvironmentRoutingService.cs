@@ -28,18 +28,27 @@ namespace APIGateWay.DomainLayer.Utilities
         {
             var request = _httpContextAccessor.HttpContext?.Request;
 
-            // 1. Check HTTP Header (For standard API calls)
             string env = request?.Headers["X-Environment"].ToString();
 
-            // 2. Check Query String (Required for SignalR WebSockets)
             if (string.IsNullOrEmpty(env))
             {
                 env = request?.Query["env"].ToString();
             }
 
-            // 3. Return the correct Master Connection String
-            string connectionName = (env == "Test") ? "TestConnection" : "DefaultConnection";
-            return _configuration.GetConnectionString(connectionName);
+            string connectionName =
+                (env == "Test")
+                    ? "TestConnection"
+                    : "DefaultConnection";
+
+            var conn =
+                _configuration.GetConnectionString(connectionName);
+
+            Console.WriteLine($"User={request?.HttpContext?.User?.Identity?.Name}");
+            Console.WriteLine($"Env={env}");
+            Console.WriteLine($"ConnectionName={connectionName}");
+            Console.WriteLine($"Conn={conn}");
+
+            return conn;
         }
     }
 }

@@ -11,6 +11,7 @@ using APIGateWay.DomainLayer.CommonSevice;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using APIGateWay.Business_Layer.Session;
+using APIGateWay.DomainLayer.Utilities;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -20,6 +21,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly TokenGeneration _tokenGeneration;
         private readonly DecodeHelpers _decodeHelpers;
         private readonly APIGateWayCommonService _service;
+        private readonly GenerateHelper _helper;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ISessionTrackingService _sessionTracking;
         private readonly INotificationRepository _notificationRepository;
@@ -31,7 +33,7 @@ namespace APIGateWay.BusinessLayer.Repository
             public Guid SessionId { get; set; }
         }
         public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service, IHttpContextAccessor httpContextAccessor, 
-            ISessionTrackingService sessionTracking, INotificationRepository notificationRepository)
+            ISessionTrackingService sessionTracking, INotificationRepository notificationRepository, GenerateHelper helper)
         {
             _loginService = loginService;
             _tokenGeneration = tokenGeneration;
@@ -40,6 +42,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _httpContextAccessor = httpContextAccessor;
             _sessionTracking = sessionTracking;
             _notificationRepository = notificationRepository;
+            _helper = helper;
         }
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
@@ -67,7 +70,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var relativePath = relPathEl.GetString();
                     if (!string.IsNullOrEmpty(relativePath))
                     {
-                        user.PreviewUrl = _service.GeneratePreviewUrl(relativePath);
+                        user.PreviewUrl = _helper.GeneratePreviewUrl(relativePath);
                     }
                 }
             }
