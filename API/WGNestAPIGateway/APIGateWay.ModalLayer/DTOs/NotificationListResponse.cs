@@ -17,6 +17,8 @@ namespace APIGateWay.ModalLayer.DTOs
         public string EntityType { get; set; }
 
         public string EntityId { get; set; }
+        public Guid? ActorId { get; set; }
+        public string ActorName { get; set; }
 
         public DateTime? CreatedAt { get; set; }
     }

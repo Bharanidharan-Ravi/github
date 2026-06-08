@@ -100,7 +100,9 @@ namespace APIGateWay.Business_Layer.Session
                     Message = n.Message,
                     EntityType = n.EntityType,
                     EntityId = n.EntityId.ToString(),
-                    CreatedAt = n.CreatedAt
+                    CreatedAt = n.CreatedAt,
+                    ActorId = n.ActorId,
+                    ActorName = n.ActorName,
                 }).ToListAsync();
         }
 
