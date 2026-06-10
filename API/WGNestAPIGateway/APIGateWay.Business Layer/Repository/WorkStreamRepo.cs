@@ -1,4 +1,5 @@
 ﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Helper.Events.EventFactory;
 using APIGateWay.Business_Layer.Helper.Events.Interface;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.SignalRHub;
@@ -78,6 +79,15 @@ namespace APIGateWay.BusinessLayer.Repository
             var response = await _workStream.PostWorkStreamAsync(dto);
             await LogWorkStreamHistoryAsync(dto, response);
 
+            string summary = "Workstream assigned/updated";
+            if (response.ThreadCreated) summary = "New comment added to ticket";
+
+            if (response.OldTicketStatus.HasValue && response.NewTicketStatus.HasValue &&
+                response.OldTicketStatus != response.NewTicketStatus)
+            {
+                summary = $"Ticket status changed to {await GetStatusNameAsync(response.NewTicketStatus)}";
+            }
+            bool notifyClient = dto.toClient ?? false;
             // ── Step 2: thread broadcast (only when a new thread was created) ──
             // UseLastThread=true or pure % update → no new thread → skip
             if (response.ThreadCreated && response.ThreadId.HasValue)
@@ -85,19 +95,23 @@ namespace APIGateWay.BusinessLayer.Repository
                 await BroadcastThreadCreatedAsync(
                     issueId: dto.IssueId,
                     threadId: response.ThreadId.Value,
-                    repoId: response.RepoId
+                    repoId: response.RepoId,
+                    notifyClient
                 );
             }
 
             // ── Step 3: ticket status broadcast (always fires) ────────────────
-            await BroadcastTicketStatusAsync(response);
+            /* await BroadcastTicketStatusAsync(response);
 
-            await BroadcastTicketDetailAsync(dto.IssueId, response.RepoId);
+             await BroadcastTicketDetailAsync(dto.IssueId, response.RepoId);*/
+            await _eventCenter.PublishAsync<GetTickets>(
+                 TicketFactory.TicketUpdated(dto.IssueId, summary, notifyRepo: notifyClient, notifyUsers: true)
+             );
 
             if (dto.TicketOverallPercentage.HasValue || !string.IsNullOrWhiteSpace(dto.TicketStatusSummary))
             {
                 // Add dto.TicketStatusSummary here 👇
-                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoId, dto.TicketOverallPercentage, dto.TicketStatusSummary);
+                await BroadcastTicketProgressAsync(dto.IssueId, response.RepoId, dto.TicketOverallPercentage, dto.TicketStatusSummary, notifyClient);
             }
 
             return response;
@@ -290,7 +304,8 @@ namespace APIGateWay.BusinessLayer.Repository
         private async Task BroadcastThreadCreatedAsync(
             Guid issueId,
             long threadId,
-            Guid? repoId)
+            Guid? repoId,
+            bool notifyClient)
         {
             if (string.IsNullOrEmpty(repoId.ToString())) return;
 
@@ -352,7 +367,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Payload = freshThread,     // rich SP data with all joined fields
                     KeyField = "ThreadId",
                     IssueId = issueId,
-                    RepoKey = repoId.ToString(),
+                    RepoKey = notifyClient ? repoId.ToString() : null,
                     Timestamp = DateTime.UtcNow,
                 });
             }
@@ -460,7 +475,8 @@ private async Task BroadcastTicketProgressAsync(
     Guid issueId,
     Guid? repoId,
     decimal? overallPct,
-    string? statusSummary)
+    string? statusSummary,
+    bool notifyClient)
         {
             if (repoId == null) return;
 
@@ -527,8 +543,7 @@ private async Task BroadcastTicketProgressAsync(
 
                     // IMPORTANT
                     KeyField = "LogId",
-
-                    RepoKey = repoId.ToString(),
+                    RepoKey = notifyClient ? repoId.ToString() : null,
                     IssueId = issueId,
                     Timestamp = DateTime.UtcNow
                 });

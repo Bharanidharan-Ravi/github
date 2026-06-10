@@ -2,6 +2,7 @@
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.ModalLayer;
+using APIGateWay.ModalLayer.ChatsModal.Master;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
@@ -104,6 +105,9 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationAudience> NotificationAudience { get; set; }
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
+        public DbSet<ChatMessage> ChatMessage { get; set; }
+        public DbSet<ChatParticipant> ChatParticipant { get; set; }
+        public DbSet<ChatRoom> ChatRoom { get; set; }
 
         #region SaveChanges Override (Audit)
 

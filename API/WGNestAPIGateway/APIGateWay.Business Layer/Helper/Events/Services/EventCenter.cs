@@ -87,7 +87,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                             Action = cfg.SignalRAction,
                             Payload = richData,
                             KeyField = request.KeyField,
-                            RepoKey = audienceId.HasValue ? $"repo-{audienceId}" : "global-admin",
+                            RepoKey = (audienceId.HasValue && request.NotifyRepo) ? $"repo-{audienceId}" : null,
                             Timestamp = DateTime.UtcNow
                         });
                 }
