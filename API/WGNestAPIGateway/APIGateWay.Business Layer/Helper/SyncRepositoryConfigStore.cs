@@ -1,4 +1,5 @@
 ﻿using APIGateWay.BusinessLayer.Configuration;
+using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
 using System;
@@ -204,7 +205,30 @@ namespace APIGateWay.BusinessLayer.Helper
                 Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
-            }
+            },
+            ["BannerData"]= new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetBannerMessage",
+                EntityType = typeof(GetBannerMessageSP),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+            ["BannerDataType"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetAllBannerMessageType",
+                EntityType = typeof(BannerMessageType),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+
         };
     }
 

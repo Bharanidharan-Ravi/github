@@ -104,11 +104,14 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationMaster> NotificationMaster { get; set; }
         public DbSet<NotificationAudience> NotificationAudience { get; set; }
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
+   
+        public DbSet<BannerMessageMaster> BannerMessageMaster { get; set; }
+        public DbSet<GetBannerMessageSP> GetBannerMessageSP { get; set; }
+        public DbSet<BannerMessageType> BannerMessageType { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<ChatMessage> ChatMessage { get; set; }
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
         public DbSet<ChatRoom> ChatRoom { get; set; }
-
         #region SaveChanges Override (Audit)
 
         public override Task<int> SaveChangesAsync(

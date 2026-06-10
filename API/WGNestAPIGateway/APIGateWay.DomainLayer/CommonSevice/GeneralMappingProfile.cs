@@ -30,6 +30,9 @@ namespace APIGateWay.DomainLayer.CommonSevice
             CreateMap<ThreadMaster, ThreadList>()
                 .ForMember(dest => dest.ThreadId, opt => opt.MapFrom(src => src.ThreadId));
             CreateMap<LabelMaster, GetLabel>();
+            CreateMap<PostBannerMessageDto, BannerMessageMaster>();
+            CreateMap<PutBannerMessageDto, BannerMessageMaster>();
+            CreateMap<BannerMessageMaster, GetBannerMessageSP>();
         }
     }
 }

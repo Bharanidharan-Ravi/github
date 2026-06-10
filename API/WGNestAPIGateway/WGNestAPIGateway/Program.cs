@@ -82,6 +82,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IEventCenter, EventCenter>();
 builder.Services.AddScoped<IVersionRepo, VersionRepo>();
 builder.Services.AddScoped<IEventContextProvider, ApiGatewayEventContextProvider>();
+builder.Services.AddScoped<IBannermessageRepo, BannerMessageRepo>();
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
 // ─────────────────────────────────────────────────────────────
