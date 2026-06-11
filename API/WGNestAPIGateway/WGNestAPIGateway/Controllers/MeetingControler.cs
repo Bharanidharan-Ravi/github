@@ -1,7 +1,6 @@
 ﻿using APIGateWay.Business_Layer.Interface;
 using Microsoft.AspNetCore.Mvc;
 using APIGateWay.BusinessLayer.Helpers;
-
 using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Authorization;
