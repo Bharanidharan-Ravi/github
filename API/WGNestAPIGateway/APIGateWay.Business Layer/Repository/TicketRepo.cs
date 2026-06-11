@@ -109,9 +109,10 @@ namespace APIGateWay.BusinessLayer.Repository
                     bool hasAssignee = ticketDto.Assignee_Id.HasValue;
 
                     bool hasResources = ticketDto.resourceIds?.Any() ?? false;
+                    bool hasLabel = ticketDto.labelId?.Any() ?? false;
 
                     // 2. UPDATED: Hours AND Due Date AND (Assignee OR Resources)
-                    bool isReady = hasHours && hasDueDate && (hasAssignee || hasResources);
+                    bool isReady = hasHours && hasDueDate && hasAssignee && hasResources && hasLabel;
 
                     ticketMaster.Status = isReady
                         ? ticketDto.Status
