@@ -56,14 +56,7 @@ namespace APIGateWay.BusinessLayer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "repoId",
-                DeltaEnabled = true,
-                NotificationTitle = "Ticket",
-
-                NotificationMessage = "Ticket Created",
-
-                SignalREntity = "Ticket",
-
-                SignalRAction = "Create"
+                DeltaEnabled = true
 
             },
 
@@ -101,7 +94,7 @@ namespace APIGateWay.BusinessLayer.Helper
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "DashBoardTimesheetdataTest",
+                StoredProcedure = "DashBoardTimesheetData",
                 EntityType = typeof(DashBoardTimeSheetData),
                 SourceName = "SyncExecutionService",
 
@@ -205,7 +198,31 @@ namespace APIGateWay.BusinessLayer.Helper
                 Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
+            }
+            ,
+            ["MeetingData"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetMeetingByID",
+                EntityType = typeof(GetMeeting),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
             },
+               ["UpcomingMeeting"] = new SyncRepositoryConfig
+               {
+                   SourceType = SyncSourceType.Local,
+                   StoredProcedure = "Sp_GetAllUpcomingMeetings",
+                   EntityType = typeof(GetUpcomingMeeting),
+                   SourceName = "SyncExecutionService",
+                   Type = "array",
+                   Strategy = "merge",
+                 IdKey = "repoId",
+                   DeltaEnabled = true
+               },
+            
             ["BannerData"]= new SyncRepositoryConfig
             {
                 SourceType = SyncSourceType.Local,

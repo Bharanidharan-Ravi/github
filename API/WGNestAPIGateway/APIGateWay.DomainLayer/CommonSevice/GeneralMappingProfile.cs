@@ -18,6 +18,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
             CreateMap<PostTicketDto, TicketMaster>().ApplyDynamicIgnores();
             CreateMap<PostThreadsDto, ThreadMaster>().ApplyDynamicIgnores();
             CreateMap<CreateLabelDto, LabelMaster>().ApplyDynamicIgnores();
+            CreateMap<PostingmeetingDto, MeetingMaster>().ApplyDynamicIgnores();
             CreateMap<CreateNotificationRequest, NotificationMaster>();
 
             CreateMap<NotificationAudienceDto, NotificationAudience>();
@@ -33,6 +34,7 @@ namespace APIGateWay.DomainLayer.CommonSevice
             CreateMap<PostBannerMessageDto, BannerMessageMaster>();
             CreateMap<PutBannerMessageDto, BannerMessageMaster>();
             CreateMap<BannerMessageMaster, GetBannerMessageSP>();
+            CreateMap<MeetingMaster, GetMeeting>();
         }
     }
 }
