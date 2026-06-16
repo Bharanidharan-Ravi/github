@@ -65,7 +65,7 @@ namespace APIGateWay.DomainLayer.DBContext
         //public DbSet<LOGIN_MASTER> lOGIN_MASTER { get; set; }
         public DbSet<GetUserModel> getUserModels { get; set; }
         public DbSet<LOGIN_MASTER> LOGIN_MASTER { get; set; }
-        public DbSet<EMPLOYEEMASTER> eMPLOYEEMASTERs { get; set; }
+        public DbSet<EMPLOYEEMASTER> EMPLOYEEMASTER { get; set; }
         public DbSet<ClientMaster> clientMasters { get; set; }
         public DbSet<GetUserforValidate> getUserforValidates { get; set; }
         public DbSet<CLIENTSMAILIDS> cLIENTSMAILIDs { get; set; }
@@ -111,6 +111,9 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<ChatMessage> ChatMessage { get; set; }
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
+        public DbSet<MeetingMaster>MeetingMaster { get; set; }
+        public DbSet<MeetingAttendance> meeting_attendance { get; set; }
+
         public DbSet<ChatRoom> ChatRoom { get; set; }
         #region SaveChanges Override (Audit)
 
