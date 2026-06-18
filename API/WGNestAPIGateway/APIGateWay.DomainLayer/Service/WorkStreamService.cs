@@ -1404,7 +1404,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
         public async Task<int?> GetDepartmentNameAsync(Guid? resourceId)
         {
-            var emp = await _db.eMPLOYEEMASTERs
+            var emp = await _db.EMPLOYEEMASTER
                 .Where(e => e.EmployeeID == resourceId)
                 .Select(e => new { e.Team })
                 .FirstOrDefaultAsync();

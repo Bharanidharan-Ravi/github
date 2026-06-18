@@ -215,7 +215,7 @@ namespace APIGateWay.DomainLayer.Service
                         Status = "Active"
                     };
 
-                    _context.eMPLOYEEMASTERs.Add(employee);
+                    _context.EMPLOYEEMASTER.Add(employee);
                     await _context.SaveChangesAsync();
                     createdUserId = newUser.UserID;
                     

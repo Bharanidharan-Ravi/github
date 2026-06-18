@@ -280,7 +280,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                         TargetDate = ticketDto.TargetDate
                                     });
 
-                                var assigneeName = await _db.eMPLOYEEMASTERs
+                                var assigneeName = await _db.EMPLOYEEMASTER
                                     .Where(e => e.EmployeeID == resourceId)
                                     .Select(e => new { Name = e.EmployeeName ?? "Unknown" })
                                     .FirstOrDefaultAsync();
@@ -488,7 +488,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                         // ── Audit history — only for changed fields ───────────
                         var statusMap = await _db.StatusMasters.ToDictionaryAsync(s => s.Status_Id, s => s.Status_Name);
-                        var employeeMap = await _db.eMPLOYEEMASTERs.ToDictionaryAsync(e => e.EmployeeID, e => e.EmployeeName);
+                        var employeeMap = await _db.EMPLOYEEMASTER.ToDictionaryAsync(e => e.EmployeeID, e => e.EmployeeName);
 
                         foreach (var change in patcher.Changes)
                         {
@@ -653,7 +653,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             try
                             {
                                 var changedEmployeeIds = toDeactivate.Concat(newlyAddedIds).Distinct().ToList();
-                                var wsEmployeeMap = await _db.eMPLOYEEMASTERs
+                                var wsEmployeeMap = await _db.EMPLOYEEMASTER
                                     .Where(e => changedEmployeeIds.Contains(e.EmployeeID))
                                     .ToDictionaryAsync(e => e.EmployeeID, e => e.EmployeeName ?? "Unknown");
 
@@ -1038,7 +1038,7 @@ namespace APIGateWay.BusinessLayer.Repository
 //                                TargetDate = ticketDto.TargetDate
 //                            }
 //                        );
-//                        var assigneeName = await _db.eMPLOYEEMASTERs
+//                        var assigneeName = await _db.EMPLOYEEMASTER
 //                              .Where(e => e.EmployeeID == resourceId)
 //                              .Select(e => new { Name = e.EmployeeName ?? "Unknown" })
 //                              .FirstOrDefaultAsync();
@@ -1166,7 +1166,7 @@ namespace APIGateWay.BusinessLayer.Repository
 //                ws.IssueId == ticketId &&
 //                ws.StreamStatus != StatusId.Inactive &&
 //                ws.StreamStatus != StatusId.Cancelled)
-//                .Join(_db.eMPLOYEEMASTERs,
+//                .Join(_db.EMPLOYEEMASTER,
 //                ws => ws.ResourceId,
 //                e => e.EmployeeID,
 //                (ws, e) => new { ws.ResourceId, e.EmployeeName })
@@ -1502,7 +1502,7 @@ namespace APIGateWay.BusinessLayer.Repository
 //                    ws.IssueId == ticketId &&
 //                    ws.StreamStatus != StatusId.Inactive &&
 //                    ws.StreamStatus != StatusId.Cancelled)
-//                .Join(_db.eMPLOYEEMASTERs,
+//                .Join(_db.EMPLOYEEMASTER,
 //                    ws => ws.ResourceId,
 //                    e => e.EmployeeID,
 //                    (ws, e) => new { ws.ResourceId, e.EmployeeName })
