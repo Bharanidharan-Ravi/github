@@ -42,7 +42,7 @@ namespace APIGateWay.DomainLayer.Service
             }
 
             await _dBContext.SaveChangesAsync(); // Commit the changes to the database
-        } 
+        }
         public async Task SaveAttachmentsAsync(List<AttachmentMaster> attachments)
         {
             if (attachments != null && attachments.Any())
@@ -290,5 +290,18 @@ namespace APIGateWay.DomainLayer.Service
                 throw new Exception($"Failed to update a data for {typeof(TEntity).Name}. Detail: {actualError}", ex);
             }
         }
-    }
+
+        public async Task DeleteEntityAsync<TEntity>(TEntity entity) where TEntity : class
+        {
+            try
+            {
+                _dBContext.Set<TEntity>().Remove(entity);
+                await _dBContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                var actualError = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Failed to delete a data for {typeof(TEntity).Name}.Detail:{actualError}", ex);
+            }
+        }  } 
 }

@@ -54,5 +54,7 @@ namespace APIGateWay.DomainLayer.Interface
         Task UpdateEntityAsync<TEntity>(
         TEntity entity)
         where TEntity : class;
+
+        Task DeleteEntityAsync<TEntity>(TEntity entity) where TEntity : class;
     }
 }

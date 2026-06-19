@@ -42,30 +42,30 @@ namespace APIGateWay.ModalLayer.PostData
     {
         public Guid? Id { get; set; }
     }
-    public class MeetingAttendance 
-    {
-        [Key]
-        public int? attendance_id { get; set; }
-        public Guid hoster_id { get; set; }
+    //public class MeetingAttendance 
+    //{
+    //    [Key]
+    //    public int? attendance_id { get; set; }
+    //    public Guid hoster_id { get; set; }
        
-        public Guid meeting_id { get; set; }
+    //    public Guid meeting_id { get; set; }
 
-        public string? participant_type { get; set; }
+    //    public string? participant_type { get; set; }
 
-        public Guid participant_id { get; set; }
+    //    public Guid participant_id { get; set; }
 
-        public string? participant_role { get; set; }
+    //    public string? participant_role { get; set; }
 
-        public string? invite_status { get; set; }
+    //    public string? invite_status { get; set; }
 
-        public string? attendance_status { get; set; }
+    //    public string? attendance_status { get; set; }
 
-        public DateTime? response_date { get; set; }
+    //    public DateTime? response_date { get; set; }
 
-        public string? remark { get; set; }
+    //    public string? remark { get; set; }
 
-        public Guid? created_by { get; set; }
+    //    public Guid? created_by { get; set; }
 
-        public DateTime? created_at { get; set; }
-    }
+    //    public DateTime? created_at { get; set; }
+    //}
 }

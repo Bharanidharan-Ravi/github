@@ -15,11 +15,10 @@ namespace APIGateWay.DomainLayer.CommonSevice
         public GeneralMappingProfile()
         {
             CreateMap<ProjectDto, ProjectMaster>().ApplyDynamicIgnores();
-            CreateMap<PostMeetingDto, MeetingMaster>().ApplyDynamicIgnores();
             CreateMap<PostTicketDto, TicketMaster>().ApplyDynamicIgnores();
             CreateMap<PostThreadsDto, ThreadMaster>().ApplyDynamicIgnores();
             CreateMap<CreateLabelDto, LabelMaster>().ApplyDynamicIgnores();
-            CreateMap<PostingmeetingDto, MeetingMaster>().ApplyDynamicIgnores();
+            CreateMap<PostMeetingDto, MeetingMaster>().ApplyDynamicIgnores();
             CreateMap<CreateNotificationRequest, NotificationMaster>();
 
             CreateMap<NotificationAudienceDto, NotificationAudience>();

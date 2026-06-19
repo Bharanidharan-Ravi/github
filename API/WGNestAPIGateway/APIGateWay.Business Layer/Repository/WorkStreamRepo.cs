@@ -236,7 +236,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 if (isRoutingToOthers)
                 {
                     var assigneeIds = dto.NextAssignees.Select(a => a.Id).ToList();
-                    var employeeNameList = await _db.EMPLOYEEMASTER
+                    var employeeNameList = await _db.eMPLOYEEMASTERs
                         .Where(e => assigneeIds.Contains(e.EmployeeID))
                         .Select(e => new { e.EmployeeID, Name = e.EmployeeName ?? "Unknown" })
                         .ToListAsync();
@@ -276,7 +276,7 @@ namespace APIGateWay.BusinessLayer.Repository
         }
         private async Task<string> GetEmployeeNameAsync(Guid resourceId)
         {
-            var emp = await _db.EMPLOYEEMASTER
+            var emp = await _db.eMPLOYEEMASTERs
                 .Where(e => e.EmployeeID == resourceId)
                 .Select(e => new { Name = e.EmployeeName ?? "Unknown" })
                 .FirstOrDefaultAsync();

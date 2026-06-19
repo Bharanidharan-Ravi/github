@@ -78,6 +78,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 finalThreadData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
                     var threadMaster = _mapper.Map<ThreadMaster>(threadDto);
+                    threadMaster.Ref_Id = threadDto.Ref_Id;
 
                     issueRepoInfo = await _helperGet.GetIssueRepositoryInfoAsync(threadDto.Issue_Id);
                     if (issueRepoInfo != null)

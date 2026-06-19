@@ -1,8 +1,7 @@
 ﻿using APIGateWay.Business_Layer.Interface;
-using Microsoft.AspNetCore.Mvc;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.PostData;
-
+using Microsoft.AspNetCore.Mvc;
 
 namespace APIGateway.Controllers
 {
@@ -18,7 +17,7 @@ namespace APIGateway.Controllers
         [HttpPost("CreateMeeting")]
         public async Task<IActionResult> CreateMeeting([FromBody] PostMeetingDto meetingDto)
         {
-            
+
             var response = await _meetingRepo.CreateMeetingAsync(meetingDto);
             return Ok(ApiResponseHelper.Success(response, "Meeting Scheduled successfully."));
         }

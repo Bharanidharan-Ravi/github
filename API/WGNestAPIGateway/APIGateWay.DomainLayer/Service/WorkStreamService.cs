@@ -448,6 +448,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                      t =>
                                      {
                                          t.WorkStreamId = stream.StreamId;
+
                                          if (activeHandoffId.HasValue)
                                              t.HandsOffId = activeHandoffId.Value;
                                      });
@@ -580,7 +581,9 @@ namespace APIGateWay.BusinessLayer.Repository
                     From_Time = dto.From_Time,
                     To_Time = dto.To_Time,
                     Hours = dto.Hours,
-                };
+                    Ref_Id = dto.Ref_Id,
+                   
+    };
 
                 // ── ThreadMaster INSERT ───────────────────────────────────────
                 var timer = _stepContext.StartStep();
@@ -903,10 +906,237 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         // COMPUTE AND UPDATE TICKET STATUS
         // =====================================================================
+        // public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
+        //Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
+        // bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false, 
+        // bool TechnicalResponse = false, bool AdminResponse = false)
+        // {
+        //     var subtasks = await _db.WorkStreams
+        //         .Where(ws =>
+        //             ws.IssueId == issueId &&
+        //             ws.StreamStatus != StatusId.Inactive)
+        //         .Join(_db.StatusMasters,
+        //             ws => ws.StreamStatus ?? StatusId.New,
+        //             sm => sm.Status_Id,
+        //             (ws, sm) => new
+        //             {
+        //                 ws.StreamStatus,
+        //                 ws.CompletionPct,
+        //                 sm.Sort_Order,
+        //                 sm.Status_Name,
+        //                 IsCompleted = ws.StreamStatus.HasValue &&
+        //                               StatusId.CompletedStatuses.Contains(ws.StreamStatus.Value)
+        //             })
+        //         .ToListAsync();
+
+        //     if (!subtasks.Any() && forceTerminalStatusId == null)
+        //     {
+        //         var ticketForQueue = await _db.Set<TicketMaster>().FirstOrDefaultAsync(t => t.Issue_Id == issueId);
+        //         if (ticketForQueue !=null && ticketForQueue.Status == 19)
+        //         {
+        //             return new TicketStatusResult
+        //             {
+        //                 OldStatusId = ticketForQueue.Status,
+        //                 ComputedStatusId = 19,
+        //                 ComputedStatusName = "In Queue",
+        //                 OverallPct = (decimal)(ticketForQueue.CompletionPct ?? 0),
+        //                 TotalSubtasks = 0,
+        //                 CompletedSubtasks = 0,
+        //                 ActiveSubtasks = 0,
+        //                 TicketAutoCompleted = false,
+        //                 RepoId = ticketForQueue.RepoId,
+        //             };
+        //         }
+        //             return new TicketStatusResult
+        //         {
+        //             ComputedStatusId = StatusId.New,
+        //             ComputedStatusName = "New",
+        //             OverallPct = 0,
+        //             TotalSubtasks = 0,
+        //             CompletedSubtasks = 0,
+        //             ActiveSubtasks = 0,
+        //             TicketAutoCompleted = false,
+        //         };
+        //     }
+
+        //     var overallPct = subtasks.Any()
+        //         ? Math.Round(subtasks.Average(s => (double)(s.CompletionPct ?? 0)), 2)
+        //         : 0;
+
+        //     var totalSubtasks = subtasks.Count;
+        //     var completedSubtasks = subtasks.Count(s => s.IsCompleted);
+        //     var activeSubtasks = subtasks.Count(s => !s.IsCompleted);
+
+        //     int computedStatusId;
+        //     string computedStatusName;
+
+        //     bool isExplicitlyClosed = forceTerminalStatusId == StatusId.Closed || subtasks.Any(s => s.StreamStatus == StatusId.Closed);
+        //     bool isExplicitlyCancelled = forceTerminalStatusId == StatusId.Cancelled || subtasks.Any(s => s.StreamStatus == StatusId.Cancelled);
+
+        //     if (isExplicitlyClosed)
+        //     {
+        //         computedStatusId = StatusId.Closed;
+        //         computedStatusName = "Closed";
+        //         overallPct = 100;
+        //     }
+        //     else if (isExplicitlyCancelled)
+        //     {
+        //         computedStatusId = StatusId.Cancelled;
+        //         computedStatusName = "Cancelled";
+        //     }
+        //     else
+        //     {
+        //         if (overallPct > 90) overallPct = 90;
+
+        //         var mostAdvanced = subtasks
+        //             .Where(s => !s.IsCompleted)
+        //             .OrderByDescending(s => s.Sort_Order)
+        //             .FirstOrDefault();
+
+        //         if (mostAdvanced == null && subtasks.Any())
+        //             mostAdvanced = subtasks.OrderByDescending(s => s.Sort_Order).First();
+
+        //         computedStatusId = mostAdvanced?.StreamStatus ?? StatusId.New;
+        //         computedStatusName = mostAdvanced?.Status_Name ?? "New";
+        //     }
+
+        //     var ticket = await _db.Set<TicketMaster>().FirstOrDefaultAsync(t => t.Issue_Id == issueId);
+        //     // 👇 ADDED: CAPTURE THE OLD STATUS BEFORE IT CHANGES
+        //     int? oldTicketStatus = ticket?.Status;
+
+        //     // 🔥 NEW: TEAM-BASED REOPEN STATUS OVERRIDE 🔥
+        //     if (isReopenRequest && ticket != null)
+        //     {
+        //         // 1. Get the ticket owner's (Assignee's) Team ID
+        //         // (This uses your existing GetDepartmentNameAsync which returns the team int)
+        //         int? ownerTeamId = await GetDepartmentNameAsync(ticket.Assignee_Id);
+
+        //         // 2. Map the Status based on Team ID
+        //         if (ownerTeamId == 1) // Functional Team
+        //         {
+        //             computedStatusId = 11; // FunctionalSupport
+        //             computedStatusName = "Functional Support";
+        //         }
+        //         else // Technical (2) or Web (3)
+        //         {
+        //             computedStatusId = 5; // InDevelopment
+        //             computedStatusName = "In Development";
+        //         }
+
+        //         // Optional: Reset ticket progress to 0% when reopened
+        //         overallPct = 0;
+        //     }
+        //     bool isTerminal = computedStatusId == StatusId.Closed || computedStatusId == StatusId.Cancelled;
+        //     bool shouldReopen = isTerminal && activeSubtasks > 0;
+
+        //     if (ticket != null)
+        //     {
+        //         if (oldTicketStatus == 19)
+        //         {
+        //             computedStatusId = 19;
+        //             computedStatusName = "In Queue";
+        //         }
+        //         // ── TicketMaster UPDATE ───────────────────────────────────────
+        //         var timer = _stepContext.StartStep();
+        //         try
+        //         {
+        //             await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
+        //                 t => t.Issue_Id == issueId,
+        //                 t =>
+        //                 {
+        //                     t.Status = 19;
+        //                     t.CompletionPct = (decimal?)overallPct;
+        //                     t.StatusName = computedStatusName;
+        //                     if (isReopenRequest)
+        //                     {
+        //                         t.ReopenCount += 1;
+        //                         t.ReopenedBy = reopenedBy;
+        //                     }
+        //                     //if (isCloseRequested)
+        //                     //{
+        //                     //    t.IsCloseRequested = true;
+        //                     //}
+
+        //                     t.IsCloseRequested = isCloseRequested;
+        //                     t.PriorityRequest = PriorityRequest;
+        //                     t.FuncResponse = FuncResponse;
+        //                     t.WebResponse = WebResponse;
+        //                     t.TechnicalResponse = TechnicalResponse;
+        //                     t.AdminResponse = AdminResponse;
+
+        //                     // Clear the flag if the owner actually closes or cancels the ticket
+        //                     if (isExplicitlyClosed || isExplicitlyCancelled)
+        //                     {
+        //                         t.IsCloseRequested = false;
+        //                         t.PriorityRequest = false;
+        //                         t.FuncResponse = false;
+        //                         t.WebResponse = false;
+        //                         t.TechnicalResponse = false;
+        //                         t.AdminResponse = false;
+        //                     }
+        //                 });
+
+        //             _stepContext.Success("TicketMaster", "UPDATE(StatusCompute)",
+        //                 issueId.ToString(), timer);
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             _stepContext.Failure("TicketMaster", "UPDATE(StatusCompute)",
+        //                 ex.Message, ex.InnerException?.Message, timer);
+        //             throw;
+        //         }
+        //     }
+
+        //     if (shouldReopen) isTerminal = false;
+
+        //     string repoKey = string.Empty;
+        //     try
+        //     {
+        //         if (ticket?.RepoId != null)
+        //             repoKey = await _db.RepositoryMasters
+        //                 .Where(r => r.Repo_Id == ticket.RepoId)
+        //                 .Select(r => r.RepoKey)
+        //                 .FirstOrDefaultAsync() ?? string.Empty;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"[WorkStreamService] RepoKey lookup failed for {issueId}: {ex.Message}");
+        //     }
+
+        //     var broadcastPayload = isTerminal ? null : (object)new
+        //     {
+        //         Issue_Id = issueId,
+        //         Status = computedStatusId,
+        //         StatusName = computedStatusName,
+        //         OverallPct = overallPct,
+        //         TotalSubtasks = totalSubtasks,
+        //         CompletedSubtasks = completedSubtasks,
+        //         ActiveSubtasks = activeSubtasks,
+        //         AutoClosed = false,
+        //         UpdatedAt = DateTime.UtcNow,
+        //     };
+
+        //     return new TicketStatusResult
+        //     {
+        //         OldStatusId = oldTicketStatus, // 👇 ADDED: Attach the old status
+        //         ComputedStatusId = computedStatusId,
+        //         ComputedStatusName = computedStatusName,
+        //         OverallPct = (decimal)overallPct,
+        //         TotalSubtasks = totalSubtasks,
+        //         CompletedSubtasks = completedSubtasks,
+        //         ActiveSubtasks = activeSubtasks,
+        //         TicketAutoCompleted = false,
+        //         RepoKey = repoKey,
+        //         IsTerminal = isTerminal,
+        //         RepoId = ticket?.RepoId,
+        //         BroadcastPayload = broadcastPayload,
+        //     };
+        // }
+
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
-       Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
-        bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false, 
-        bool TechnicalResponse = false, bool AdminResponse = false)
+    Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
+    bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false,
+    bool TechnicalResponse = false, bool AdminResponse = false)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -926,8 +1156,31 @@ namespace APIGateWay.BusinessLayer.Repository
                     })
                 .ToListAsync();
 
+            var ticket = await _db.Set<TicketMaster>()
+                .FirstOrDefaultAsync(t => t.Issue_Id == issueId);
+
+            int? oldTicketStatus = ticket?.Status;
+
+            bool wasInQueue = oldTicketStatus == 18;  
+
             if (!subtasks.Any() && forceTerminalStatusId == null)
             {
+                if (ticket != null && ticket.Status == 18)
+                {
+                    return new TicketStatusResult
+                    {
+                        OldStatusId = ticket.Status,
+                        ComputedStatusId = 18,
+                        ComputedStatusName = "In Queue",
+                        OverallPct = (decimal)(ticket.CompletionPct ?? 0),
+                        TotalSubtasks = 0,
+                        CompletedSubtasks = 0,
+                        ActiveSubtasks = 0,
+                        TicketAutoCompleted = false,
+                        RepoId = ticket.RepoId,
+                    };
+                }
+
                 return new TicketStatusResult
                 {
                     ComputedStatusId = StatusId.New,
@@ -951,8 +1204,13 @@ namespace APIGateWay.BusinessLayer.Repository
             int computedStatusId;
             string computedStatusName;
 
-            bool isExplicitlyClosed = forceTerminalStatusId == StatusId.Closed || subtasks.Any(s => s.StreamStatus == StatusId.Closed);
-            bool isExplicitlyCancelled = forceTerminalStatusId == StatusId.Cancelled || subtasks.Any(s => s.StreamStatus == StatusId.Cancelled);
+            bool isExplicitlyClosed =
+                forceTerminalStatusId == StatusId.Closed ||
+                subtasks.Any(s => s.StreamStatus == StatusId.Closed);
+
+            bool isExplicitlyCancelled =
+                forceTerminalStatusId == StatusId.Cancelled ||
+                subtasks.Any(s => s.StreamStatus == StatusId.Cancelled);
 
             if (isExplicitlyClosed)
             {
@@ -981,39 +1239,37 @@ namespace APIGateWay.BusinessLayer.Repository
                 computedStatusName = mostAdvanced?.Status_Name ?? "New";
             }
 
-            var ticket = await _db.Set<TicketMaster>().FirstOrDefaultAsync(t => t.Issue_Id == issueId);
-            // 👇 ADDED: CAPTURE THE OLD STATUS BEFORE IT CHANGES
-            int? oldTicketStatus = ticket?.Status;
+            if (wasInQueue)
+            {
+                computedStatusId = 18;
+                computedStatusName = "In Queue";
+            }
 
-            // 🔥 NEW: TEAM-BASED REOPEN STATUS OVERRIDE 🔥
+            // reopen override
             if (isReopenRequest && ticket != null)
             {
-                // 1. Get the ticket owner's (Assignee's) Team ID
-                // (This uses your existing GetDepartmentNameAsync which returns the team int)
                 int? ownerTeamId = await GetDepartmentNameAsync(ticket.Assignee_Id);
 
-                // 2. Map the Status based on Team ID
-                if (ownerTeamId == 1) // Functional Team
+                if (ownerTeamId == 1)
                 {
-                    computedStatusId = 11; // FunctionalSupport
+                    computedStatusId = 11;
                     computedStatusName = "Functional Support";
                 }
-                else // Technical (2) or Web (3)
+                else
                 {
-                    computedStatusId = 5; // InDevelopment
+                    computedStatusId = 5;
                     computedStatusName = "In Development";
                 }
 
-                // Optional: Reset ticket progress to 0% when reopened
                 overallPct = 0;
             }
+
             bool isTerminal = computedStatusId == StatusId.Closed || computedStatusId == StatusId.Cancelled;
-            bool shouldReopen = isTerminal && activeSubtasks > 0;
 
             if (ticket != null)
             {
-                // ── TicketMaster UPDATE ───────────────────────────────────────
                 var timer = _stepContext.StartStep();
+
                 try
                 {
                     await _domainService.UpdateTrackedEntityAsync<TicketMaster>(
@@ -1021,17 +1277,14 @@ namespace APIGateWay.BusinessLayer.Repository
                         t =>
                         {
                             t.Status = computedStatusId;
-                            t.CompletionPct = (decimal?)overallPct;
                             t.StatusName = computedStatusName;
+                            t.CompletionPct = (decimal?)overallPct;
+
                             if (isReopenRequest)
                             {
                                 t.ReopenCount += 1;
                                 t.ReopenedBy = reopenedBy;
                             }
-                            //if (isCloseRequested)
-                            //{
-                            //    t.IsCloseRequested = true;
-                            //}
 
                             t.IsCloseRequested = isCloseRequested;
                             t.PriorityRequest = PriorityRequest;
@@ -1040,7 +1293,6 @@ namespace APIGateWay.BusinessLayer.Repository
                             t.TechnicalResponse = TechnicalResponse;
                             t.AdminResponse = AdminResponse;
 
-                            // Clear the flag if the owner actually closes or cancels the ticket
                             if (isExplicitlyClosed || isExplicitlyCancelled)
                             {
                                 t.IsCloseRequested = false;
@@ -1063,38 +1315,19 @@ namespace APIGateWay.BusinessLayer.Repository
                 }
             }
 
-            if (shouldReopen) isTerminal = false;
-
             string repoKey = string.Empty;
-            try
-            {
-                if (ticket?.RepoId != null)
-                    repoKey = await _db.RepositoryMasters
-                        .Where(r => r.Repo_Id == ticket.RepoId)
-                        .Select(r => r.RepoKey)
-                        .FirstOrDefaultAsync() ?? string.Empty;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[WorkStreamService] RepoKey lookup failed for {issueId}: {ex.Message}");
-            }
 
-            var broadcastPayload = isTerminal ? null : (object)new
+            if (ticket?.RepoId != null)
             {
-                Issue_Id = issueId,
-                Status = computedStatusId,
-                StatusName = computedStatusName,
-                OverallPct = overallPct,
-                TotalSubtasks = totalSubtasks,
-                CompletedSubtasks = completedSubtasks,
-                ActiveSubtasks = activeSubtasks,
-                AutoClosed = false,
-                UpdatedAt = DateTime.UtcNow,
-            };
+                repoKey = await _db.RepositoryMasters
+                    .Where(r => r.Repo_Id == ticket.RepoId)
+                    .Select(r => r.RepoKey)
+                    .FirstOrDefaultAsync() ?? string.Empty;
+            }
 
             return new TicketStatusResult
             {
-                OldStatusId = oldTicketStatus, // 👇 ADDED: Attach the old status
+                OldStatusId = oldTicketStatus,
                 ComputedStatusId = computedStatusId,
                 ComputedStatusName = computedStatusName,
                 OverallPct = (decimal)overallPct,
@@ -1105,7 +1338,18 @@ namespace APIGateWay.BusinessLayer.Repository
                 RepoKey = repoKey,
                 IsTerminal = isTerminal,
                 RepoId = ticket?.RepoId,
-                BroadcastPayload = broadcastPayload,
+                BroadcastPayload = isTerminal ? null : new
+                {
+                    Issue_Id = issueId,
+                    Status = computedStatusId,
+                    StatusName = computedStatusName,
+                    OverallPct = overallPct,
+                    TotalSubtasks = totalSubtasks,
+                    CompletedSubtasks = completedSubtasks,
+                    ActiveSubtasks = activeSubtasks,
+                    AutoClosed = false,
+                    UpdatedAt = DateTime.UtcNow,
+                }
             };
         }
 
@@ -1404,7 +1648,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
         public async Task<int?> GetDepartmentNameAsync(Guid? resourceId)
         {
-            var emp = await _db.EMPLOYEEMASTER
+            var emp = await _db.eMPLOYEEMASTERs
                 .Where(e => e.EmployeeID == resourceId)
                 .Select(e => new { e.Team })
                 .FirstOrDefaultAsync();

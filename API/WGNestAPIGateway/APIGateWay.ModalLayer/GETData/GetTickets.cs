@@ -34,6 +34,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? Due_Date { get; set; }
         public int? StatusId { get; set; }
         public string? Issue_Code { get; set; }
+        public string? Status { get; set; }
         public string? Hours { get; set; }
         public string? Labels_JSON { get; set; }
         public string? Attachment_JSON { get; set; }
@@ -50,6 +51,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Functional { get; set; }
         public string? Client { get; set; }
         public bool? RaiseToClient { get; set; }
+        public int? ThreadCount { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }
         //public List<GetAttachForIssues> Attachment_JSON { get; set; }
     }
@@ -91,6 +93,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? From_Time { get; set; }
         public DateTime? To_Time { get; set; }
         public string? Hours { get; set; }
+        public string? Ref_Id { get; set; }
         public int? team { get; set; }
         public bool? toClient { get; set; }
     }

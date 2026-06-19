@@ -5,7 +5,6 @@ using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.GETData;
-using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
 using System;
@@ -16,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Repository
 {
-    public class MeetingSchedulerRepo:IMeetingSchedulerRepo
+    public class MeetingSchedulerRepo : IMeetingSchedulerRepo
     {
         private readonly IDomainService _domainService;
         private readonly APIGateWayCommonService _commonService;
@@ -232,7 +231,7 @@ namespace APIGateWay.Business_Layer.Repository
 
                         existingMeeting.updated_by = _loginContext.userId;
                         existingMeeting.updated_at = DateTime.UtcNow;
-                            existingMeeting.days_of_week = meetingDto.Days_Of_Week;
+                        existingMeeting.days_of_week = meetingDto.Days_Of_Week;
 
                         _db.MeetingMaster.Update(existingMeeting);
                         await _db.SaveChangesAsync();

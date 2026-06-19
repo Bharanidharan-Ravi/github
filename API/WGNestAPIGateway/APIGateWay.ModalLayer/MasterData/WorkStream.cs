@@ -121,6 +121,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public string BlockSummary { get; set; }
         public bool IsTerminal { get; set; }
         public string RepoKey { get; set; }
+        public string Ref_Id { get; set; }
         public Guid? RepoId { get; set; }
         public Guid IssueId { get; set; }
         public decimal? CompletionPct { get; set; }

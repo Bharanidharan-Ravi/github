@@ -23,6 +23,7 @@ namespace APIGateWay.ModalLayer.PostData
         public int? StreamStatus { get; set; }
         public string? HtmlDesc { get; set; }
         public TempReturn? temp { get; set; }
+        public string? Ref_Id { get; set; }
     }
 
     public class UpdateThreadDto

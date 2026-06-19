@@ -28,6 +28,7 @@ namespace APIGateWay.ModalLayer.MasterData
         [IgnoreMapping] // Handled strictly by ProcessAndCopyAttachmentsAsync()
         public string? HtmlDesc { get; set; }
         public string? CommentText { get; set; }
+        public string? Ref_Id { get; set; }
         public string? Hours { get; set; }
         public decimal? CompletionPct { get; set; }
         public DateTime? From_Time { get; set; }

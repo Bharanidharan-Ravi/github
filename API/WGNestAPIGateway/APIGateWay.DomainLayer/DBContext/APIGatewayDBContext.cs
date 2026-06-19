@@ -65,7 +65,7 @@ namespace APIGateWay.DomainLayer.DBContext
         //public DbSet<LOGIN_MASTER> lOGIN_MASTER { get; set; }
         public DbSet<GetUserModel> getUserModels { get; set; }
         public DbSet<LOGIN_MASTER> LOGIN_MASTER { get; set; }
-        public DbSet<EMPLOYEEMASTER> EMPLOYEEMASTER { get; set; }
+        public DbSet<EMPLOYEEMASTER> eMPLOYEEMASTERs { get; set; }
         public DbSet<ClientMaster> clientMasters { get; set; }
         public DbSet<GetUserforValidate> getUserforValidates { get; set; }
         public DbSet<CLIENTSMAILIDS> cLIENTSMAILIDs { get; set; }
@@ -106,18 +106,15 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
         public DbSet<MeetingAttendance> meeting_attendance { get; set; }
         public DbSet<MeetingMaster> MeetingMaster { get; set; }
-        public DbSet<GetMeeting> getMeetings { get; set; }
-        public DbSet<GetUpcomingMeeting> getUpcomingMeetings { get; set; }
-
-   
+        public DbSet<GetMeetingDto> getMeetings { get; set; }
         public DbSet<BannerMessageMaster> BannerMessageMaster { get; set; }
         public DbSet<GetBannerMessageSP> GetBannerMessageSP { get; set; }
         public DbSet<BannerMessageType> BannerMessageType { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<ChatMessage> ChatMessage { get; set; }
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
-
         public DbSet<ChatRoom> ChatRoom { get; set; }
+        public DbSet<Emoji_Reactions> Emoji_Reactions { get; set; }
         #region SaveChanges Override (Audit)
 
         public override Task<int> SaveChangesAsync(
@@ -218,6 +215,7 @@ namespace APIGateWay.DomainLayer.DBContext
             // Tell EF Core that Issue_Id AND Label_Id together make the Primary Key
             modelBuilder.Entity<IssueLabel>()
                 .HasKey(il => new { il.Issue_Id, il.Label_Id });
+            modelBuilder.Entity<GetMeetingDto>().HasNoKey();
             //modelBuilder.Entity<LOGIN_MASTER>()
             //    .Property(e => e.UserID)
             //    .HasConversion<string>();

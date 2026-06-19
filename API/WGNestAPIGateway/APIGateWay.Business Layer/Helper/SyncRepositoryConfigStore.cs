@@ -203,25 +203,25 @@ namespace APIGateWay.BusinessLayer.Helper
             ["MeetingData"] = new SyncRepositoryConfig
             {
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "GetMeetingByID",
-                EntityType = typeof(GetMeeting),
+                StoredProcedure = "sp_GetMeetings",
+                EntityType = typeof(GetMeetingDto),
                 SourceName = "SyncExecutionService",
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "repoId",
                 DeltaEnabled = true
             },
-               ["UpcomingMeeting"] = new SyncRepositoryConfig
-               {
-                   SourceType = SyncSourceType.Local,
-                   StoredProcedure = "Sp_GetAllUpcomingMeetings",
-                   EntityType = typeof(GetUpcomingMeeting),
-                   SourceName = "SyncExecutionService",
-                   Type = "array",
-                   Strategy = "merge",
-                 IdKey = "repoId",
-                   DeltaEnabled = true
-               },
+               //["UpcomingMeeting"] = new SyncRepositoryConfig
+               //{
+               //    SourceType = SyncSourceType.Local,
+               //    StoredProcedure = "Sp_GetAllUpcomingMeetings",
+               //    EntityType = typeof(GetUpcomingMeeting),
+               //    SourceName = "SyncExecutionService",
+               //    Type = "array",
+               //    Strategy = "merge",
+               //  IdKey = "repoId",
+               //    DeltaEnabled = true
+               //},
             
             ["BannerData"]= new SyncRepositoryConfig
             {
@@ -245,6 +245,18 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "repoId",
                 DeltaEnabled = true
             },
+            ["Emoji_Reactions"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetEmoji",
+                EntityType = typeof(Emoji_Reactions),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+            
 
         };
     }

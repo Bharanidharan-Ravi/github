@@ -1,4 +1,4 @@
-﻿using APIGateWay.ModalLayer.GETData;
+﻿using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Collections.Generic;
@@ -6,11 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace APIGateWay.Business_Layer.Interface
 {
-    public interface IMeetingRepo
+    public interface IEmojiReactionRepo
     {
-        Task<GetMeeting> CreateMeetingAsync(PostingmeetingDto dto);
+        Task<Emoji_Reactions> CreateAsync(PostEmoji dto);
+        Task DeleteAsync(int id);
     }
 }
