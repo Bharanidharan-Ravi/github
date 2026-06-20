@@ -47,7 +47,7 @@ namespace APIGateWay.Business_Layer.Session
                 .Where(x => x.UserId == userId).Select(x => (DateTime?)x.LastSeenAt).FirstOrDefaultAsync() ?? DateTime.MinValue;
 
             var role = _loginContext.role;
-            IQueryable<NotificationMaster> query;
+            IQueryable<Guid> query;
 
             if (role == 3) // Client Logic
             {
@@ -55,7 +55,7 @@ namespace APIGateWay.Business_Layer.Session
                         join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
                         where a.AudienceType == "REPOSITORY" && repoIds.Contains(a.AudienceValue)
                            && n.CreatedAt > lastSeenDate && n.ActorId != userId
-                        select n;
+                        select n.NotificationId;
             }
             else // Admin/Employee Logic (ONLY see if assigned)
             {
@@ -63,9 +63,9 @@ namespace APIGateWay.Business_Layer.Session
                         join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
                         where a.AudienceType == "USER" && a.AudienceValue == userId.ToString()
                            && n.CreatedAt > lastSeenDate && n.ActorId != userId
-                        select n;
+                        select n.NotificationId;
             }
-
+            
             return await query.Distinct().CountAsync();
         }
 
@@ -106,7 +106,46 @@ namespace APIGateWay.Business_Layer.Session
                 }).ToListAsync();
         }
 
-        public async Task EnsureUserStateAsync(Guid userId) { /* Keep exact same code as before */ }
-        public async Task MarkSeenAsync(Guid userId) { /* Keep exact same code as before */ }
+        public async Task EnsureUserStateAsync(Guid userId)
+        {
+            // 1. Check if the user already has a row in the table
+            var exists = await _domainService.Query<NotificationUserState>()
+                .AnyAsync(x => x.UserId == userId);
+
+            // 2. If not, create it. 
+            if (!exists)
+            {
+                var newState = new NotificationUserState
+                {
+                    UserId = userId
+                    // Note: We don't need to manually set LastSeenAt here because 
+                    // your SaveChangesAsync override intercepts EntityState.Added 
+                    // and applies the correct indiaTime automatically!
+                };
+
+                await _domainService.SaveEntityAsync(newState);
+            }
+        }
+
+        public async Task MarkSeenAsync(Guid userId)
+        {
+            // 1. Check if the record exists first to avoid DataNotFoundException
+            var exists = await _domainService.Query<NotificationUserState>()
+                .AnyAsync(x => x.UserId == userId);
+
+            if (exists)
+            {
+                // 2. Use your domain service's mutator method to update just the date
+                await _domainService.UpdateTrackedEntityAsync<NotificationUserState>(
+                    x => x.UserId == userId,
+                    state => state.LastSeenAt = DateTime.UtcNow // Forces EF Core to mark as Modified
+                );
+            }
+            else
+            {
+                // 3. Fallback: Create it if it doesn't exist
+                await EnsureUserStateAsync(userId);
+            }
+        }
     }
 }
