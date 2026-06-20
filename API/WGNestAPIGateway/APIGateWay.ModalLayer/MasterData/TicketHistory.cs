@@ -5,11 +5,12 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static APIGateWay.ModalLayer.Helper.PostHelper;
 
 namespace APIGateWay.ModalLayer.MasterData
 {
     [Table("TicketHistory")]
-    public class TicketHistory
+    public class TicketHistory : IHasCreatedAt
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -53,7 +54,7 @@ namespace APIGateWay.ModalLayer.MasterData
 
         public string? MetaJson { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
 
