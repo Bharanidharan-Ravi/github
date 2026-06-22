@@ -87,6 +87,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? CreatedBy { get; set; }
         public decimal? CompletionPct { get; set; }
         public string? CoContributors_JSON { get; set; }
+        public string? Reactions_JSON { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
