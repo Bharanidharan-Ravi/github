@@ -115,6 +115,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
         public DbSet<ChatRoom> ChatRoom { get; set; }
         public DbSet<Emoji_Reactions> Emoji_Reactions { get; set; }
+        public DbSet<GetStaleTicketsForAssignee> GetStaleTicketsForAssignee { get; set; }
         #region SaveChanges Override (Audit)
 
         public override Task<int> SaveChangesAsync(

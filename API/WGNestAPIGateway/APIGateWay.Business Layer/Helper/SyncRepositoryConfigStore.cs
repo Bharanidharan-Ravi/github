@@ -256,10 +256,18 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "repoId",
                 DeltaEnabled = true
             },
-            
-
+           
+            ["GetStaleTicketsForAssignee"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetStaleTicketsForAssignee",
+                EntityType = typeof(GetStaleTicketsForAssignee),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
         };
     }
-
-
 }
