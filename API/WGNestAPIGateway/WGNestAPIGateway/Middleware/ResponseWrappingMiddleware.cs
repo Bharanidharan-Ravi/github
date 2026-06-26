@@ -30,8 +30,9 @@ namespace APIGateWay.Middelware
 
             using var memoryStream = new MemoryStream();
             context.Response.Body = memoryStream;
-
-            await _next(context);
+            try
+            {
+                await _next(context);
 
             memoryStream.Seek(0, SeekOrigin.Begin);
             var responseBody = await new StreamReader(memoryStream).ReadToEndAsync();
@@ -128,6 +129,14 @@ namespace APIGateWay.Middelware
 
             // For error responses or other content types, write original response body back
             await context.Response.WriteAsync(responseBody);
+            }
+            catch
+            {
+                // If an exception happens, ensure the original stream is restored 
+                // so the global exception handler can write the proper 500 error page.
+                context.Response.Body = originalBodyStream;
+                throw;
+            }
         }
     }
 }

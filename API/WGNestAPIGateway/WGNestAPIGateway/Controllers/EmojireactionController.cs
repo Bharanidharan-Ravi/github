@@ -36,7 +36,7 @@ namespace APIGateway.Controllers
         public async Task<IActionResult>Delete(int id)
         {
             await _reactionRepo.DeleteAsync(id);
-            return NoContent();
+            return Ok();
         }
     }
 }

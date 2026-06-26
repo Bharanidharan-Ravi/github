@@ -8,7 +8,8 @@ namespace APIGateWay.ModalLayer.PostData
 {
     public class PostEmoji
     {
-        public int? ThreadId {  get; set; }
-        public string? Emoji {  get; set; }
+        public long ThreadId {  get; set; }
+        public string Emoji {  get; set; }
+        public Guid IssueId {  get; set; }
     }
 }
