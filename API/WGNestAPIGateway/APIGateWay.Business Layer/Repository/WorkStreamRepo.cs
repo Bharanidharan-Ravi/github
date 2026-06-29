@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -91,15 +90,13 @@ namespace APIGateWay.BusinessLayer.Repository
             bool notifyClient = dto.toClient ?? false;
             // ── Step 2: thread broadcast (only when a new thread was created) ──
             // UseLastThread=true or pure % update → no new thread → skip
-            var action = "Create";
             if (response.ThreadCreated && response.ThreadId.HasValue)
             {
                 await BroadcastThreadCreatedAsync(
                     issueId: dto.IssueId,
                     threadId: response.ThreadId.Value,
                     repoId: response.RepoId,
-                    notifyClient,
-                    action
+                    notifyClient
                 );
             }
 
@@ -304,12 +301,11 @@ namespace APIGateWay.BusinessLayer.Repository
         // ThreadRepo.CreateThreadAsync pattern.
         // Broadcasts ThreadsList → Create so all clients see the new comment.
         // =====================================================================
-        public async Task BroadcastThreadCreatedAsync(
+        private async Task BroadcastThreadCreatedAsync(
             Guid issueId,
             long threadId,
             Guid? repoId,
-            bool notifyClient,
-            string? action)
+            bool notifyClient)
         {
             if (string.IsNullOrEmpty(repoId.ToString())) return;
 
@@ -367,7 +363,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
                 {
                     Entity = "ThreadsList",
-                    Action = action,
+                    Action = "Create",
                     Payload = freshThread,     // rich SP data with all joined fields
                     KeyField = "ThreadId",
                     IssueId = issueId,
