@@ -270,27 +270,25 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
 
-        public async Task UpdateEntityAsync<TEntity>(
-            TEntity entity)
-            where TEntity : class
+        public async Task UpdateEntitiesAsync<TEntity>(
+     IEnumerable<TEntity> entities)
+     where TEntity : class
         {
             try
             {
-                _dBContext
-                    .Entry(entity)
-                    .State =
-                        EntityState.Modified;
+                _dBContext.UpdateRange(entities);
 
-                await _dBContext
-                    .SaveChangesAsync();
+                await _dBContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
                 var actualError = ex.InnerException?.Message ?? ex.Message;
-                throw new Exception($"Failed to update a data for {typeof(TEntity).Name}. Detail: {actualError}", ex);
+
+                throw new Exception(
+                    $"Failed to update {typeof(TEntity).Name}. Detail: {actualError}",
+                    ex);
             }
         }
-
         public async Task DeleteEntityAsync<TEntity>(TEntity entity) where TEntity : class
         {
             try

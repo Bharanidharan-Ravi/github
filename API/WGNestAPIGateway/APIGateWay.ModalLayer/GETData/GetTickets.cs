@@ -88,6 +88,7 @@ namespace APIGateWay.ModalLayer.GETData
         public decimal? CompletionPct { get; set; }
         public string? CoContributors_JSON { get; set; }
         public string? Reactions_JSON { get; set; }
+        public string? MeetingDetails_JSON { get; set; }
         public DateTime? CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -95,6 +96,8 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? To_Time { get; set; }
         public string? Hours { get; set; }
         public string? Ref_Id { get; set; }
+        public string? ThreadType { get; set; }
+        public Guid? MeetingId { get; set; }
         public int? team { get; set; }
         public bool? toClient { get; set; }
     }

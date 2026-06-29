@@ -4,6 +4,7 @@ using APIGateWay.Business_Layer.Session;
 using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Helper;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -64,18 +65,27 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                 if (richData == null)
                     return default;
 
-                var audienceId = ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AudienceField);
-                var assigneeId = ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AssigneeField);
-                var resourceIdsObj = ReflectionHelper.GetPropertyValue<object>(richData, request.ResourceIdsField);
-
-
                 var contextValues = GetContextValues();
                 var actorId = Guid.Parse(contextValues["UserId"]);
                 var actorName = contextValues["UserName"];
 
-                var title = ReflectionHelper.GetPropertyValue<string>(richData, request.TitleField);
-                var code = ReflectionHelper.GetPropertyValue<string>(richData, request.CodeField);
-                
+                // Inside EventCenter.PublishAsync
+                var audienceId = string.IsNullOrEmpty(request.AudienceField) ? null :
+                    ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AudienceField);
+
+                var assigneeId = string.IsNullOrEmpty(request.AssigneeField) ? null :
+                    ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AssigneeField);
+
+                var resourceIdsObj = string.IsNullOrEmpty(request.ResourceIdsField) ? null :
+                    ReflectionHelper.GetPropertyValue<object>(richData, request.ResourceIdsField);
+                var titleObj = string.IsNullOrEmpty(request.TitleField) ? null :
+    ReflectionHelper.GetPropertyValue<object>(richData, request.TitleField);
+                var title = titleObj?.ToString();
+
+                var codeObj = string.IsNullOrEmpty(request.CodeField) ? null :
+                    ReflectionHelper.GetPropertyValue<object>(richData, request.CodeField);
+                var code = codeObj?.ToString();
+
 
                 // 2. BROADCAST LIVE TICKET UPDATE TO EVERYONE IN REPO (Keeps UI fast/sync'd for everyone)
                 if (signalR)
@@ -83,10 +93,13 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                     await _realtimeNotifier.BroadcastAsync(
                         new RealtimeMessage
                         {
-                            Entity = cfg.SignalREntity,
-                            Action = cfg.SignalRAction,
+                            Entity = !string.IsNullOrEmpty(cfg.SignalREntity) ? cfg.SignalREntity : request.ConfigKey, // "ThreadsList"
+                            Action = !string.IsNullOrEmpty(cfg.SignalRAction) ? cfg.SignalRAction : request.EventType, // "Create"
+
                             Payload = richData,
-                            KeyField = request.KeyField,
+
+                            // 🌟 FIX 2: Send MatchField ("ThreadId") to UI so it knows how to update the array
+                            KeyField = request.MatchField,
                             RepoKey = (audienceId.HasValue && request.NotifyRepo) ? $"repo-{audienceId}" : null,
                             Timestamp = DateTime.UtcNow
                         });
@@ -221,24 +234,60 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
         private async Task<object?> FetchRichDataAsync(EventRequest request)
         {
             var syncParams = BuildSyncParams(request);
+
+            // 🌟 FIX 2: Override the matching logic for Threads
+            // We pass IssueId to the SP, but we MUST filter the results by ThreadId.
+            string matchField = request.MatchField;
+            string matchValue = request.EntityId;
+
+            if (request.ConfigKey == "ThreadsList" && request.ThreadId.HasValue)
+            {
+                matchField = "ThreadId";
+                matchValue = request.ThreadId.Value.ToString();
+            }
+
             var method = typeof(ServiceHelper).GetMethod(nameof(ServiceHelper.FetchRichDataAsync));
             var genericMethod = method!.MakeGenericMethod(request.ResponseType);
             var fallback = Activator.CreateInstance(request.ResponseType);
-            var predicate = EventExpressionHelper.CreatePredicate(request.ResponseType, request.MatchField, request.EntityId);
+
+            // This will now correctly match ThreadId == threadId
+            var predicate = EventExpressionHelper.CreatePredicate(request.ResponseType, matchField, matchValue);
 
             var task = (Task)genericMethod.Invoke(null, new object[]
             {
-                _syncExecutionService,
-                request.ConfigKey,
-                syncParams,
-                predicate,
-                fallback,
-                null
+        _syncExecutionService,
+        request.ConfigKey,
+        syncParams,
+        predicate,
+        fallback,
+        null
             })!;
 
             await task;
             var resultProperty = task.GetType().GetProperty("Result");
             return resultProperty?.GetValue(task);
         }
+        //private async Task<object?> FetchRichDataAsync(EventRequest request)
+        //{
+        //    var syncParams = BuildSyncParams(request);
+        //    var method = typeof(ServiceHelper).GetMethod(nameof(ServiceHelper.FetchRichDataAsync));
+        //    var genericMethod = method!.MakeGenericMethod(request.ResponseType);
+        //    var fallback = Activator.CreateInstance(request.ResponseType);
+        //    var predicate = EventExpressionHelper.CreatePredicate(request.ResponseType, request.MatchField, request.EntityId);
+
+        //    var task = (Task)genericMethod.Invoke(null, new object[]
+        //    {
+        //        _syncExecutionService,
+        //        request.ConfigKey,
+        //        syncParams,
+        //        predicate,
+        //        fallback,
+        //        null
+        //    })!;
+
+        //    await task;
+        //    var resultProperty = task.GetType().GetProperty("Result");
+        //    return resultProperty?.GetValue(task);
+        //}
     }
 }

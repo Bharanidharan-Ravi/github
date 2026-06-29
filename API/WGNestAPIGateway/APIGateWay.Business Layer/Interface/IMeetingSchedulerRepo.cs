@@ -1,4 +1,5 @@
-﻿using APIGateWay.ModalLayer.GETData;
+﻿using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Collections.Generic;
@@ -12,5 +13,6 @@ namespace APIGateWay.Business_Layer.Interface
     {
         Task<GetMeetingDto> CreateMeetingAsync(PostMeetingDto meetingDto);
         Task<GetMeetingDto> UpdateMeetingAsync(PutMeetingDto meetingDto);
+        Task CompleteMeetingAsync(MeetingCompletionDto dto, Guid userId);
     }
 }

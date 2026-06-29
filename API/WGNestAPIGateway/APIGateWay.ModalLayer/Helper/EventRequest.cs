@@ -32,6 +32,7 @@ namespace APIGateWay.ModalLayer.Helper
 
         public Type ResponseType { get; set; }
         public string? AssigneeField { get; set; }
+        public long? ThreadId { get; set; }
         public string? ResourceIdsField { get; set; }
 
         public Dictionary<string, string> ContextMappings { get; set; }

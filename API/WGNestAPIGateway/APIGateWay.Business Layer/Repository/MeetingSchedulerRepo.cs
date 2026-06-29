@@ -1,12 +1,16 @@
-﻿using APIGateWay.Business_Layer.Helper.Events.Interface;
+﻿using APIGateWay.Business_Layer.Helper.Events.EventFactory;
+using APIGateWay.Business_Layer.Helper.Events.Interface;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.PostData;
 using AutoMapper;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +55,9 @@ namespace APIGateWay.Business_Layer.Repository
 
         public async Task<GetMeetingDto> CreateMeetingAsync(PostMeetingDto meetingDto)
         {
-            GetMeetingDto finalMeetingData = null;
+            GetMeetingDto? finalMeetingData = null;
+            MeetingMaster? meetingMasterForThread = null;
+            var attendeesForThread = new List<MeetingAttendance>();
 
             try
             {
@@ -65,6 +71,7 @@ namespace APIGateWay.Business_Layer.Repository
                     meetingMaster.status = "Scheduled"; // Default starting status
                     meetingMaster.created_by = _loginContext.userId;
                     meetingMaster.created_at = DateTime.UtcNow;
+                    meetingMasterForThread = meetingMaster;
                     // ── Step 1: Insert MeetingMaster ───────────────────────────
                     {
                         var timer = _stepContext.StartStep();
@@ -158,30 +165,7 @@ namespace APIGateWay.Business_Layer.Repository
                             throw;
                         }
                     }
-
-                    // ── Step 3: MeetingHistory (Created Event) ─────────────────
-                    //{
-                    //    var timer = _stepContext.StartStep();
-                    //    try
-                    //    {
-                    //        // Utilizing your history repository to log the creation
-                    //        await _historyRepository.LogAsync(MeetingHistoryHelper.MeetingCreated(
-                    //            meetingId: meetingMaster.meeting_id,
-                    //            title: meetingMaster.title,
-                    //            actorId: _loginContext.userId,
-                    //            actorName: _loginContext.userName));
-
-                    //        _stepContext.Success("MeetingHistory", "INSERT",
-                    //            meetingMaster.meeting_id.ToString(), timer);
-                    //    }
-                    //    catch (Exception ex)
-                    //    {
-                    //        _stepContext.Failure("MeetingHistory", "INSERT",
-                    //            ex.Message, ex.InnerException?.Message, timer);
-                    //        throw;
-                    //    }
-                    //}
-
+                    attendeesForThread = attendees;
                     // Map the finalized entity back to a GET DTO
                     return _mapper.Map<GetMeetingDto>(meetingMaster);
                 });
@@ -192,13 +176,32 @@ namespace APIGateWay.Business_Layer.Repository
                 throw new Exception($"Meeting creation failed. Everything was rolled back safely. {ex.Message}", ex);
             }
 
+            if (finalMeetingData.Ticket_Id.HasValue && meetingMasterForThread != null)
+            {
+                var threadId =
+                    await _workStreamService.PostMeetingScheduledAsync(
+                        meetingMasterForThread,
+                        attendeesForThread,
+                        _loginContext.userId);
+
+                await _domainService.UpdateTrackedEntityAsync<MeetingMaster>(
+                    x => x.meeting_id == meetingMasterForThread.meeting_id,
+                    x => x.ThreadId = threadId);
+
+                meetingMasterForThread.ThreadId = threadId;
+                finalMeetingData.ThreadId = threadId;
+
+                await _eventCenter.PublishAsync<ThreadList>(
+                    TicketFactory.ThreadCreated(
+                        finalMeetingData.Ticket_Id.Value, threadId));
+            }
             // ── Step 4: Publish Event (Fires only if transaction succeeds) ───
-            return _mapper.Map<GetMeetingDto>(finalMeetingData);
+            return finalMeetingData;
         }
 
         public async Task<GetMeetingDto> UpdateMeetingAsync(PutMeetingDto meetingDto)
         {
-            GetMeetingDto finalMeetingData = null;
+            GetMeetingDto? finalMeetingData = null;
 
             try
             {
@@ -317,7 +320,124 @@ namespace APIGateWay.Business_Layer.Repository
                 throw new Exception($"Meeting update failed. Everything was rolled back safely. {ex.Message}", ex);
             }
 
+            var updatedMeeting = await _db.MeetingMaster
+                .FirstOrDefaultAsync(m => m.meeting_id == meetingDto.Meeting_Id);
+
+            if (updatedMeeting?.ticket_id.HasValue == true && updatedMeeting.ThreadId.HasValue)
+            {
+                var attendance = await _db.meeting_attendance
+                    .Where(x => x.meeting_id == updatedMeeting.meeting_id)
+                    .ToListAsync();
+
+                await _workStreamService.UpdateMeetingThreadAsync(
+                    updatedMeeting,
+                    attendance,
+                    _loginContext.userId);
+
+                await _eventCenter.PublishAsync<ThreadList>(
+                TicketFactory.ThreadUpdated(
+                    updatedMeeting.ticket_id.Value,
+                    updatedMeeting.ThreadId.Value));
+            }
+
             return finalMeetingData;
+        }
+
+        public async Task CompleteMeetingAsync(
+     MeetingCompletionDto dto,
+     Guid userId)
+        {
+            var parameters = new[]
+            {
+        new SqlParameter("@MeetingId", dto.MeetingId),
+        new SqlParameter("@ActualStartTime", dto.ActualStartTime),
+        new SqlParameter("@ActualEndTime", dto.ActualEndTime),
+        new SqlParameter("@MeetingSummary", dto.MeetingSummary ?? string.Empty),
+        new SqlParameter("@CompletedBy", userId)
+    };
+
+            // Complete Meeting
+            await _commonService.ExecuteNonModalAsync(
+                "SP_MeetingComplete",
+                parameters);
+
+            // Update Attendance
+            await UpdateAttendanceAsync(dto);
+
+            // Read Meeting
+            var meeting = await _domainService
+                .Query<MeetingMaster>()
+                .FirstOrDefaultAsync(x => x.meeting_id == dto.MeetingId);
+
+            if (meeting == null)
+                return;
+
+            // Update WorkStream Thread
+            if (meeting.ticket_id.HasValue && meeting.ThreadId.HasValue)
+            {
+                await UpdateMeetingCompletionThreadAsync(
+                    meeting,
+                    dto,
+                    userId);
+            }
+
+            // Refresh Meeting
+            await _eventCenter.PublishAsync<GetMeetingDto>(
+                TicketFactory.MeetingCompleted(
+                    meeting.meeting_id,
+                    dto.MeetingSummary ?? string.Empty,
+                    true,
+                    true));
+        }
+
+        private async Task UpdateAttendanceAsync(
+    MeetingCompletionDto dto)
+        {
+            if (dto.Attendance == null || !dto.Attendance.Any())
+                return;
+
+            var participantIds = dto.Attendance
+                .Select(x => x.ParticipantId)
+                .ToList();
+
+            var attendanceList = await _domainService
+                .Query<MeetingAttendance>()
+                .Where(x =>
+                    x.meeting_id == dto.MeetingId &&
+                    participantIds.Contains(x.participant_id))
+                .ToListAsync();
+
+            foreach (var attendance in attendanceList)
+            {
+                var dtoAttendance = dto.Attendance.First(x =>
+                    x.ParticipantId == attendance.participant_id);
+
+                attendance.attendance_status = dtoAttendance.AttendanceStatus;
+                attendance.invite_status = dtoAttendance.InviteStatus;
+                attendance.response_date = DateTime.Now;
+                attendance.remark = dtoAttendance.Remark;
+            }
+
+            await _domainService.UpdateEntitiesAsync(attendanceList);
+        }
+        private async Task UpdateMeetingCompletionThreadAsync(
+    MeetingMaster meeting,
+    MeetingCompletionDto dto,
+    Guid userId)
+        {
+            if (!meeting.ticket_id.HasValue)
+                return;
+
+            await _workStreamService.UpdateMeetingCompletionThreadAsync(
+                meeting,
+                dto,
+                userId);
+
+            await _eventCenter.PublishAsync<ThreadList>(
+        TicketFactory.ThreadUpdated(
+            meeting.ticket_id.Value,
+            meeting.ThreadId.Value));
+
         }
     }
 }

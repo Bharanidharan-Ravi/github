@@ -1,4 +1,5 @@
-﻿using APIGateWay.ModalLayer.MasterData;
+﻿using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,9 @@ namespace APIGateWay.DomainLayer.Interface
 
         Task ClearWorkStreamsAsync(Guid issueId);
         Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds);
+        Task<long> PostMeetingScheduledAsync(MeetingMaster meeting, List<MeetingAttendance> attendance, Guid createdBy);
+        Task UpdateMeetingThreadAsync(MeetingMaster meeting, List<MeetingAttendance> attendance, Guid updatedBy);
+        Task UpdateMeetingCompletionThreadAsync(MeetingMaster meeting, MeetingCompletionDto dto, Guid completedBy);
     }
 }
 

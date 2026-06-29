@@ -29,6 +29,8 @@ public class MeetingMaster
 
     public Guid? ticket_id { get; set; }
 
+    public long? ThreadId { get; set; }
+
     public Guid? project_id { get; set; }
 
     public DateTime? valid_from_date { get; set; }

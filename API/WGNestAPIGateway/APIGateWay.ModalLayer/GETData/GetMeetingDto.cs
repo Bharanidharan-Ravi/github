@@ -15,6 +15,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Host_Name { get; set; }
         public string? Ticket_Title { get; set; }
         public Guid? Ticket_Id { get; set; }
+        public long? ThreadId { get; set; }
         public Guid Host_Id { get; set; }
         public string? Booking_Type { get; set; }
         public Guid? Project_Id { get; set; }

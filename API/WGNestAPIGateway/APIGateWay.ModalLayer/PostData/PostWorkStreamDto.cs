@@ -48,6 +48,8 @@ namespace APIGateWay.ModalLayer.PostData
         public int? handsoffId { get; set; }
         public bool AssignOnly { get; set; } = false;
         public string? Ref_Id { get; set; }
+        public string? ThreadType { get; set; }
+        public Guid? MeetingId { get; set; }
 
         // ── BEFORE (single assignee) ───────────────────────────────────────
         // public Guid? NextAssigneeId       { get; set; }

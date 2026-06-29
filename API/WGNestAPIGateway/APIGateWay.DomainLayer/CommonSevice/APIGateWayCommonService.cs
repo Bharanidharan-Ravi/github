@@ -113,37 +113,60 @@ namespace APIGateWay.DomainLayer.CommonSevice
                 throw;
             }
         }
-        public async Task ExecuteNonModalAsync(string storedProcedureName, SqlParameter[] parameters)
+
+        public async Task ExecuteNonModalAsync(
+        string storedProcedureName,
+        SqlParameter[] parameters)
         {
-            var validProcedureNames = new[] { "INSERTUSERLOG" };
+            using var connection =
+                new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString);
 
-            if (!validProcedureNames.Contains(storedProcedureName))
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+
+            command.CommandText = storedProcedureName;
+            command.CommandType = CommandType.StoredProcedure;
+
+            if (parameters?.Length > 0)
             {
-                throw new ArgumentException("Invalid stored procedure name", (storedProcedureName));
-            }
-            //using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
-            // This automatically inherits the Live/Test routing AND the Tenant DB routing
-            using (var connection = new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString))
-            {
-                await connection.OpenAsync();
-
-                // Create a HanaCommand for executing the stored procedure
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = storedProcedureName;
-                    command.CommandType = CommandType.StoredProcedure;
-
-                    // Add parameters to the command
-                    foreach (var parameter in parameters)
-                    {
-                        command.Parameters.Add(new SqlParameter(parameter.ParameterName, parameter.Value));
-                    }
-
-                    // Execute the non-query command (used for insert, update, delete operations)
-                    await command.ExecuteNonQueryAsync();
-                }
+                command.Parameters.AddRange(parameters);
             }
 
+            await command.ExecuteNonQueryAsync();
         }
+
+        //public async Task ExecuteNonModalAsync(string storedProcedureName, SqlParameter[] parameters)
+        //{
+        //    var validProcedureNames = new[] { "INSERTUSERLOG" };
+
+        //    if (!validProcedureNames.Contains(storedProcedureName))
+        //    {
+        //        throw new ArgumentException("Invalid stored procedure name", (storedProcedureName));
+        //    }
+        //    //using (var connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+        //    // This automatically inherits the Live/Test routing AND the Tenant DB routing
+        //    using (var connection = new SqlConnection(_dbContext.Database.GetDbConnection().ConnectionString))
+        //    {
+        //        await connection.OpenAsync();
+
+        //        // Create a HanaCommand for executing the stored procedure
+        //        using (var command = connection.CreateCommand())
+        //        {
+        //            command.CommandText = storedProcedureName;
+        //            command.CommandType = CommandType.StoredProcedure;
+
+        //            // Add parameters to the command
+        //            foreach (var parameter in parameters)
+        //            {
+        //                command.Parameters.Add(new SqlParameter(parameter.ParameterName, parameter.Value));
+        //            }
+
+        //            // Execute the non-query command (used for insert, update, delete operations)
+        //            await command.ExecuteNonQueryAsync();
+        //        }
+        //    }
+
+        //}
     }
 }
