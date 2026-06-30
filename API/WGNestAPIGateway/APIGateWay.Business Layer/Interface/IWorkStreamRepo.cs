@@ -11,5 +11,6 @@ namespace APIGateWay.BusinessLayer.Interface
     public interface IWorkStreamRepo
     {
         Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto);
+        Task BroadcastThreadCreatedAsync(Guid issueId, long threadId, Guid? repoId, bool notifyClient, string? action);
     }
 }

@@ -108,6 +108,7 @@ builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 // ─────────────────────────────────────────────────────────────
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddScoped<APIGateWayCommonService>();
+builder.Services.AddScoped<hanaservice>();
 builder.Services.AddScoped<GenerateHelper>();
 builder.Services.AddScoped<DecodeHelpers>();
 builder.Services.AddScoped<IlogHelper, LogHelper>();
