@@ -37,6 +37,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Status { get; set; }
         public string? Hours { get; set; }
         public string? Labels_JSON { get; set; }
+        public string? Move_toJson { get; set; }
         public string? Attachment_JSON { get; set; }
         public decimal? OverallPercentage { get; set; }
         public string? CurrentStatusSummary { get; set; }

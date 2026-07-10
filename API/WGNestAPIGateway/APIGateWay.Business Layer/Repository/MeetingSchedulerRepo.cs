@@ -372,7 +372,7 @@ namespace APIGateWay.Business_Layer.Repository
                 return;
 
             // Update WorkStream Thread
-            if (meeting.ticket_id.HasValue && meeting.ThreadId.HasValue)
+            if (meeting.ticket_id.HasValue || meeting.ThreadId.HasValue)
             {
                 await UpdateMeetingCompletionThreadAsync(
                     meeting,

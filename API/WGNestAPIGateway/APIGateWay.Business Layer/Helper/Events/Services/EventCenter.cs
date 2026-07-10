@@ -309,7 +309,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                 }
              
                 var titleObj = string.IsNullOrEmpty(request.TitleField) ? null :
-    ReflectionHelper.GetPropertyValue<object>(richData, request.TitleField);
+                ReflectionHelper.GetPropertyValue<object>(richData, request.TitleField);
                 var title = titleObj?.ToString();
 
                 var codeObj = string.IsNullOrEmpty(request.CodeField) ? null :

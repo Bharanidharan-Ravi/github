@@ -84,7 +84,6 @@ builder.Services.AddScoped<IVersionRepo, VersionRepo>();
 builder.Services.AddScoped<IEventContextProvider, ApiGatewayEventContextProvider>();
 builder.Services.AddScoped<IBannermessageRepo, BannerMessageRepo>();
 builder.Services.AddScoped<IMeetingSchedulerRepo, MeetingSchedulerRepo>();
-builder.Services.AddScoped<IEmojiReactionRepo, EmojiReactionRepo>();
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
 // ─────────────────────────────────────────────────────────────

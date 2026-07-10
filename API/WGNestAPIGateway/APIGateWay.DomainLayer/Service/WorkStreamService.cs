@@ -7,6 +7,7 @@ using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
+using ReverseMarkdown.Converters;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -43,7 +44,15 @@ namespace APIGateWay.BusinessLayer.Repository
             ProcessedAttachmentResult attachmentResult = null;
             string oldFlagIds = null;
             string newFlagIds = null;
+            string actionType = "";
+            var indiaTimeZone =
+                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
 
+            var indiaTime =
+                TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow,
+                    indiaTimeZone
+                );
             try
             {
                 return await _domainService.ExecuteInTransactionAsync(async () =>
@@ -65,15 +74,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             var currentLog = activeLogs.FirstOrDefault();
                             decimal newPercentage = dto.TicketOverallPercentage ?? 0;
                             string oldFlagValue = currentLog?.Flag;
-                            string actionType = "";
-                            var indiaTimeZone =
-                                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-
-                            var indiaTime =
-                                TimeZoneInfo.ConvertTimeFromUtc(
-                                    DateTime.UtcNow,
-                                    indiaTimeZone
-                                );
+                          
 
                             var flagMasters = await _db.Set<FlagMaster>().ToListAsync();
                             var flagIds = new List<int>();
@@ -153,6 +154,8 @@ namespace APIGateWay.BusinessLayer.Repository
                             if (ticketMaster != null)
                             {
                                 ticketMaster.OverallPercentage = newPercentage;
+                              
+
                             }
 
                             await _db.SaveChangesAsync();
@@ -192,7 +195,37 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
                     // =========================================================================
+                    if (dto.Move_to != null && dto.Move_to.Any())
+                    {
+                        // Remove previous Move_to records for this issue
+                        var oldMoveTo = await _db.Set<IssueMoveTo>()
+                            .Where(x => x.Issue_Id == dto.IssueId)
+                            .ToListAsync();
 
+                        if (oldMoveTo.Any())
+                        {
+                            _db.Set<IssueMoveTo>().RemoveRange(oldMoveTo);
+                        }
+
+                        // Add new Move_to records
+                        foreach (var item in dto.Move_to)
+                        {
+                            var issueMoveTo = new IssueMoveTo
+                            {
+                                Id = Guid.NewGuid(),
+                                Issue_Id = dto.IssueId,
+                                Move_to = item.id,
+                                CreatedBy = posterId,
+                                CreatedAt = indiaTime
+                            };
+
+                            await _db.Set<IssueMoveTo>().AddAsync(issueMoveTo);
+                        }
+
+                        await _db.SaveChangesAsync();
+
+                        actionType = "UPDATE";
+                    }
                     // ── TYPE 1: Pure assignment ───────────────────────────────
                     if (dto.AssignOnly)
                     {
@@ -424,7 +457,8 @@ namespace APIGateWay.BusinessLayer.Repository
                             }
                         }
 
-                        if (threadId > 0 && stream?.StreamId != Guid.Empty && AppRoles.AdminManager.Contains(_loginContext.role))
+                        //if (threadId > 0 && stream?.StreamId != Guid.Empty && AppRoles.AdminManager.Contains(_loginContext.role))
+                        if (threadId > 0 && stream?.StreamId != Guid.Empty)
                         {
                             // ── ThreadMaster back-link update ─────────────────
                             var timer = _stepContext.StartStep();
@@ -435,7 +469,6 @@ namespace APIGateWay.BusinessLayer.Repository
                                      t =>
                                      {
                                          t.WorkStreamId = stream.StreamId;
-
                                          if (activeHandoffId.HasValue)
                                              t.HandsOffId = activeHandoffId.Value;
                                      });
@@ -492,6 +525,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(
                           dto.IssueId,
+                          //dto.Move_to,
                           isTerminalAction ? targetStatusId : null,
                           dto.IsReopenRequest, // Pass the flag from UI
                           dto.IsReopenRequest ? posterId : null,
@@ -500,7 +534,8 @@ namespace APIGateWay.BusinessLayer.Repository
                           dto.FuncResponse,
                           dto.WebResponse,
                           dto.TechnicalResponse,
-                          dto.AdminResponse
+                          dto.AdminResponse,
+                          dto.toClient
                       );
 
                     //return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
@@ -904,7 +939,7 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
     Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
     bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false,
-    bool TechnicalResponse = false, bool AdminResponse = false)
+    bool TechnicalResponse = false, bool AdminResponse = false , bool? toClient = false)
         {
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
@@ -1047,6 +1082,14 @@ namespace APIGateWay.BusinessLayer.Repository
                             t.Status = computedStatusId;
                             t.StatusName = computedStatusName;
                             t.CompletionPct = (decimal?)overallPct;
+                            //if (move_to !=null)
+                            //{
+                            //    t.Move_to = move_to;
+                            //}
+                            if (!t.RaiseToClient && (toClient ?? false))
+                            {
+                                t.RaiseToClient = true;
+                            }
 
                             if (isReopenRequest)
                             {

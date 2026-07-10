@@ -39,34 +39,48 @@ namespace APIGateWay.Business_Layer.Session
             return notification.NotificationId;
         }
 
-        public async Task<int> GetUnreadCountAsync(Guid userId)
+        public async Task<Dictionary<string, int>> GetUnreadCountAsync(Guid userId)
         {
             var userRepos = await _repoAccessService.GetUserRepoGuidsAsync(userId);
             var repoIds = userRepos.Select(x => x.RepoId.ToString()).ToList();
+
             var lastSeenDate = await _domainService.Query<NotificationUserState>()
-                .Where(x => x.UserId == userId).Select(x => (DateTime?)x.LastSeenAt).FirstOrDefaultAsync() ?? DateTime.MinValue;
+                .Where(x => x.UserId == userId)
+                .Select(x => (DateTime?)x.LastSeenAt)
+                .FirstOrDefaultAsync() ?? DateTime.MinValue;
 
             var role = _loginContext.role;
-            IQueryable<Guid> query;
+
+            IQueryable<NotificationMaster> query;
 
             if (role == 3) // Client Logic
             {
                 query = from n in _domainService.Query<NotificationMaster>()
-                        join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
-                        where a.AudienceType == "REPOSITORY" && repoIds.Contains(a.AudienceValue)
-                           && n.CreatedAt > lastSeenDate && n.ActorId != userId
-                        select n.NotificationId;
+                        join a in _domainService.Query<NotificationAudience>()
+                            on n.NotificationId equals a.NotificationId
+                        where a.AudienceType == "REPOSITORY"
+                           && repoIds.Contains(a.AudienceValue)
+                           && n.CreatedAt > lastSeenDate
+                           && n.ActorId != userId
+                        select n;
             }
-            else // Admin/Employee Logic (ONLY see if assigned)
+            else // Admin/Employee Logic
             {
                 query = from n in _domainService.Query<NotificationMaster>()
-                        join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
-                        where a.AudienceType == "USER" && a.AudienceValue == userId.ToString()
-                           && n.CreatedAt > lastSeenDate && n.ActorId != userId
-                        select n.NotificationId;
+                        join a in _domainService.Query<NotificationAudience>()
+                            on n.NotificationId equals a.NotificationId
+                        where a.AudienceType == "USER"
+                           && n.CreatedAt > lastSeenDate
+                           && n.ActorId != userId
+                        select n;
             }
-            
-            return await query.Distinct().CountAsync();
+
+            return await query
+                .GroupBy(n => n.EventType)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.Select(n => n.NotificationId).Distinct().Count()
+                );
         }
 
         public async Task<List<NotificationListResponse>> GetNotificationsAsync(Guid userId)
@@ -88,7 +102,8 @@ namespace APIGateWay.Business_Layer.Session
             {
                 query = from n in _domainService.Query<NotificationMaster>()
                         join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
-                        where a.AudienceType == "USER" && a.AudienceValue == userId.ToString() && n.ActorId != userId
+                     where a.AudienceType == "USER" && a.AudienceValue == userId.ToString() && n.ActorId != userId
+                       // where a.AudienceType == "USER" 
                         select n;
             }
 

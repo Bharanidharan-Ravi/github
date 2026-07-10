@@ -102,15 +102,14 @@ namespace APIGateWay.ModalLayer.MasterData
         public long? ThreadId { get; set; }
         public long? ParentThreadId { get; set; }
         public string StreamName { get; set; } = string.Empty;
-
         public int? StreamStatus { get; set; }
         public int? OldTicketStatus { get; set; }
         public int? NewTicketStatus { get; set; }
-        public string? StatusName { get; set; }  // human-readable from Status_Master
+        public string? StatusName { get; set; } 
+        public string? OldFlagIds { get; set; } 
+        public string? NewFlagIds { get; set; } 
         public bool IsBlocked { get; set; }
         public string? BlockedReason { get; set; }
-        public string? OldFlagIds { get; set; }
-        public string? NewFlagIds { get; set; }
         public bool ThreadCreated { get; set; }
         public bool TicketCompleted { get; set; }
         public int TicketStatusId { get; set; }
@@ -126,10 +125,13 @@ namespace APIGateWay.ModalLayer.MasterData
         public string Ref_Id { get; set; }
         public Guid? RepoId { get; set; }
         public Guid IssueId { get; set; }
+        public string OldFlagIds { get; set; }
+        public string NewFlagIds { get; set; }
         public decimal? CompletionPct { get; set; }
         public object? BroadcastPayload { get; set; }
         // Tells the UI the block was cleared (dev can now mark DevCompleted)
         public bool DeveloperUnblocked { get; set; }
+      
     }
 }
 
