@@ -8,6 +8,8 @@ using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Helper;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
+using System.Text.Json;
+using static APIGateWay.Business_Layer.SignalRHub.RealtimeEntities;
 // Ensure you have the using statement for wherever CreateNotificationRequest is defined
 
 namespace APIGateWay.Business_Layer.Helper.Events.Services
@@ -48,6 +50,221 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
             return syncParams;
         }
 
+        //    public async Task<T?> PublishAsync<T>(EventRequest request, bool notify = true, bool signalR = true)
+        //    {
+        //        try
+        //        {
+        //            Console.WriteLine($"Event Received : {request.EventType}");
+
+        //            if (!SyncRepositoryConfigStore.Configs.TryGetValue(request.ConfigKey, out var cfg))
+        //            {
+        //                Console.WriteLine($"Config not found : {request.ConfigKey}");
+        //                return default;
+        //            }
+
+        //            var richData = await FetchRichDataAsync(request);
+
+        //            if (richData == null)
+        //                return default;
+
+        //            var contextValues = GetContextValues();
+        //            var actorId = Guid.Parse(contextValues["UserId"]);
+        //            var actorName = contextValues["UserName"];
+
+        //            // Inside EventCenter.PublishAsync
+        //            var audienceId = string.IsNullOrEmpty(request.AudienceField) ? null :
+        //                ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AudienceField);
+
+        //            var assigneeId = string.IsNullOrEmpty(request.AssigneeField) ? null :
+        //                ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AssigneeField);
+
+        //            var resourceIdsObj = string.IsNullOrEmpty(request.ResourceIdsField) ? null :
+        //                ReflectionHelper.GetPropertyValue<object>(richData, request.ResourceIdsField);
+        //            var titleObj = string.IsNullOrEmpty(request.TitleField) ? null :
+        //ReflectionHelper.GetPropertyValue<object>(richData, request.TitleField);
+        //            var title = titleObj?.ToString();
+
+        //            var codeObj = string.IsNullOrEmpty(request.CodeField) ? null :
+        //                ReflectionHelper.GetPropertyValue<object>(richData, request.CodeField);
+        //            var code = codeObj?.ToString();
+
+
+        //            // 2. BROADCAST LIVE TICKET UPDATE TO EVERYONE IN REPO (Keeps UI fast/sync'd for everyone)
+        //            if (signalR)
+        //            {
+        //                await _realtimeNotifier.BroadcastAsync(
+        //                    new RealtimeMessage
+        //                    {
+        //                        Entity = !string.IsNullOrEmpty(cfg.SignalREntity) ? cfg.SignalREntity : request.ConfigKey, // "ThreadsList"
+        //                        Action = !string.IsNullOrEmpty(cfg.SignalRAction) ? cfg.SignalRAction : request.EventType, // "Create"
+
+        //                        Payload = richData,
+
+        //                        // 🌟 FIX 2: Send MatchField ("ThreadId") to UI so it knows how to update the array
+        //                        KeyField = request.MatchField,
+        //                        RepoKey = (audienceId.HasValue && request.NotifyRepo) ? $"repo-{audienceId}" : null,
+        //                        Timestamp = DateTime.UtcNow
+        //                    });
+        //            }
+
+        //            // 3. PERSIST DB NOTIFICATION AND PING BELL ICONS
+        //            if (notify)
+        //            {
+        //                // 1. DECLARE IT HERE: Build a unique list of all targeted users
+        //                var targetUsers = new HashSet<Guid>();
+
+        //                // 2. Add the primary Assignee to the list (if one exists)
+        //                if (assigneeId.HasValue)
+        //                {
+        //                    targetUsers.Add(assigneeId.Value);
+        //                }
+
+        //                // 3. YOUR LOOP: Safely extract Guids from the All_Assignees list
+        //                if (resourceIdsObj is string jsonString && !string.IsNullOrWhiteSpace(jsonString))
+        //                {
+        //                    try
+        //                    {
+        //                        // Deserialize the JSON string into a list of generic objects (dictionaries)
+        //                        var resList = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonString);
+
+        //                        if (resList != null)
+        //                        {
+        //                            foreach (var item in resList)
+        //                            {
+        //                                // Check if the dictionary contains our key
+        //                                if (item.TryGetValue("Assignee_Id", out var valObj))
+        //                                {
+        //                                    // JSON deserializer often reads Guids as strings, so we parse it
+        //                                    if (valObj != null)
+        //                                    {
+        //                                        var strVal = valObj.ToString();
+        //                                        if (Guid.TryParse(strVal, out var parsedGuid))
+        //                                        {
+        //                                            targetUsers.Add(parsedGuid);
+        //                                        }
+        //                                    }
+        //                                }
+        //                            }
+        //                        }
+        //                    }
+        //                    catch (System.Text.Json.JsonException ex)
+        //                    {
+        //                        Console.WriteLine($"Failed to deserialize All_Assignees JSON: {ex.Message}");
+        //                    }
+        //                }
+        //                if (!string.IsNullOrEmpty(request.ExtraResourceIdsFields))
+        //                {
+        //                    var extraFieldNames = request.ExtraResourceIdsFields
+        //                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        //                    var extraIdKey = string.IsNullOrEmpty(request.ExtraResourceIdKey) ? "Id" :request.ExtraResourceIdKey;
+        //                    foreach (var fieldName in extraFieldNames)
+        //                    {
+        //                        var extraFieldValue = ReflectionHelper.GetPropertyValue<object>(richData, fieldName);
+        //                        if (extraFieldValue is string extraJsonString && !string.IsNullOrWhiteSpace(extraJsonString))
+        //                        {
+        //                                var extraList = System.Text.Json.JsonSerializer
+        //                                    .Deserialize<List<Dictionary<string, object>>>(extraJsonString);
+
+        //                                if (extraList != null)
+        //                                {
+        //                                    foreach (var item in extraList)
+        //                                    {
+        //                                        if (item.TryGetValue(extraIdKey, out var valObj) && valObj != null)
+        //                                        {
+        //                                            var strVal = valObj.ToString();
+        //                                            if (Guid.TryParse(strVal, out var parsedGuid))
+        //                                            {
+        //                                                targetUsers.Add(parsedGuid);
+        //                                            }
+        //                                        }
+        //                                    }
+        //                                }
+
+        //                            }
+
+        //                    }
+        //                }
+        //                // 4. Build Audiences for the Database using our targetUsers list
+        //                var audiences = new List<NotificationAudience>();
+
+        //                // 🔥 ONLY add Client if the flag is true
+        //                if (audienceId.HasValue && request.NotifyRepo)
+        //                {
+        //                    audiences.Add(new() { AudienceType = "REPOSITORY", AudienceValue = audienceId.Value.ToString() });
+        //                }
+
+        //                // 🔥 ONLY add Employees if the flag is true
+        //                if (request.NotifyUsers)
+        //                {
+        //                    foreach (var userId in targetUsers)
+        //                    {
+        //                        audiences.Add(new() { AudienceType = "USER", AudienceValue = userId.ToString() });
+        //                    }
+        //                }
+
+        //                // 5. Save the single notification with multiple audiences to the DB
+        //                if (audiences.Any())
+        //                {
+        //                    var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest
+        //                    {
+        //                        EventType = request.EventType,
+        //                        EntityType = request.EntityType,
+        //                        EntityId = request.EntityId,
+        //                        RepositoryId = audienceId,
+        //                        Title = title,
+        //                        Message = request.MessageTemplate.Replace("{Code}", code ?? string.Empty),
+        //                        ActorId = actorId,
+        //                        ActorName = actorName,
+        //                        Audiences = audiences
+        //                    });
+
+        //                    // 5. SignalR Ping for Client's Bell Icon
+        //                    if (audienceId.HasValue && request.NotifyRepo)
+        //                    {
+        //                        await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+        //                        {
+        //                            Entity = "Notification",
+        //                            Action = "Created",
+        //                            Payload = new { NotificationId = notificationId, CreatedByUserId = actorId },
+        //                            KeyField = "NotificationId",
+        //                            RepoKey = audienceId.Value.ToString(),
+        //                            Timestamp = DateTime.UtcNow
+        //                        });
+        //                    }
+
+        //                    // 6. SignalR Ping for EVERY assigned User's Bell Icon
+        //                    if (request.NotifyUsers)
+        //                    {
+        //                        foreach (var userId in targetUsers)
+        //                        {
+        //                            await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+        //                            {
+        //                                Entity = "Notification",
+        //                                Action = "Created",
+        //                                Payload = new { NotificationId = notificationId, CreatedByUserId = actorId },
+        //                                KeyField = "NotificationId",
+        //                                TargetUserId = userId,
+        //                                Timestamp = DateTime.UtcNow
+        //                            });
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //            if (richData is not T typedData)
+        //            {
+        //                throw new InvalidOperationException($"Expected {typeof(T).Name}, got {richData?.GetType().Name}");
+        //            }
+
+        //            return typedData;
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine($"EventCenter Error : {ex.Message}");
+        //            return default;
+        //        }
+        //    }
+
+
         public async Task<T?> PublishAsync<T>(EventRequest request, bool notify = true, bool signalR = true)
         {
             try
@@ -76,8 +293,21 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                 var assigneeId = string.IsNullOrEmpty(request.AssigneeField) ? null :
                     ReflectionHelper.GetPropertyValue<Guid?>(richData, request.AssigneeField);
 
-                var resourceIdsObj = string.IsNullOrEmpty(request.ResourceIdsField) ? null :
-                    ReflectionHelper.GetPropertyValue<object>(richData, request.ResourceIdsField);
+                var resourceJsonStrings = new List<string>();
+                if (!string.IsNullOrEmpty(request.ResourceIdsField))
+                {
+                    var fieldNames = request.ResourceIdsField.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    foreach(var fieldName in fieldNames)
+                    {
+                        var val = ReflectionHelper.GetPropertyValue<object>(richData, fieldName);
+                        if (val is string s && !string.IsNullOrEmpty(s))
+                        {
+                            resourceJsonStrings.Add(s);
+                        }
+
+                    }
+                }
+             
                 var titleObj = string.IsNullOrEmpty(request.TitleField) ? null :
     ReflectionHelper.GetPropertyValue<object>(richData, request.TitleField);
                 var title = titleObj?.ToString();
@@ -117,39 +347,39 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                         targetUsers.Add(assigneeId.Value);
                     }
 
-                    // 3. YOUR LOOP: Safely extract Guids from the All_Assignees list
-                    if (resourceIdsObj is string jsonString && !string.IsNullOrWhiteSpace(jsonString))
+                    foreach (var jsonString in resourceJsonStrings)
                     {
                         try
                         {
-                            // Deserialize the JSON string into a list of generic objects (dictionaries)
-                            var resList = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonString);
+                            var resList = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(jsonString);
 
                             if (resList != null)
                             {
+                                string idKey = request.EventType == "MEETING_CREATED"
+                                    ? "Participant_Id"
+                                    : "Assigness_id";
+
                                 foreach (var item in resList)
                                 {
-                                    // Check if the dictionary contains our key
-                                    if (item.TryGetValue("Assignee_Id", out var valObj))
+                                    if (item.TryGetValue(idKey, out var valObj))
                                     {
-                                        // JSON deserializer often reads Guids as strings, so we parse it
-                                        if (valObj != null)
+                                        var idValue = valObj.GetString();
+
+                                        if (Guid.TryParse(idValue, out var parsedGuid))
                                         {
-                                            var strVal = valObj.ToString();
-                                            if (Guid.TryParse(strVal, out var parsedGuid))
-                                            {
-                                                targetUsers.Add(parsedGuid);
-                                            }
+                                            targetUsers.Add(parsedGuid);
                                         }
                                     }
                                 }
                             }
                         }
-                        catch (System.Text.Json.JsonException ex)
+                        catch (JsonException ex)
                         {
-                            Console.WriteLine($"Failed to deserialize All_Assignees JSON: {ex.Message}");
+                            Console.WriteLine($"Failed to deserialize participant JSON: {ex.Message}");
                         }
                     }
+
+
 
                     // 4. Build Audiences for the Database using our targetUsers list
                     var audiences = new List<NotificationAudience>();
@@ -230,6 +460,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                 return default;
             }
         }
+
 
         private async Task<object?> FetchRichDataAsync(EventRequest request)
         {

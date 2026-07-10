@@ -189,17 +189,16 @@ namespace APIGateWay.Business_Layer.Repository
                     x => x.ThreadId = threadId);
 
                 meetingMasterForThread.ThreadId = threadId;
-                finalMeetingData.ThreadId = threadId;
-
-                await _eventCenter.PublishAsync<ThreadList>(
-                    TicketFactory.ThreadCreated(
-                        finalMeetingData.Ticket_Id.Value, threadId));
+                finalMeetingData.ThreadId = threadId;            
+                await _eventCenter.PublishAsync<GetMeetingDto>(
+                    TicketFactory.MeetingCreated(
+                        finalMeetingData.Meeting_Id,finalMeetingData.Title, notifyUsers:true));
             }
             // ── Step 4: Publish Event (Fires only if transaction succeeds) ───
             return finalMeetingData;
         }
 
-        public async Task<GetMeetingDto> UpdateMeetingAsync(PutMeetingDto meetingDto)
+        public async Task<GetMeetingDto> UpdateMeetingAsync(Guid id ,PutMeetingDto meetingDto)
         {
             GetMeetingDto? finalMeetingData = null;
 
@@ -208,7 +207,7 @@ namespace APIGateWay.Business_Layer.Repository
                 finalMeetingData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
                     // ── Step 1: Fetch Existing Meeting ──────────────────────────
-                    var existingMeeting = _db.MeetingMaster.FirstOrDefault(m => m.meeting_id == meetingDto.Meeting_Id);
+                    var existingMeeting = _db.MeetingMaster.FirstOrDefault(m => m.meeting_id == id);
 
                     if (existingMeeting == null)
                         throw new Exception("Meeting not found.");
@@ -230,8 +229,6 @@ namespace APIGateWay.Business_Layer.Repository
                         existingMeeting.valid_to_date = meetingDto.Valid_To_Date;
                         existingMeeting.start_time = meetingDto.Start_Time;
                         existingMeeting.end_time = meetingDto.End_Time;
-                        existingMeeting.status = meetingDto.Status;
-
                         existingMeeting.updated_by = _loginContext.userId;
                         existingMeeting.updated_at = DateTime.UtcNow;
                         existingMeeting.days_of_week = meetingDto.Days_Of_Week;
@@ -252,7 +249,7 @@ namespace APIGateWay.Business_Layer.Repository
                     try
                     {
                         // 1. Get all current attendees for this meeting
-                        var existingAttendees = _db.meeting_attendance.Where(a => a.meeting_id == meetingDto.Meeting_Id).ToList();
+                        var existingAttendees = _db.meeting_attendance.Where(a => a.meeting_id == id).ToList();
 
                         // 2. Parse incoming IDs from frontend
                         var incomingInternalIds = meetingDto.InternalParticipants?.Select(p => (p.Id)).ToList() ?? new List<Guid>();
@@ -321,9 +318,11 @@ namespace APIGateWay.Business_Layer.Repository
             }
 
             var updatedMeeting = await _db.MeetingMaster
-                .FirstOrDefaultAsync(m => m.meeting_id == meetingDto.Meeting_Id);
+                .FirstOrDefaultAsync(m => m.meeting_id == id);
 
-            if (updatedMeeting?.ticket_id.HasValue == true && updatedMeeting.ThreadId.HasValue)
+            //if (updatedMeeting?.ticket_id.HasValue == true && updatedMeeting.ThreadId.HasValue)
+
+            if (updatedMeeting?.ticket_id.HasValue == true)
             {
                 var attendance = await _db.meeting_attendance
                     .Where(x => x.meeting_id == updatedMeeting.meeting_id)

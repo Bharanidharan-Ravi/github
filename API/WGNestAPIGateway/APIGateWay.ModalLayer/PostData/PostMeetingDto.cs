@@ -74,12 +74,10 @@ namespace APIGateWay.ModalLayer.PostData
     public class PutMeetingDto
     {
         [Required]
-        public Guid Meeting_Id { get; set; }
+        //public Guid Meeting_Id { get; set; }
 
-        [Required]
         [MaxLength(255)]
         public string Title { get; set; }
-
         [Required]
         public string Host_Type { get; set; }
 
@@ -88,9 +86,8 @@ namespace APIGateWay.ModalLayer.PostData
 
         [Required]
         public string Booking_Type { get; set; }
-
         public Guid? Project_Id { get; set; }
-        public string Meeting_Summary { get; set; }
+        public string? Meeting_Summary { get; set; }
         public string Slot_Duration { get; set; }
         public string Recurrence_Type { get; set; }
         public DateTime? Meeting_Date { get; set; }
@@ -98,8 +95,6 @@ namespace APIGateWay.ModalLayer.PostData
         public DateTime? Valid_To_Date { get; set; }
         public string Start_Time { get; set; }
         public string End_Time { get; set; }
-        public string Status { get; set; } // Allow editing status (e.g., "Cancelled", "Completed")
-
         public string? Days_Of_Week { get; set; }
         public List<SelectionItem> InternalParticipants { get; set; } = new List<SelectionItem>();
         public List<SelectionItem> ClientParticipants { get; set; } = new List<SelectionItem>();

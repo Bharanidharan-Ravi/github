@@ -10,7 +10,6 @@ using AutoMapper;
 using Azure;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using static Dapper.SqlMapper;
 
 namespace APIGateWay.BusinessLayer.Repository
 {

@@ -13,6 +13,11 @@ namespace APIGateWay.Business_Layer.Helper
         public long id { get; set; }
         public string name { get; set; }
     }
+    public class HistoryFlagDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
     public static class TicketHistoryHelper
     {
         // ─────────────────────────────────────────────────────────────────────
@@ -89,6 +94,77 @@ namespace APIGateWay.Business_Layer.Helper
                 }
             };
         }
+
+       
+
+        public static TicketHistoryEntry FlagsUpdated(
+    Guid? issueId,
+    List<HistoryLabelDto> added,
+    List<HistoryLabelDto> removed,
+    List<HistoryLabelDto> previousState,
+    List<HistoryLabelDto> newState,
+    Guid actorId,
+    string actorName)
+        {
+            string oldValString = previousState != null && previousState.Any()
+                ? string.Join(", ", previousState.Select(f => f.name))
+                : "None";
+
+            string newValString = newState != null && newState.Any()
+                ? string.Join(", ", newState.Select(f => f.name))
+                : "None";
+
+
+            string dynamicSummary;
+
+            if (oldValString == "None" && newValString != "None")
+            {
+                dynamicSummary = $"Flags set to '{newValString}'";
+            }
+            else if (newValString == "None")
+            {
+                dynamicSummary = $"Flags removed from '{oldValString}'";
+            }
+            else
+            {
+                dynamicSummary = $"Flags changed from '{oldValString}' to '{newValString}'";
+            }
+
+
+            return new TicketHistoryEntry
+            {
+                IssueId = issueId ?? Guid.Empty,
+
+                EventType = HistoryEventType.TicketUpdated,
+
+                Summary = dynamicSummary,
+
+                FieldName = "Flags",
+
+                OldValue = oldValString,
+
+                NewValue = newValString,
+
+                TargetEntityType = "Flag",
+
+                ActorId = actorId,
+
+                ActorName = actorName,
+
+                Meta = new
+                {
+                    added = added ?? new List<HistoryLabelDto>(),
+
+                    removed = removed ?? new List<HistoryLabelDto>(),
+
+                    previousState = previousState ?? new List<HistoryLabelDto>(),
+
+                    newState = newState ?? new List<HistoryLabelDto>()
+                }
+            };
+        }
+
+
         // Add inside TicketHistoryHelper.cs
 
         public static TicketHistoryEntry TicketClosedWithContext(
@@ -299,7 +375,7 @@ namespace APIGateWay.Business_Layer.Helper
         {
             return new TicketHistoryEntry
             {
-                IssueId = issueId??Guid.Empty,
+                IssueId = issueId ?? Guid.Empty,
                 EventType = HistoryEventType.WorkStreamCreated,
                 //Summary = $"Subtask created: {streamName} → {assigneeName} ({statusName})",
                 //Summary = $"{assigneeName} assigned to this ticket",
@@ -369,7 +445,7 @@ namespace APIGateWay.Business_Layer.Helper
                 NewValue = NewValue,
                 ActorId = actorId,
                 ActorName = actorName,
-                ThreadId = threadId,                
+                ThreadId = threadId,
             };
         }
 

@@ -106,6 +106,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
         public DbSet<MeetingAttendance> meeting_attendance { get; set; }
         public DbSet<MeetingMaster> MeetingMaster { get; set; }
+        public DbSet<GetUpcomingMeeting> upcomingMeetings { get; set; }
         public DbSet<GetMeetingDto> getMeetings { get; set; }
         public DbSet<BannerMessageMaster> BannerMessageMaster { get; set; }
         public DbSet<GetBannerMessageSP> GetBannerMessageSP { get; set; }

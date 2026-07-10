@@ -23,6 +23,8 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Meeting_Summary { get; set; }
         public string? Slot_Duration { get; set; }
         public string Recurrence_Type { get; set; }
+        public string? ProjectKey { get; set; }
+        public string? Issue_Code { get; set; }
 
         public DateTime? Meeting_Date { get; set; }
         public DateTime? Valid_From_Date { get; set; }
@@ -31,14 +33,10 @@ namespace APIGateWay.ModalLayer.GETData
         public string? End_Time { get; set; }
 
         public string? Days_Of_Week { get; set; } // Returns as "1,3,5"
-        public string Status { get; set; } // e.g., "Scheduled", "In-Progress"
+        public string Status { get; set; }
         public DateTime Created_At { get; set; }
         public DateTime? Updated_At { get; set; }
         public Guid? Updated_By { get; set; }
-
-        // Nested lists for the attendees so the UI can render the tags/status
-        //public List<GetAttendeeDto> InternalParticipants { get; set; } = new List<GetAttendeeDto>();
-        //public List<GetAttendeeDto> ClientParticipants { get; set; } = new List<GetAttendeeDto>();
         public string? InternalParticipants { get; set; }
         public string? ClientParticipants { get; set; }
     }

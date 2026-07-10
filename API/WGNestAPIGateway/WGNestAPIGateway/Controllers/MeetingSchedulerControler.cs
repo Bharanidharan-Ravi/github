@@ -23,16 +23,12 @@ namespace APIGateway.Controllers
             var response = await _meetingRepo.CreateMeetingAsync(meetingDto);
             return Ok(ApiResponseHelper.Success(response, "Meeting Scheduled successfully."));
         }
-        [HttpPut("{id}")]
+        [HttpPost("{id}")]
         public async Task<IActionResult> UpdateMeetingAsync(Guid id, [FromBody] PutMeetingDto meetingDto)
         {
-            if (meetingDto == null || id != meetingDto.Meeting_Id)
-            {
-                return BadRequest(new { message = "Invalid meeting data or ID mismatch." });
-            }
 
-            var response = await _meetingRepo.UpdateMeetingAsync(meetingDto);
-            return Ok(ApiResponseHelper.Success(response, "Meeting Scheduled successfully."));
+            var response = await _meetingRepo.UpdateMeetingAsync(id,meetingDto);
+            return Ok(ApiResponseHelper.Success(response, "Meeting Updated successfully."));
         }
         [HttpPost("CompleteMeeting")]
         public async Task<IActionResult> CompleteMeeting([FromBody] MeetingCompletionDto dto)

@@ -102,6 +102,42 @@ namespace APIGateWay.Business_Layer.Helper.Events.EventFactory
             };
         }
 
+        public static EventRequest MeetingCreated(
+      Guid meetingId,
+         string title,
+        bool notifyUsers)
+        {
+            return new EventRequest
+            {
+                EventType = "MEETING_CREATED",
+
+                EntityType = "MEETING",
+
+                ConfigKey = "MeetingData",
+
+                EntityId = meetingId.ToString(),
+
+                KeyField = "MeetingId",
+
+                MatchField = "Meeting_Id",
+                AssigneeField = "Host_Id",
+
+                ResourceIdsField = "InternalParticipants,ClientParticipants",
+          
+                TitleField = "Title",
+                NotifyUsers = notifyUsers,
+
+                MessageTemplate = $"Meeting scheduled: {title}",
+
+                ResponseType = typeof(GetMeetingDto),
+
+        //        ContextMappings =
+        //{
+        //    { "Role", "Role" }
+        //}
+            };
+        }
+
         public static EventRequest ThreadCreated(Guid issueId, long threadId)
         {
             return new EventRequest

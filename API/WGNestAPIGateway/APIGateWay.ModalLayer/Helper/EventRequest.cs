@@ -34,6 +34,8 @@ namespace APIGateWay.ModalLayer.Helper
         public string? AssigneeField { get; set; }
         public long? ThreadId { get; set; }
         public string? ResourceIdsField { get; set; }
+        public string? ExtraResourceIdsFields { get; set; }
+        public string? ExtraResourceIdKey { get; set; } = "Id";
 
         public Dictionary<string, string> ContextMappings { get; set; }
             = new();

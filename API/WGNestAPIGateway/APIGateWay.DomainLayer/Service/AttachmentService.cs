@@ -47,7 +47,14 @@ namespace APIGateWay.DomainLayer.Service
             {
                 //foreach (var file in files)
                 //{
-                var fileName = Path.GetFileName(files.FileName);
+                var originalFileName = Path.GetFileName(files.FileName);
+                var fileExtension = Path.GetExtension(originalFileName);
+                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFileName);
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+
+                var fileName = $"{fileNameWithoutExtension}_{timestamp}{fileExtension}";
+
                 var filePath = Path.Combine(tempFolder, fileName);
 
                 using var stream = new FileStream(filePath, FileMode.Create);

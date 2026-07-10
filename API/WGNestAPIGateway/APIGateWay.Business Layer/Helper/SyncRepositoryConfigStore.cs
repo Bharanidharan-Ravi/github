@@ -211,18 +211,18 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "repoId",
                 DeltaEnabled = true
             },
-               //["UpcomingMeeting"] = new SyncRepositoryConfig
-               //{
-               //    SourceType = SyncSourceType.Local,
-               //    StoredProcedure = "Sp_GetAllUpcomingMeetings",
-               //    EntityType = typeof(GetUpcomingMeeting),
-               //    SourceName = "SyncExecutionService",
-               //    Type = "array",
-               //    Strategy = "merge",
-               //  IdKey = "repoId",
-               //    DeltaEnabled = true
-               //},
-            
+            ["UpcomingMeeting"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "Sp_GetUpcomingMeetings",
+                EntityType = typeof(GetUpcomingMeeting),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+
             ["BannerData"]= new SyncRepositoryConfig
             {
                 SourceType = SyncSourceType.Local,

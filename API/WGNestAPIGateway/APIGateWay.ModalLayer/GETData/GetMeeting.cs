@@ -47,12 +47,15 @@ namespace APIGateWay.ModalLayer.GETData
         [Key]
         public Guid meeting_id { get; set; }
         public string? title { get; set; }
-        public string? MeetingType { get; set; }
+        public string? recurrence_type { get; set; }
+        public string? booking_type { get; set; }
         public string? Date { get; set; }
-        public string? Time { get; set; }
+        public string? start_time { get; set; }
+        public string? end_time { get; set; }
         public decimal? DurationHours { get; set; }
-        public string? DaysOfWeek { get; set; }
+        public string? days_of_week { get; set; }
         public string? Organizer { get; set; }
+        public Guid? Organizer_Id { get; set; }
         public string? status { get; set; }
     } 
 

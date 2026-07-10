@@ -12,7 +12,7 @@ namespace APIGateWay.Business_Layer.Interface
     public interface IMeetingSchedulerRepo
     {
         Task<GetMeetingDto> CreateMeetingAsync(PostMeetingDto meetingDto);
-        Task<GetMeetingDto> UpdateMeetingAsync(PutMeetingDto meetingDto);
+        Task<GetMeetingDto> UpdateMeetingAsync(Guid id,PutMeetingDto meetingDto);
         Task CompleteMeetingAsync(MeetingCompletionDto dto, Guid userId);
     }
 }

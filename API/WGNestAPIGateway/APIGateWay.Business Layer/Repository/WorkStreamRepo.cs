@@ -102,11 +102,6 @@ namespace APIGateWay.BusinessLayer.Repository
                     action
                 );
             }
-
-            // ── Step 3: ticket status broadcast (always fires) ────────────────
-            /* await BroadcastTicketStatusAsync(response);
-
-             await BroadcastTicketDetailAsync(dto.IssueId, response.RepoId);*/
             await _eventCenter.PublishAsync<GetTickets>(
                  TicketFactory.TicketUpdated(dto.IssueId, summary, notifyRepo: notifyClient, notifyUsers: true)
              );
@@ -128,6 +123,37 @@ namespace APIGateWay.BusinessLayer.Repository
                 var actorId = _loginContextService.userId;
                 var actorName = _loginContextService.userName;
 
+                var oldFlagIds = response.OldFlagIds ??string.Empty;
+                var newFlagIds = response.NewFlagIds ?? string.Empty;
+
+                 if (!string.Equals(response.OldFlagIds, response.NewFlagIds, StringComparison.Ordinal))
+          
+                    {
+                    var previousState = await GetFlagDetailsAsync(response.OldFlagIds);
+                    var newState = await GetFlagDetailsAsync(response.NewFlagIds);
+
+
+                    var added = newState
+                        .Where(n => !previousState.Any(p => p.id == n.id))
+                        .ToList();
+
+
+                    var removed = previousState
+                        .Where(p => !newState.Any(n => n.id == p.id))
+                        .ToList();
+
+
+                    await _historyRepository.LogAsync(
+                        TicketHistoryHelper.FlagsUpdated(
+                            issueId: dto.IssueId,
+                            added: added,
+                            removed: removed,
+                            previousState: previousState,
+                            newState: newState,
+                            actorId: actorId,
+                            actorName: actorName
+                        ));
+                }
                 // ── 1. LOG GLOBAL TICKET STATUS CHANGES (Close, Reopen, etc.) ──
                 if (response.OldTicketStatus.HasValue &&
                     response.NewTicketStatus.HasValue &&
@@ -144,7 +170,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     bool wasClosed = closedStatusIds.Contains(oldId);
                     bool isNowClosed = closedStatusIds.Contains(newId);
-
+                    
                     if (!wasClosed && isNowClosed)
                     {
                         // 🔥 TICKET CLOSED (Passes ThreadId if they used the comment box!)
@@ -234,6 +260,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         ));
                     }
                 }
+               
 
                 // ── SCENARIO 2: HANDOFF ──
                 if (isRoutingToOthers)
@@ -296,7 +323,31 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return statusName ?? "Unknown";
         }
+        private async Task<List<HistoryLabelDto>> GetFlagDetailsAsync(string flagIds)
+        {
+            if (string.IsNullOrWhiteSpace(flagIds))
+                return new List<HistoryLabelDto>();
 
+            var ids = flagIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x.Trim(), out var id) ? id : 0)
+                .Where(id => id > 0)
+                .ToList();
+
+            if (!ids.Any())
+                return new List<HistoryLabelDto>();
+
+            var flags = await _db.FlagMasters
+                .Where(x => ids.Contains(x.Id))
+                .Select(x => new HistoryLabelDto
+                {
+                    id = x.Id,
+                    name = x.FlagName
+                })
+                .ToListAsync();
+
+            return flags;
+        }
         // =====================================================================
         // THREAD BROADCAST
         //

@@ -41,6 +41,8 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
         {
             ProcessedAttachmentResult attachmentResult = null;
+            string oldFlagIds = null;
+            string newFlagIds = null;
 
             try
             {
@@ -62,6 +64,7 @@ namespace APIGateWay.BusinessLayer.Repository
                            .ToListAsync();
                             var currentLog = activeLogs.FirstOrDefault();
                             decimal newPercentage = dto.TicketOverallPercentage ?? 0;
+                            string oldFlagValue = currentLog?.Flag;
                             string actionType = "";
                             var indiaTimeZone =
                                 TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
@@ -108,7 +111,8 @@ namespace APIGateWay.BusinessLayer.Repository
                             }
 
                             string flagValue = flagIds.Any() ? string.Join(",", flagIds) : null;
-
+                            oldFlagIds = oldFlagValue;
+                            newFlagIds = flagValue;
 
                             // 2. Logic: Insert New Row OR Update Existing Row
                             if (!string.IsNullOrWhiteSpace(dto.TicketStatusSummary) || currentLog == null)
@@ -165,6 +169,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                 {
                                     IssueId = dto.IssueId,
                                     RepoId = ticketStatus.RepoId,
+
                                     OldTicketStatus = ticketStatus.OldStatusId,
                                     NewTicketStatus = ticketStatus.ComputedStatusId,
                                     TicketOverallPct = newPercentage, // Use the new manual percentage
@@ -299,25 +304,6 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
 
                         // ── WorkStream upsert ─────────────────────────────────
-                        //stream = await UpsertStreamAsync(
-                        //    dto, posterId, targetStatusId, threadId, resolvedStreamName);
-
-                        //if (!dto.IsSupport)
-                        //{
-                        //    stream = await UpsertStreamAsync(
-                        //        dto, posterId, targetStatusId, threadId, resolvedStreamName);
-                        //}
-                        //else if (stream == null)
-                        //{
-                        //    stream = new WorkStream()
-                        //    {
-                        //        StreamId = Guid.Empty,
-                        //        ResourceId = posterId,
-                        //        StreamStatus = targetStatusId,
-                        //        CompletionPct = 0
-                        //    };
-                        //}
-
                         if (handoffToUpdate != null)
                         {
                             // ── WorkStreamHandoff update ──────────────────────
@@ -517,7 +503,16 @@ namespace APIGateWay.BusinessLayer.Repository
                           dto.AdminResponse
                       );
 
-                    return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
+                    //return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
+                    var response = BuildResponse(dto,stream, targetStatusId, threadId,threadCreated,ticketStatus2);
+                    if (AppRoles.AdminManager.Contains(_loginContext.role))
+                    {
+                        response.OldFlagIds = oldFlagIds;
+                        response.NewFlagIds = newFlagIds;
+                    }
+                   
+
+                    return response;
                 });
             }
             catch (Exception ex)
@@ -585,8 +580,8 @@ namespace APIGateWay.BusinessLayer.Repository
                     Ref_Id = dto.Ref_Id,
                     ThreadType = dto.ThreadType ?? "Comment",
                     MeetingId = dto.MeetingId,
-                   
-    };
+
+                };
 
                 // ── ThreadMaster INSERT ───────────────────────────────────────
                 var timer = _stepContext.StartStep();
@@ -934,7 +929,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             int? oldTicketStatus = ticket?.Status;
 
-            bool wasInQueue = oldTicketStatus == 18;  
+            bool wasInQueue = oldTicketStatus == 18;
 
             if (!subtasks.Any() && forceTerminalStatusId == null)
             {

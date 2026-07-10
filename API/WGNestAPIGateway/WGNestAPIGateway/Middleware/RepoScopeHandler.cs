@@ -118,34 +118,26 @@ public class RepoScopeHandler : AuthorizationHandler<RepoScopeRequirement>
         }
 
         // 3️⃣ Body (POST/PUT)
-        if (context.Request.Method == "POST" || context.Request.Method == "PUT")
+        if (context.Request.Method == "POST" ||
+            context.Request.Method == "PUT")
         {
-            // Only attempt to parse if the content type is JSON
-            if (context.Request.ContentType != null &&
-                context.Request.ContentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            context.Request.EnableBuffering();
+
+            using var reader = new StreamReader(
+                context.Request.Body,
+                leaveOpen: true);
+
+            var body = await reader.ReadToEndAsync();
+            context.Request.Body.Position = 0;
+
+            if (!string.IsNullOrWhiteSpace(body))
             {
-                context.Request.EnableBuffering();
+                var json = JsonDocument.Parse(body);
 
-                using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
-                var body = await reader.ReadToEndAsync();
-                context.Request.Body.Position = 0;
-
-                if (!string.IsNullOrWhiteSpace(body))
+                if (json.RootElement.TryGetProperty("Repo_Id", out var repoProp))
                 {
-                    try
-                    {
-                        var json = JsonDocument.Parse(body);
-                        if (json.RootElement.TryGetProperty("Repo_Id", out var repoProp))
-                        {
-                            if (Guid.TryParse(repoProp.GetString(), out var bodyRepoId))
-                                return bodyRepoId;
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // Handle malformed JSON gracefully without crashing the pipeline
-                        return null;
-                    }
+                    if (Guid.TryParse(repoProp.GetString(), out var bodyRepoId))
+                        return bodyRepoId;
                 }
             }
         }
