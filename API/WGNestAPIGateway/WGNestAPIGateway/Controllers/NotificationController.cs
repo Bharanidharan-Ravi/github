@@ -1,6 +1,8 @@
 ﻿using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
+using Azure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIGateway.Controllers
@@ -25,13 +27,13 @@ namespace APIGateway.Controllers
                     .GetUnreadCountAsync(
                         _loginContext.userId
                         );
-/*
-            return Ok(
-                new NotificationCountResponse
-                {
-                    UnreadCount = count
-                });*/
-           return Ok( count );
+            /*
+                        return Ok(
+                            new NotificationCountResponse
+                            {
+                                UnreadCount = count
+                            });*/
+           return Ok(ApiResponseHelper.Success(count));
         }
         
         [HttpGet("list")]

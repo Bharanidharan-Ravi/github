@@ -91,6 +91,7 @@ namespace APIGateWay.ModalLayer.PostData
         public bool TechnicalResponse { get; set; }
         public bool AdminResponse { get; set; }
         public bool? toClient { get; set; }
+        public List<CoContributorItemDto>? Move_to { get; set; }
 
         // Set this to true from the UI if the user is ONLY submitting 
         // the overall progress and NOT updating their subtask/comments.
