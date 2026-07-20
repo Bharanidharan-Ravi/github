@@ -125,7 +125,8 @@ namespace APIGateWay.ModalLayer.MasterData
         public string Ref_Id { get; set; }
         public Guid? RepoId { get; set; }
         public Guid IssueId { get; set; }
-     
+        public string OldFlagIds { get; set; }
+        public string NewFlagIds { get; set; }
         public decimal? CompletionPct { get; set; }
         public object? BroadcastPayload { get; set; }
         // Tells the UI the block was cleared (dev can now mark DevCompleted)
