@@ -80,11 +80,13 @@ namespace APIGateWay.ModalLayer.PostData
         public bool ClearTestFailure { get; set; } = false;
         public Guid? TargetDeveloperResourceId { get; set; }
         public Guid? WorkStreamId { get; set; }
+
         public decimal? PercentageDrop { get; set; }
         public decimal? TicketOverallPercentage { get; set; }
         public string? TicketStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public List<CoContributorItemDto>? CoContributors { get; set; }
+        public List<CoContributorItemDto>? Move_to { get; set; }
         public bool PriorityRequest { get; set; }
         public bool FuncResponse { get; set; }
         public bool WebResponse { get; set; }

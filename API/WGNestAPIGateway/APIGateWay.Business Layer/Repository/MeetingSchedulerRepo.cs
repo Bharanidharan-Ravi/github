@@ -368,6 +368,7 @@ namespace APIGateWay.Business_Layer.Repository
                 .Query<MeetingMaster>()
                 .FirstOrDefaultAsync(x => x.meeting_id == dto.MeetingId);
 
+
             if (meeting == null)
                 return;
 

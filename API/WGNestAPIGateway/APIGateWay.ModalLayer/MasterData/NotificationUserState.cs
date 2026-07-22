@@ -12,11 +12,18 @@ namespace APIGateWay.ModalLayer.MasterData
     {
         [Key]
         public Guid UserId { get; set; }
+        public string? NotificationType { get; set; }
 
         public DateTime? LastSeenAt { get; set; }
 
         public Guid? LastNotificationId { get; set; }
 
         public DateTime? UpdatedAt { get; set; }
+    }
+
+
+    public class MarkSeenBody
+    {
+        public string NotificationType { get; set; }
     }
 }

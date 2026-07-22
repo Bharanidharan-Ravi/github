@@ -31,6 +31,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? Functional { get; set; }
         public string? Client { get; set; }
         public bool RaiseToClient { get; set; }
+        public bool IsPrivate { get; set; }
 
     }
 
@@ -63,6 +64,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? Functional { get; set; }
         public string? Client { get; set; }
         public bool? RaiseToClient { get; set; }
+        public bool? IsPrivate { get; set; }
 
         // Same shape as PostTicketDto.labelId — full replacement list on update
         // null   → labels not touched

@@ -449,6 +449,10 @@ namespace APIGateWay.BusinessLayer.Repository
                             existingTicket.RaiseToClient, dto.RaiseToClient,
                             (e, v) => e.RaiseToClient = v ?? false)
 
+
+                       .Set("IsPrivate",existingTicket.IsPrivate, dto.IsPrivate,
+                             (e, v) => e.IsPrivate = v)
+
                         .Set("Assignee",
                             existingTicket.Assignee_Id, dto.Assignee_Id,
                             (e, v) => { e.Assignee_Id = v; })
@@ -461,6 +465,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         .Set("Status",
                             existingTicket.Status, dto.Status,
                             (e, v) => { if (v.HasValue) e.Status = v.Value; });
+
 
                     TicketMaster updatedTicket;
 

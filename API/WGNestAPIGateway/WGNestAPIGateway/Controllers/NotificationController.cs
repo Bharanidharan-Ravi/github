@@ -1,6 +1,9 @@
 ﻿using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
+using APIGateWay.ModalLayer.MasterData;
+using Azure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIGateway.Controllers
@@ -25,13 +28,13 @@ namespace APIGateway.Controllers
                     .GetUnreadCountAsync(
                         _loginContext.userId
                         );
-/*
-            return Ok(
-                new NotificationCountResponse
-                {
-                    UnreadCount = count
-                });*/
-           return Ok( count );
+            /*
+                        return Ok(
+                            new NotificationCountResponse
+                            {
+                                UnreadCount = count
+                            });*/
+           return Ok(ApiResponseHelper.Success(count));
         }
         
         [HttpGet("list")]
@@ -42,11 +45,11 @@ namespace APIGateway.Controllers
            return Ok( count );
         }
         [HttpPost("mark-seen")]
-        public async Task<IActionResult> MarkSeen()
+        public async Task<IActionResult> MarkSeen([FromBody] MarkSeenBody request)
         {
             await _notificationRepository
                 .MarkSeenAsync(
-                    _loginContext.userId);
+                    _loginContext.userId, request.NotificationType);
 
             return Ok();
         }

@@ -63,7 +63,7 @@ namespace APIGateWay.BusinessLayer.Auth
 
             // ── Attachment ────────────────────────────────────────────────────
             new() { PathPrefix = "/api/attachment",
-                    Methods = new[] { "POST" },    AllowedRoles = AppRoles.All,          ValidateRepoScope = false },
+                    Methods = new[] { "POST" },    AllowedRoles = AppRoles.All,          ValidateRepoScope = true },
         };
 
         /// <summary>

@@ -12,9 +12,8 @@ namespace APIGateWay.Business_Layer.Session
     {
         Task<Guid> CreateAsync(CreateNotificationRequest request);
         Task<Dictionary<string, int>> GetUnreadCountAsync(Guid userId);
-        Task EnsureUserStateAsync(
-        Guid userId);
+        Task EnsureUserStateAsync(Guid userId, string NotificationType);
         Task<List<NotificationListResponse>> GetNotificationsAsync(Guid userId);
-        Task MarkSeenAsync(Guid userId);
+        Task MarkSeenAsync(Guid userId, string NotificationType);
     }
 }

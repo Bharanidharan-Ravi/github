@@ -53,6 +53,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Client { get; set; }
         public bool? RaiseToClient { get; set; }
         public int? ThreadCount { get; set; }
+        public bool? IsPrivate { get; set; }
         //public List<GetLabelForIssues> Labels_JSON { get; set; }
         //public List<GetAttachForIssues> Attachment_JSON { get; set; }
     }

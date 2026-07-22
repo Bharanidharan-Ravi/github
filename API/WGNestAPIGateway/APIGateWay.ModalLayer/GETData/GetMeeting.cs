@@ -48,6 +48,7 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid meeting_id { get; set; }
         public string? title { get; set; }
         public string? recurrence_type { get; set; }
+        public string? Participants { get; set; }
         public string? booking_type { get; set; }
         public string? Date { get; set; }
         public string? start_time { get; set; }

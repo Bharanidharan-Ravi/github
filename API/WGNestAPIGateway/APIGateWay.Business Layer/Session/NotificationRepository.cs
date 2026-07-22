@@ -38,50 +38,122 @@ namespace APIGateWay.Business_Layer.Session
             await _domainService.SaveEntitiesAsync(audiences);
             return notification.NotificationId;
         }
-
         public async Task<Dictionary<string, int>> GetUnreadCountAsync(Guid userId)
         {
             var userRepos = await _repoAccessService.GetUserRepoGuidsAsync(userId);
             var repoIds = userRepos.Select(x => x.RepoId.ToString()).ToList();
 
-            var lastSeenDate = await _domainService.Query<NotificationUserState>()
-                .Where(x => x.UserId == userId)
-                .Select(x => (DateTime?)x.LastSeenAt)
-                .FirstOrDefaultAsync() ?? DateTime.MinValue;
+            // Get last seen date based on notification type
+            var lastSeenLookup = await _domainService.Query<NotificationUserState>()
+       .Where(x => x.UserId == userId)
+       .GroupBy(x => x.NotificationType.ToUpper())
+       .ToDictionaryAsync(
+           g => g.Key,
+           g => g.Max(x => x.LastSeenAt)
+       );
 
             var role = _loginContext.role;
 
             IQueryable<NotificationMaster> query;
 
-            if (role == 3) // Client Logic
+            if (role == 3)
             {
-                query = from n in _domainService.Query<NotificationMaster>()
-                        join a in _domainService.Query<NotificationAudience>()
-                            on n.NotificationId equals a.NotificationId
-                        where a.AudienceType == "REPOSITORY"
-                           && repoIds.Contains(a.AudienceValue)
-                           && n.CreatedAt > lastSeenDate
-                           && n.ActorId != userId
-                        select n;
+                query =
+                    from n in _domainService.Query<NotificationMaster>()
+                    join a in _domainService.Query<NotificationAudience>()
+                        on n.NotificationId equals a.NotificationId
+                    where a.AudienceType == "REPOSITORY"
+                       && repoIds.Contains(a.AudienceValue)
+                       && n.ActorId != userId
+                    select n;
             }
-            else // Admin/Employee Logic
+            else
             {
-                query = from n in _domainService.Query<NotificationMaster>()
-                        join a in _domainService.Query<NotificationAudience>()
-                            on n.NotificationId equals a.NotificationId
-                        where a.AudienceType == "USER"
-                           && n.CreatedAt > lastSeenDate
-                           && n.ActorId != userId
-                        select n;
+                query =
+                    from n in _domainService.Query<NotificationMaster>()
+                    join a in _domainService.Query<NotificationAudience>()
+                        on n.NotificationId equals a.NotificationId
+                    where a.AudienceType == "USER"
+                 && n.ActorId != userId
+                    select n;
             }
 
-            return await query
-                .GroupBy(n => n.EventType)
-                .ToDictionaryAsync(
+
+            var notifications = await query.ToListAsync();
+
+
+            var result = notifications
+                .Where(n =>
+                {
+                    var notificationType = (n.EntityType ?? "").ToUpper();
+
+                    if (lastSeenLookup.TryGetValue(notificationType, out var lastSeen))
+                    {
+                        return n.CreatedAt > lastSeen;
+                    }
+
+                    // If user never opened this notification type
+                    return true;
+                })
+                .GroupBy(n => n.EntityType.ToUpper())
+                .ToDictionary(
                     g => g.Key,
-                    g => g.Select(n => n.NotificationId).Distinct().Count()
+                    g => g.Select(x => x.NotificationId)
+                          .Distinct()
+                          .Count()
                 );
+
+
+            return result;
         }
+        //    public async Task<Dictionary<string, int>> GetUnreadCountAsync(Guid userId)
+        //    {
+        //        var userRepos = await _repoAccessService.GetUserRepoGuidsAsync(userId);
+        //        var repoIds = userRepos.Select(x => x.RepoId.ToString()).ToList();
+
+        //        var lastSeenDate = await _domainService.Query<NotificationUserState>()
+        //            .Where(x => x.UserId == userId)
+        //            .Select(x => (DateTime?)x.LastSeenAt)
+        //            .FirstOrDefaultAsync() ?? DateTime.MinValue;
+        //        var lastSeenLookup = await _domainService.Query<NotificationUserState>()
+        //.Where(x => x.UserId == userId)
+        //.ToDictionaryAsync(
+        //    x => x.NotificationType,
+        //    x => x.LastSeenAt);
+
+        //        var role = _loginContext.role;
+
+        //        IQueryable<NotificationMaster> query;
+
+        //        if (role == 3) // Client Logic
+        //        {
+        //            query = from n in _domainService.Query<NotificationMaster>()
+        //                    join a in _domainService.Query<NotificationAudience>()
+        //                        on n.NotificationId equals a.NotificationId
+        //                    where a.AudienceType == "REPOSITORY"
+        //                       && repoIds.Contains(a.AudienceValue)
+        //                       && n.CreatedAt > lastSeenDate
+        //                       && n.ActorId != userId
+        //                    select n;
+        //        }
+        //        else // Admin/Employee Logic
+        //        {
+        //            query = from n in _domainService.Query<NotificationMaster>()
+        //                    join a in _domainService.Query<NotificationAudience>()
+        //                        on n.NotificationId equals a.NotificationId
+        //                    where a.AudienceType == "USER"
+        //                       && n.CreatedAt > lastSeenDate
+        //                       && n.ActorId != userId
+        //                    select n;
+        //        }
+
+        //        return await query
+        //            .GroupBy(n => n.EventType)
+        //            .ToDictionaryAsync(
+        //                g => g.Key,
+        //                g => g.Select(n => n.NotificationId).Distinct().Count()
+        //            );
+        //    }
 
         public async Task<List<NotificationListResponse>> GetNotificationsAsync(Guid userId)
         {
@@ -121,18 +193,21 @@ namespace APIGateWay.Business_Layer.Session
                 }).ToListAsync();
         }
 
-        public async Task EnsureUserStateAsync(Guid userId)
+        public async Task EnsureUserStateAsync(Guid userId,string NotificationType)
         {
             // 1. Check if the user already has a row in the table
             var exists = await _domainService.Query<NotificationUserState>()
-                .AnyAsync(x => x.UserId == userId);
+        .AnyAsync(x => x.UserId == userId &&
+                       x.NotificationType == NotificationType);
+
 
             // 2. If not, create it. 
             if (!exists)
             {
                 var newState = new NotificationUserState
                 {
-                    UserId = userId
+                    UserId = userId,
+                    NotificationType = NotificationType
                     // Note: We don't need to manually set LastSeenAt here because 
                     // your SaveChangesAsync override intercepts EntityState.Added 
                     // and applies the correct indiaTime automatically!
@@ -142,24 +217,26 @@ namespace APIGateWay.Business_Layer.Session
             }
         }
 
-        public async Task MarkSeenAsync(Guid userId)
+        public async Task MarkSeenAsync(Guid userId,string NotificationType)
         {
             // 1. Check if the record exists first to avoid DataNotFoundException
             var exists = await _domainService.Query<NotificationUserState>()
-                .AnyAsync(x => x.UserId == userId);
+        .AnyAsync(x => x.UserId == userId &&
+                       x.NotificationType == NotificationType);
 
             if (exists)
             {
                 // 2. Use your domain service's mutator method to update just the date
                 await _domainService.UpdateTrackedEntityAsync<NotificationUserState>(
-                    x => x.UserId == userId,
+                    x => x.UserId == userId &&
+                    x.NotificationType == NotificationType,
                     state => state.LastSeenAt = DateTime.UtcNow // Forces EF Core to mark as Modified
                 );
             }
             else
             {
                 // 3. Fallback: Create it if it doesn't exist
-                await EnsureUserStateAsync(userId);
+                await EnsureUserStateAsync(userId, NotificationType);
             }
         }
     }

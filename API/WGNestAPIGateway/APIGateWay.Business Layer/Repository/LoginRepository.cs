@@ -122,7 +122,7 @@ namespace APIGateWay.BusinessLayer.Repository
             );
             await _notificationRepository
             .EnsureUserStateAsync(
-                 user.UserId);
+                 user.UserId,"");
 
             var token =
             _tokenGeneration.GenerateJwtToken(

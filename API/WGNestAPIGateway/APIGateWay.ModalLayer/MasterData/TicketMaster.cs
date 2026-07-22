@@ -52,16 +52,6 @@ namespace APIGateWay.ModalLayer.MasterData
         public bool TechnicalResponse { get; set; }
         public bool AdminResponse { get; set; }
         public bool RaiseToClient { get; set; }
-        //public Guid? StreamId { get; set; }
-        //public Guid? ResourceId { get; set; }
-
-        // --------------------------------------------------------
-        // 🛡️ AUDIT FIELDS (Handled dynamically)
-        // --------------------------------------------------------
-        // 💡 Notice: No [IgnoreMapping] is needed here! 
-        // Because your class uses IAuditableEntity & IAuditableUser, 
-        // our dynamic AutoMapper extension automatically ignores these 4 fields!
-
         public DateTime? CreatedAt { get; set; }
         public Guid? CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -70,6 +60,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public string? Functional { get; set; }
         public string? Web { get; set; }
         public string? Client { get; set; }
+        public bool? IsPrivate { get; set; }
 
     }
 }
