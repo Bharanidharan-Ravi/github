@@ -278,7 +278,7 @@ namespace APIGateWay.BusinessLayer.Repository
                                         StreamStatus = null,
                                         CompletionPct = 0,
                                         TargetDate = ticketDto.TargetDate
-                                    });
+                                    },false);
 
                                 var assigneeName = await _db.eMPLOYEEMASTERs
                                     .Where(e => e.EmployeeID == resourceId)
@@ -317,6 +317,30 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
 
+                    if (ticketDto.RaiseToClient)
+                    {
+                        var timer = _stepContext.StartStep();
+                        try
+                        {
+                            var workGlowSolutionId = Guid.Parse("7C4039B9-248C-4D4C-A66B-976554D603B1");
+                            var issueMoveTo = new IssueMoveTo
+                            {
+                                Id = Guid.NewGuid(),
+                                Issue_Id = ticketMaster.Issue_Id.Value,
+                                Move_to = workGlowSolutionId,
+                                CreatedBy = _loginContext.userId,
+                                CreatedAt = DateTime.UtcNow,
+                            };
+                            await _db.Set<IssueMoveTo>().AddAsync(issueMoveTo);
+                            await _db.SaveChangesAsync();
+                            _stepContext.Success("IssueMoveTo", "INSERT", issueMoveTo.Id.ToString(), timer);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("IssueMoveTo", "INSERT", ex.Message, ex.InnerException?.Message, timer);
+                        }
+                    }
                     if (ticketDto.temp?.temps != null && ticketDto.temp.temps.Any())
                         await _attachmentService.CleanupTempFiles(ticketDto.temp);
 
@@ -672,7 +696,8 @@ namespace APIGateWay.BusinessLayer.Repository
                                             StreamStatus = StatusId.Inactive,
                                             CompletionPct = null,
                                             TargetDate = null
-                                        });
+                                      
+                                        }, false);
 
                                     await _historyRepository.LogAsync(TicketHistoryHelper.AssigneeRemoved(
                                         issueId: ticketId,
@@ -692,8 +717,9 @@ namespace APIGateWay.BusinessLayer.Repository
                                             ResourceId = resourceId,
                                             StreamStatus = null,
                                             CompletionPct = 0,
-                                            TargetDate = dto.TargetDate
-                                        });
+                                            TargetDate = dto.TargetDate,
+                                        
+                                        },false);
 
                                     if (newlyAddedIds.Contains(resourceId))
                                     {
@@ -719,6 +745,43 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                         await _attachmentService.CleanupTempFiles(dto.temp);
+                    if (patcher.Changes.Any(c => c.FieldName == "RaiseToClient"))
+                    {
+                        var timer = _stepContext.StartStep();
+                        try
+                        {
+                            var workGlowSolutionsId = Guid.Parse("7C4039B9-248C-4D4C-A66B-976554D603B1");
+                            var existingMoveTo = await _db.Set<IssueMoveTo>()
+                            .Where(x => x.Issue_Id == ticketId && x.Move_to == workGlowSolutionsId)
+                            .ToListAsync();
+                            if (dto.RaiseToClient ?? false)
+                            {
+                                if (!existingMoveTo.Any())
+                                {
+                                    await _db.Set<IssueMoveTo>().AddAsync(new IssueMoveTo
+                                    {
+                                        Id = Guid.NewGuid(),
+                                        Issue_Id = ticketId,
+                                        Move_to = workGlowSolutionsId,
+                                        CreatedBy = _loginContext.userId,
+                                        CreatedAt = DateTime.UtcNow
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                if (existingMoveTo.Any())
+                                    _db.Set<IssueMoveTo>().RemoveRange(existingMoveTo);
+                            }
+                            await _db.SaveChangesAsync();
+                            _stepContext.Success("IssueMoveTo", "SYNC", ticketId.ToString(), timer);
+                        }
+                        catch (Exception ex)
+                        {
+                            _stepContext.Failure("IssueMoveTo", "SYNC", ex.Message, ex.InnerException?.Message, timer);
+                            throw;
+                        }
+                    }
 
                     return _mapper.Map<GetTickets>(updatedTicket);
                 });
@@ -822,79 +885,7 @@ namespace APIGateWay.BusinessLayer.Repository
             return richTicketData;
         }
 
-        //public async Task<GetTickets> UpdateTicketProgressAsync(Guid ticketId, UpdateProgressDto dto)
-        //{
-        //    GetTickets finalTicketData = null;
-
-        //    try
-        //    {
-        //        finalTicketData = await _domainService.ExecuteInTransactionAsync(async () =>
-        //        {
-        //            var timer = _stepContext.StartStep();
-
-        //            try
-        //            {
-        //                // 1. Find the current active log(s) and make them inactive
-        //                var activeLogs = await _db.TicketProgressLogs
-        //                    .Where(log => log.Issue_Id == ticketId && log.IsActive)
-        //                    .ToListAsync();
-
-        //                foreach (var log in activeLogs)
-        //                {
-        //                    log.IsActive = false;
-        //                }
-
-        //                // 2. Create the new active log from the user's input
-        //                var newLog = new TicketProgressLog
-        //                {
-        //                    Issue_Id = ticketId,
-        //                    Assignee_Id = _loginContext.userId,
-        //                    Percentage = dto.Percentage,
-        //                    StatusSummary = dto.StatusSummary,
-        //                    IsActive = true,
-        //                    CreatedAt = DateTime.UtcNow
-        //                };
-
-        //                await _db.TicketProgressLogs.AddAsync(newLog);
-
-        //                // 3. Update the TicketMaster so your list views load fast
-        //                var ticketMaster = await _db.ISSUEMASTER.FindAsync(ticketId)
-        //                    ?? throw new Exception("Ticket not found");
-
-        //                ticketMaster.OverallPercentage = dto.Percentage;
-
-        //                // 4. Save changes and log to TicketHistory
-        //                await _db.SaveChangesAsync();
-
-        //                await _historyRepository.LogAsync(TicketHistoryHelper.TicketUpdated(
-        //                    issueId: ticketId,
-        //                    fieldName: "Overall Progress",
-        //                    oldValue: activeLogs.FirstOrDefault()?.Percentage.ToString() ?? "0",
-        //                    newValue: dto.Percentage.ToString(),
-        //                    actorId: _loginContext.userId,
-        //                    actorName: _loginContext.userName));
-
-        //                _stepContext.Success("TicketProgress", "UPDATE", ticketId.ToString(), timer);
-
-        //                return _mapper.Map<GetTickets>(ticketMaster);
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                _stepContext.Failure("TicketProgress", "UPDATE", ex.Message, ex.InnerException?.Message, timer);
-        //                throw;
-        //            }
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception($"Failed to update ticket progress. {ex.Message}", ex);
-        //    }
-
-        //    // Broadcast the update to realtime notifier just like your other methods
-        //    //await BroadcastTicketUpdateAsync(finalTicketData);
-
-        //    return finalTicketData;
-        //}
+       
     }
 
 }

@@ -357,7 +357,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                             {
                                 string idKey = request.EventType == "MEETING_CREATED"
                                     ? "Participant_Id"
-                                    : "Assigness_id";
+                                    : "Assignee_Id";
 
                                 foreach (var item in resList)
                                 {

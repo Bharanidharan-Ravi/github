@@ -25,13 +25,13 @@ namespace APIGateWay.Business_Layer.Repository
         }
         public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto)
         {
-            var res = await _customerService.PostCustomer(dto, _loginContextService.databaseName);
+            var res = await _customerService.PostCustomer(dto);
             return res;
         }
 
         public async Task<GetCustomerDto> PutCustomer(Guid userId, PutCustomerdto dto)
         {
-            var res = await _customerService.PutCustomer(userId,dto, _loginContextService.databaseName);
+            var res = await _customerService.PutCustomer(userId,dto);
             return res;
         }
     }

@@ -73,7 +73,7 @@ namespace APIGateWay.Business_Layer.Session
                     from n in _domainService.Query<NotificationMaster>()
                     join a in _domainService.Query<NotificationAudience>()
                         on n.NotificationId equals a.NotificationId
-                    where a.AudienceType == "USER"
+                    where a.AudienceType == "USER" && a.AudienceValue == userId.ToString()
                  && n.ActorId != userId
                     select n;
             }
@@ -91,8 +91,6 @@ namespace APIGateWay.Business_Layer.Session
                     {
                         return n.CreatedAt > lastSeen;
                     }
-
-                    // If user never opened this notification type
                     return true;
                 })
                 .GroupBy(n => n.EntityType.ToUpper())
@@ -174,7 +172,8 @@ namespace APIGateWay.Business_Layer.Session
             {
                 query = from n in _domainService.Query<NotificationMaster>()
                         join a in _domainService.Query<NotificationAudience>() on n.NotificationId equals a.NotificationId
-                     where a.AudienceType == "USER" && a.AudienceValue == userId.ToString() && n.ActorId != userId
+                     where a.AudienceType == "USER" && a.AudienceValue == userId.ToString()
+                       && n.ActorId != userId
                        // where a.AudienceType == "USER" 
                         select n;
             }
@@ -208,9 +207,7 @@ namespace APIGateWay.Business_Layer.Session
                 {
                     UserId = userId,
                     NotificationType = NotificationType
-                    // Note: We don't need to manually set LastSeenAt here because 
-                    // your SaveChangesAsync override intercepts EntityState.Added 
-                    // and applies the correct indiaTime automatically!
+                
                 };
 
                 await _domainService.SaveEntityAsync(newState);
@@ -221,7 +218,7 @@ namespace APIGateWay.Business_Layer.Session
         {
             // 1. Check if the record exists first to avoid DataNotFoundException
             var exists = await _domainService.Query<NotificationUserState>()
-        .AnyAsync(x => x.UserId == userId &&
+             .AnyAsync(x => x.UserId == userId &&
                        x.NotificationType == NotificationType);
 
             if (exists)

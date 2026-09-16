@@ -24,12 +24,11 @@ namespace APIGateWay.ModalLayer.DTOs
         public Guid? Repo_Id { get; set; }
         public string CustomerName { get; set; }
         public Guid? UserId { get; set; }
-        public string? NewCustomerName { get; set; }
         public string? RepoKey { get; set; }
         public string? PhoneNumber { get; set; }
         public string? MailId { get; set; }
        
-        public string? Status { get; set; }
+        public int? Status { get; set; }
 
     }
 }

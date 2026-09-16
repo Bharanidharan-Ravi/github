@@ -76,7 +76,8 @@ namespace APIGateWay.ModalLayer.PostData
             FunctionalTesting,     // 8
             UATTesting,            // 9
             AwaitingClientResponse,// 10
-            FunctionalFixCompleted,// 11
+             FunctionalSupport,// 11
+            FunctionalFixCompleted,
         };
 
                 // Production family

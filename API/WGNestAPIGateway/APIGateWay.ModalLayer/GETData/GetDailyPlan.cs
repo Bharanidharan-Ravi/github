@@ -39,7 +39,10 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid Repo_Id { get; set; }
 
         public string? All_Assignees { get; set; }
+        public bool? IsPrivate { get; set; }
         public DateTime? Due_Date { get; set; }
         public decimal? CompletionPct { get; set; }
+        public decimal?OverallPercentage { get; set; }
+        public string? Hours { get; set; }
     }
 }

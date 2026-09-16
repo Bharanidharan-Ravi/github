@@ -25,4 +25,56 @@ namespace APIGateWay.Business_Layer.Helper.Events.Eventhelper
             return (T?)property.GetValue(source);
         }
     }
+    public static class FlagHistoryHelper
+    {
+        public static string GetFlagChangeSummary(
+            List<HistoryLabelDto> oldFlags,
+            List<HistoryLabelDto> newFlags,
+            string fieldName)
+        {
+            oldFlags ??= new List<HistoryLabelDto>();
+            newFlags ??= new List<HistoryLabelDto>();
+
+            var addedFlags = newFlags
+                .Where(n => !oldFlags.Any(o => o.id == n.id))
+                .ToList();
+
+            var removedFlags = oldFlags
+                .Where(o => !newFlags.Any(n => n.id == o.id))
+                .ToList();
+
+
+            var addedNames = addedFlags.Any()
+                ? string.Join(", ", addedFlags.Select(x => x.name))
+                : string.Empty;
+
+            var removedNames = removedFlags.Any()
+                ? string.Join(", ", removedFlags.Select(x => x.name))
+                : string.Empty;
+
+
+            if (!oldFlags.Any() && newFlags.Any())
+            {
+                return $"{fieldName} added 'None' to {addedNames}";
+            }
+            else if (oldFlags.Any() && !newFlags.Any())
+            {
+                return $"{fieldName} removed: {removedNames}";
+            }
+            else if (addedFlags.Any() && !removedFlags.Any())
+            {
+                return $"{fieldName} added: {addedNames}";
+            }
+            else if (removedFlags.Any() && !addedFlags.Any())
+            {
+                return $"{fieldName} removed: {removedNames}";
+            }
+            else if (addedFlags.Any() && removedFlags.Any())
+            {
+                return $"{fieldName} updated. Added: {addedNames}, Removed: {removedNames}";
+            }
+
+            return $"{fieldName} updated";
+        }
+    }
 }

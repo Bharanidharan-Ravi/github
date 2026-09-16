@@ -1,5 +1,6 @@
 ﻿using APIGateWay.Business_Layer.Helper;
 using APIGateWay.Business_Layer.Helper.Events.EventFactory;
+using APIGateWay.Business_Layer.Helper.Events.Eventhelper;
 using APIGateWay.Business_Layer.Helper.Events.Interface;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.Business_Layer.SignalRHub;
@@ -87,6 +88,15 @@ namespace APIGateWay.BusinessLayer.Repository
                 response.OldTicketStatus != response.NewTicketStatus)
             {
                 summary = $"Ticket status changed to {await GetStatusNameAsync(response.NewTicketStatus)}";
+            }
+            var oldFlagIds = response.OldFlagIds?.Trim() ?? "";
+            var newFlagIds = response.NewFlagIds?.Trim() ?? "";
+
+            if (!string.Equals(oldFlagIds, newFlagIds, StringComparison.OrdinalIgnoreCase))
+            {
+                var oldFlags = await GetFlagDetailsAsync(oldFlagIds);
+                var newFlags = await GetFlagDetailsAsync(newFlagIds);
+                 summary = FlagHistoryHelper.GetFlagChangeSummary(oldFlags,newFlags,"Ticket Notify Status");
             }
             bool notifyClient = dto.toClient ?? false;
             // ── Step 2: thread broadcast (only when a new thread was created) ──
@@ -609,5 +619,6 @@ namespace APIGateWay.BusinessLayer.Repository
                     $"[WorkStreamRepo] TicketProgress broadcast failed: {ex.Message}");
             }
         }
+        
     }
 }

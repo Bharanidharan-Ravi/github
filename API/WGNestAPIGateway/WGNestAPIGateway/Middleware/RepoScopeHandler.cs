@@ -4,6 +4,7 @@ using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -11,13 +12,15 @@ public class RepoScopeHandler : AuthorizationHandler<RepoScopeRequirement>
 {
     private readonly IRepoAccessService _repoAccessService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
+    private readonly IConfiguration _configuration;
     public RepoScopeHandler(
         IRepoAccessService repoAccessService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IConfiguration configuration)
     {
         _repoAccessService = repoAccessService;
         _httpContextAccessor = httpContextAccessor;
+        _configuration = configuration;
     }
 
     protected override async Task HandleRequirementAsync(
@@ -45,16 +48,63 @@ public class RepoScopeHandler : AuthorizationHandler<RepoScopeRequirement>
 
         // ================================
         // ROLE 1 → Full Access
-        // ================================
         if (role == AppRoles.Admin || role == AppRoles.Manager)
         {
+            //var enabled = _configuration.GetValue<bool>("TimeRestriction:Enabled");
+
+            //var requestpath = httpContext.Request.Path.Value ?? "";
+
+            //var restrictedEndpoints = _configuration.GetSection("TimeRestriction:Endpoints") .Get<string[]>() ?? Array.Empty<string>();
+
+            //var isRestrictedEndpoint = restrictedEndpoints.Any(endpoint => requestpath.StartsWith(endpoint, StringComparison.OrdinalIgnoreCase));
+
+            //if (enabled && isRestrictedEndpoint)
+            //{
+              
+
+            //    var startTimeString = _configuration["TimeRestriction:StartTime"];
+            //    var stopTimeString = _configuration["TimeRestriction:StopTime"];
+
+
+            //    if (!TimeSpan.TryParse(startTimeString, out var startTime) ||
+            //        !TimeSpan.TryParse(stopTimeString, out var stopTime))
+            //    {
+            //        context.Fail();
+            //        return;
+            //    }
+
+            //    // Get current UTC time and convert it to India Standard Time (IST)
+            //    var indiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+            //        "India Standard Time");
+
+            //    var currentIndiaTime = TimeZoneInfo.ConvertTimeFromUtc(
+            //        DateTime.UtcNow,
+            //        indiaTimeZone
+            //    ).TimeOfDay;
+
+            //    // Allow only between StartTime and StopTime (IST)
+            //    if (currentIndiaTime < startTime ||
+            //        currentIndiaTime >= stopTime)
+            //    {
+            //        context.Fail();
+            //        return;
+            //    }
+            //}
+
+            // Admin/Manager allowed
             context.Succeed(requirement);
             return;
         }
 
+
+
         var path = httpContext.Request.Path.Value?.ToLower();
         var method = httpContext.Request.Method.ToUpper();
-
+        if (path.StartsWith("/api/attachment"))
+        {
+            context.Succeed(requirement);
+            return;
+        }
         // ================================
         // ROLE 3 → Only Project + Ticket
         // ================================

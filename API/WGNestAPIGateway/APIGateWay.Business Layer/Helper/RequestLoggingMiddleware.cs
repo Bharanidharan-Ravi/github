@@ -19,7 +19,10 @@ namespace APIGateWay.Business_Layer.Helper
         {
             "/health",
             "/swagger",
-            "/favicon.ico"
+            "/favicon.ico",
+            "/realtime/negotiate",
+            "/api/notification/unread-count",
+            "/api/Login/heartbeat"
         };
 
         public RequestLoggingMiddleware(RequestDelegate next) => _next = next;

@@ -20,7 +20,7 @@ namespace APIGateWay.DomainLayer.Interface
         /// <param name="ctx"></param>
         /// <returns></returns>
         Task<WorkStreamResult> UpsertWorkStreamAsync(WorkStreamContext ctx);
-        Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx);
+        Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx, bool updateTicketFlags);
 
         Task ClearWorkStreamsAsync(Guid issueId);
         Task MarkInactiveAsync(Guid issueId, List<Guid> removedResourceIds);

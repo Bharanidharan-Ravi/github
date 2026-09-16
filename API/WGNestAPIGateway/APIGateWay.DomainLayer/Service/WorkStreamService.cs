@@ -195,37 +195,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
                     // =========================================================================
-                    if (dto.Move_to != null && dto.Move_to.Any())
-                    {
-                        // Remove previous Move_to records for this issue
-                        var oldMoveTo = await _db.Set<IssueMoveTo>()
-                            .Where(x => x.Issue_Id == dto.IssueId)
-                            .ToListAsync();
-
-                        if (oldMoveTo.Any())
-                        {
-                            _db.Set<IssueMoveTo>().RemoveRange(oldMoveTo);
-                        }
-
-                        // Add new Move_to records
-                        foreach (var item in dto.Move_to)
-                        {
-                            var issueMoveTo = new IssueMoveTo
-                            {
-                                Id = Guid.NewGuid(),
-                                Issue_Id = dto.IssueId,
-                                Move_to = item.id,
-                                CreatedBy = posterId,
-                                CreatedAt = indiaTime
-                            };
-
-                            await _db.Set<IssueMoveTo>().AddAsync(issueMoveTo);
-                        }
-
-                        await _db.SaveChangesAsync();
-
-                        actionType = "UPDATE";
-                    }
+                
                     // ── TYPE 1: Pure assignment ───────────────────────────────
                     if (dto.AssignOnly)
                     {
@@ -939,8 +909,20 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
     Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
     bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false,
-    bool TechnicalResponse = false, bool AdminResponse = false , bool? toClient = false)
+    bool TechnicalResponse = false, bool AdminResponse = false , bool? toClient = false, bool updateTicketFlags = true)
         {
+            if(isReopenRequest)
+            {
+                var staleSubtasks = await _db.WorkStreams
+                    .Where(ws => ws.IssueId == issueId &&
+                    (ws.StreamStatus == StatusId.Closed || ws.StreamStatus == StatusId.Cancelled))
+                    .ToListAsync();
+                foreach (var s in staleSubtasks)
+                    s.StreamStatus = StatusId.Inactive;
+                if (staleSubtasks.Count > 0)
+                    await _db.SaveChangesAsync();
+
+            }
             var subtasks = await _db.WorkStreams
                 .Where(ws =>
                     ws.IssueId == issueId &&
@@ -1096,14 +1078,15 @@ namespace APIGateWay.BusinessLayer.Repository
                                 t.ReopenCount += 1;
                                 t.ReopenedBy = reopenedBy;
                             }
-
-                            t.IsCloseRequested = isCloseRequested;
-                            t.PriorityRequest = PriorityRequest;
-                            t.FuncResponse = FuncResponse;
-                            t.WebResponse = WebResponse;
-                            t.TechnicalResponse = TechnicalResponse;
-                            t.AdminResponse = AdminResponse;
-
+                            if (updateTicketFlags)
+                            {
+                                t.IsCloseRequested = isCloseRequested;
+                                t.PriorityRequest = PriorityRequest;
+                                t.FuncResponse = FuncResponse;
+                                t.WebResponse = WebResponse;
+                                t.TechnicalResponse = TechnicalResponse;
+                                t.AdminResponse = AdminResponse;
+                            }
                             if (isExplicitlyClosed || isExplicitlyCancelled)
                             {
                                 t.IsCloseRequested = false;
@@ -1265,7 +1248,7 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         // BULK UPSERT — called from TicketRepo (multiple assignees)
         // =====================================================================
-        public async Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx)
+        public async Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx, bool updateTicketFlags =true)
         {
             int? streamName = await GetDepartmentNameAsync(ctx.ResourceId);
             var stream = streamName.ToString();
@@ -1306,7 +1289,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     throw;
                 }
 
-                var ticketStatus1 = await ComputeAndUpdateTicketStatusAsync(ctx.IssueId);
+                var ticketStatus1 = await ComputeAndUpdateTicketStatusAsync(ctx.IssueId, updateTicketFlags: updateTicketFlags);
 
                 return new WorkStreamResult
                 {
@@ -1318,6 +1301,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     IsBlocked = existing.BlockedByTestFailure,
                     BlockedReason = existing.BlockedReason,
                     TicketStatus = ticketStatus1,
+
                 };
             }
             else
@@ -1348,7 +1332,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     throw;
                 }
 
-                var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(ctx.IssueId);
+                var ticketStatus2 = await ComputeAndUpdateTicketStatusAsync(ctx.IssueId, updateTicketFlags: updateTicketFlags);
 
                 return new WorkStreamResult
                 {
@@ -1358,6 +1342,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     StreamStatus = resolvedStatus,
                     WasInserted = true,
                     TicketStatus = ticketStatus2,
+                  
                 };
             }
         }

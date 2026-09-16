@@ -73,6 +73,7 @@ namespace APIGateWay.BusinessLayer.Repository
             IssueRepositoryInfo issueRepoInfo = null;
             long newThreadId = 0;
 
+
             try
             {
                 finalThreadData = await _domainService.ExecuteInTransactionAsync(async () =>
@@ -208,23 +209,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (freshThreadData != null && issueRepoInfo != null)
             {
-                //try
-                //{
-                //    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                //    {
-                //        Entity = "ThreadsList",
-                //        Action = "Create",
-                //        Payload = freshThreadData,
-                //        KeyField = "ThreadId",
-                //        IssueId = threadDto.Issue_Id,
-                //        RepoKey = issueRepoInfo.RepoKey,
-                //        Timestamp = DateTime.UtcNow
-                //    });
-                //}
-                //catch (Exception ex)
-                //{
-                //    Console.WriteLine($"Failed to broadcast Thread creation: {ex.Message}");
-                //}
+           
             }
 
             return freshThreadData;
@@ -410,6 +395,47 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
 
+
+                    // ── Step 5: Move To ──────────────────────────────────────────────
+                    if (dto.Move_to != null)
+                    {
+                        try
+                        {
+                            // Remove existing Move_to records for this issue
+                            var existingMoveTo = await _dBContext.Set<IssueMoveTo>()
+                                .Where(x => x.Issue_Id == existingThread.Issue_Id)
+                                .ToListAsync();
+
+                            if (existingMoveTo.Any())
+                            {
+                                _dBContext.Set<IssueMoveTo>().RemoveRange(existingMoveTo);
+                            }
+
+                            // Add newly selected Move_to records
+                            if (dto.Move_to.Any())
+                            {
+                                var newMoveTo = dto.Move_to.Select(item => new IssueMoveTo
+                                {
+                                    Id = Guid.NewGuid(),
+                                    Issue_Id = existingThread.Issue_Id,
+                                    Move_to = item.id,
+                                    CreatedBy = _loginContext.userId,
+                                    CreatedAt = DateTime.UtcNow
+                                }).ToList();
+
+                                await _dBContext.Set<IssueMoveTo>().AddRangeAsync(newMoveTo);
+                            }
+
+                            await _dBContext.SaveChangesAsync();
+                        }
+                        catch (Exception ex)
+                        {
+
+
+                            throw new Exception(ex.Message);
+                        }
+                    }
+
                     if (dto.temp?.temps != null && dto.temp.temps.Any())
                         await _attachmentService.CleanupTempFiles(dto.temp);
 
@@ -452,23 +478,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             if (freshThreadData != null && issueRepoInfo != null)
             {
-                //try
-                //{
-                //    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
-                //    {
-                //        Entity = "ThreadsList",
-                //        Action = "Update",
-                //        Payload = freshThreadData,
-                //        KeyField = "ThreadId",
-                //        IssueId = finalThreadData.Issue_Id,
-                //        RepoKey = issueRepoInfo.RepoKey,
-                //        Timestamp = DateTime.UtcNow
-                //    });
-                //}
-                //catch (Exception ex)
-                //{
-                //    Console.WriteLine($"Failed to broadcast Thread update: {ex.Message}");
-                //}
+               
             }
 
             return freshThreadData ?? finalThreadData;

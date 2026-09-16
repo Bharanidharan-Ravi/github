@@ -30,6 +30,7 @@ namespace APIGateWay.ModalLayer.GETData
         public int? Status { get; set; }
 
         public string? EstimatedHours { get; set; }
+        public string? EntireConsumeTime { get; set; }
 
         public string? ConsumeTime { get; set; }
         public decimal? CompletionPct { get; set; }
@@ -47,6 +48,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? ThreadStatusName { get; set; }
         public int? ThreadStatusId { get; set; }
         public decimal? OverallPercentage { get; set; }
+        public bool? IsPrivate { get; set; }
         public string? CurrentStatusSummary { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? CreatedAt { get; set; }

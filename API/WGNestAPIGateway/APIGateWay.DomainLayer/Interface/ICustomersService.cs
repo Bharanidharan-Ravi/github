@@ -11,7 +11,7 @@ namespace APIGateWay.DomainLayer.Interface
 {
     public interface ICustomersService
     {
-        Task<GetCustomerDto> PostCustomer(PostCustomerDto dto, string dbName);
-        Task<GetCustomerDto> PutCustomer(Guid userId, PutCustomerdto dto, string dbName);
+        Task<GetCustomerDto> PostCustomer(PostCustomerDto dto);
+        Task<GetCustomerDto> PutCustomer(Guid userId, PutCustomerdto dto);
     }
 }

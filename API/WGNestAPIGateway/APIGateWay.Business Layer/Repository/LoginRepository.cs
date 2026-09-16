@@ -120,9 +120,9 @@ namespace APIGateWay.BusinessLayer.Repository
                 "USP_CreateUserSession",
                 parameters
             );
-            await _notificationRepository
-            .EnsureUserStateAsync(
-                 user.UserId,"");
+            //await _notificationRepository
+            //.EnsureUserStateAsync(
+            //     user.UserId);
 
             var token =
             _tokenGeneration.GenerateJwtToken(

@@ -36,6 +36,7 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Issue_Code { get; set; }
         public string? Status { get; set; }
         public string? Hours { get; set; }
+        public string? TotalConsumeTime { get; set; }
         public string? Labels_JSON { get; set; }
         public string? Move_toJson { get; set; }
         public string? Attachment_JSON { get; set; }

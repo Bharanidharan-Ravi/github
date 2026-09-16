@@ -86,7 +86,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string? TicketStatusSummary { get; set; }
         public bool IsCloseRequested { get; set; }
         public List<CoContributorItemDto>? CoContributors { get; set; }
-        public List<CoContributorItemDto>? Move_to { get; set; }
+        //public List<CoContributorItemDto>? Move_to { get; set; }
         public bool PriorityRequest { get; set; }
         public bool FuncResponse { get; set; }
         public bool WebResponse { get; set; }
@@ -103,6 +103,15 @@ namespace APIGateWay.ModalLayer.PostData
     public class CoContributorItemDto
     {
         public Guid id { get; set; } // Matches the "id" key in your JSON payload
+    }
+    public class Assignee_To_Move
+    {
+        public Guid id { get; set; } 
+        
+    }
+    public class postAssigneeToMoveDto
+    {
+        public List<Assignee_To_Move> Assignee_To_Move { get; set; }
     }
     public class NextAssigneeDto
     {

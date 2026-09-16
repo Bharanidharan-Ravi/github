@@ -20,6 +20,7 @@ namespace APIGateWay.Business_Layer.Repository
         private readonly IMapper _mapper;
         private readonly APIGatewayDBContext _dbContext;
         private readonly IRequestStepContext _stepContext;            // ← ADDED
+        private readonly ILoginService _loginService;            
 
         public EmployeeRepo(
             IAttachmentService attachmentService,
@@ -27,7 +28,8 @@ namespace APIGateWay.Business_Layer.Repository
             ILoginContextService loginContext,
             IMapper mapper,
             APIGatewayDBContext Context,
-            IRequestStepContext stepContext)                          // ← ADDED
+            IRequestStepContext stepContext,
+            ILoginService loginService)                          // ← ADDED
         {
             _attachmentService = attachmentService;
             _domainService = domainService;
@@ -35,6 +37,7 @@ namespace APIGateWay.Business_Layer.Repository
             _mapper = mapper;
             _dbContext = Context;
             _stepContext = stepContext;                        // ← ADDED
+            _loginService = loginService;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -142,6 +145,14 @@ namespace APIGateWay.Business_Layer.Repository
 
                             if (string.Equals(dto.Login.Status, "Active", StringComparison.OrdinalIgnoreCase))
                                 loginData.Status = "Active";
+
+                            if (!string.IsNullOrWhiteSpace(dto.Login.Password))
+                            {
+                                var (hash, salt) = _loginService.HashPasswordAgron(dto.Login.Password);
+                                loginData.Password = dto.Login.Password;
+                                loginData.PasswordHash = hash;
+                                loginData.Salt = salt;
+                            }
 
                             _dbContext.LOGIN_MASTER.Update(loginData);
 

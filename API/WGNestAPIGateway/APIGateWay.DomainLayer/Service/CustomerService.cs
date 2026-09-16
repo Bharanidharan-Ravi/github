@@ -71,7 +71,7 @@ namespace APIGateWay.DomainLayer.Service
         }
     
 
-public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto,string dbName)
+public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -104,7 +104,7 @@ public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto,string dbName
                             UserName = dto.UserName,
                             PasswordHash = hash,
                             Salt = salt,
-                            DBName =dbName,
+                            DBName = _loginContext.databaseName,
                             Password = dto.Password,
                             Status = "Active",
                             Role = dto.Role,
@@ -151,7 +151,7 @@ public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto,string dbName
         }
 
 
-        public async Task<GetCustomerDto> PutCustomer(Guid userId, PutCustomerdto dto,string dbName)
+        public async Task<GetCustomerDto> PutCustomer(Guid userId, PutCustomerdto dto)
         {
             using var transaction=await _context.Database.BeginTransactionAsync();
             try
@@ -165,31 +165,31 @@ public async Task<GetCustomerDto> PostCustomer(PostCustomerDto dto,string dbName
                     && x.RepoKey == secureRepoKey)
                     ?? throw new Exception($"customer '{dto.CustomerName}' not found");
 
-              
-
-                //if (repoUser.UserId == null || repoUser.UserId == Guid.Empty)
-                //    throw new Exception($"Login not found for '{dto.CustomerName}'");
-                //Guid UserIdValue = repoUser.UserId.Value;
-
                 var loginUser = await _context.LOGIN_MASTER
                    .FirstOrDefaultAsync(x => x.UserID == userId)
                    ?? throw new Exception($"Login not found for '{dto.CustomerName}'");
 
                 if (!string.IsNullOrEmpty(dto.MailId)) repoUser.MailId = dto.MailId;
                 if (!string.IsNullOrEmpty(dto.PhoneNumber)) repoUser.PhoneNumber = dto.PhoneNumber;
-                //if (!string.IsNullOrEmpty(dto.Status)) repoUser.Status = dto.Status;
-                //if (!string.IsNullOrEmpty(dto.Status)) loginUser.Status = dto.Status;
-                if (!string.IsNullOrEmpty(dto.NewCustomerName)) repoUser.UserName = dto.NewCustomerName;
-                if (!string.IsNullOrEmpty(dto.Status))
+
+                if (!string.IsNullOrWhiteSpace(dto.CustomerName))
                 {
-                    if (dto.Status != "Active" && dto.Status != "Inactive")
-                        throw new Exception("Status must be 'Actice' or 'Inactive'");
-                    repoUser.Status = dto.Status;  
-                    loginUser.Status=dto.Status;
+                    repoUser.UserName = dto.CustomerName;
+                }
+                if (dto.Status.HasValue)
+                {
+                    string status = dto.Status switch
+                    {
+                        1 => "Active",
+                        17 => "Inactive",
+                        _ => throw new Exception("Status must be 1 (Active) or 17 (Inactive)")
+                    };
+
+                    repoUser.Status = status;
+                    loginUser.Status = status;
                 }
 
-
-                    await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return BuildCustomerProjection(loginUser, repoUser);
             }
