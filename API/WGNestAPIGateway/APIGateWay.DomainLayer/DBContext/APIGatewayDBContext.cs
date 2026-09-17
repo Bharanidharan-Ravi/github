@@ -116,12 +116,14 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ChatMessage> ChatMessage { get; set; }
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
         public DbSet<ChatRoom> ChatRoom { get; set; }
-        public DbSet<ChatIdentityKey> ChatIdentityKeys { get; set; }
-        public DbSet<ChatSignedPreKey> ChatSignedPreKeys { get; set; }
+        public DbSet<ChatUserKey> ChatUserKeys { get; set; }
         public DbSet<ChatConversation> ChatConversations { get; set; }
         public DbSet<ChatConversationMember> ChatConversationMembers { get; set; }
         public DbSet<ChatEncryptedMessage> ChatEncryptedMessages { get; set; }
         public DbSet<ChatMessageKey> ChatMessageKeys { get; set; }
+        public DbSet<ChatMessageReaction> ChatMessageReactions { get; set; }
+        public DbSet<ChatMessageTag> ChatMessageTags { get; set; }
+        public DbSet<ChatMediaAttachment> ChatMediaAttachments { get; set; }
         public DbSet<Emoji_Reactions> Emoji_Reactions { get; set; }
         public DbSet<GetStaleTicketsForAssignee> GetStaleTicketsForAssignee { get; set; }
         #region SaveChanges Override (Audit)
@@ -270,6 +272,18 @@ namespace APIGateWay.DomainLayer.DBContext
 
             modelBuilder.Entity<ClientMaster>()
                 .Property(c => c.Valid_To).HasColumnType("datetime");
+
+            // ── Messenger (E2EE) — schema in UI/scripts/chat_e2ee_master_schema.sql ──
+            modelBuilder.Entity<ChatConversationMember>()
+                .HasKey(m => new { m.ConversationId, m.UserId });
+            modelBuilder.Entity<ChatMessageKey>()
+                .HasKey(k => new { k.MessageId, k.RecipientUserId });
+            modelBuilder.Entity<ChatConversation>()
+                .HasIndex(c => c.DirectKey).IsUnique().HasFilter("[DirectKey] IS NOT NULL");
+            modelBuilder.Entity<ChatEncryptedMessage>()
+                .HasIndex(m => new { m.SenderUserId, m.ClientMessageId }).IsUnique();
+            modelBuilder.Entity<ChatMessageReaction>()
+                .HasIndex(r => new { r.MessageId, r.UserId, r.Emoji }).IsUnique();
         }
         #endregion
     }

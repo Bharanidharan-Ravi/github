@@ -8,30 +8,46 @@ namespace APIGateWay.ModalLayer.ChatsModal.Master
     public class ChatConversation
     {
         [Key]
-        public Guid ConversationId { get; set; }
+        public Guid Id { get; set; }
 
-        /// <summary>Direct (Group comes later)</summary>
-        public string Type { get; set; } = ChatConversationType.Direct;
+        /// <summary>1 = Direct, 2 = Group</summary>
+        public ChatConversationType Type { get; set; } = ChatConversationType.Direct;
 
-        /// <summary>"smallerUserId|largerUserId" for Direct conversations; unique.</summary>
+        /// <summary>Group name; null for Direct conversations.</summary>
+        public string? Title { get; set; }
+
+        /// <summary>"minUserId|maxUserId" for Direct conversations (unique); null for Group.</summary>
         public string? DirectKey { get; set; }
-        public Guid CreatedBy { get; set; }
+
+        public Guid CreatedByUserId { get; set; }
+
+        [Column(TypeName = "datetime2")]
         public DateTime CreatedAt { get; set; }
-        public DateTime? LastMessageAt { get; set; }
     }
 
+    /// <summary>Composite key (ConversationId, UserId) — configured in APIGatewayDBContext.</summary>
     [Table("ChatConversationMembers")]
     public class ChatConversationMember
     {
-        [Key]
-        public Guid MemberId { get; set; }
         public Guid ConversationId { get; set; }
         public Guid UserId { get; set; }
+
+        /// <summary>Admin | Member</summary>
+        public string Role { get; set; } = ChatMemberRole.Member;
+
+        [Column(TypeName = "datetime2")]
         public DateTime JoinedAt { get; set; }
     }
 
-    public static class ChatConversationType
+    public enum ChatConversationType : byte
     {
-        public const string Direct = "Direct";
+        Direct = 1,
+        Group = 2,
+    }
+
+    public static class ChatMemberRole
+    {
+        public const string Admin = "Admin";
+        public const string Member = "Member";
     }
 }

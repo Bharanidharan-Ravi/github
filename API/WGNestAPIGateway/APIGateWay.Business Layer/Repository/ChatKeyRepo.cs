@@ -9,17 +9,22 @@ using Microsoft.EntityFrameworkCore;
 namespace APIGateWay.BusinessLayer.Repository
 {
     /// <summary>
-    /// Public key directory for end-to-end encrypted chat.
-    /// The server only stores and validates PUBLIC keys; it never sees private keys,
-    /// so it cannot decrypt messages.
+    /// User-based key directory for end-to-end encrypted chat.
+    /// Stores each user's public key and their private key wrapped (in the browser) by a
+    /// password-derived key and a recovery-code-derived key. The server cannot unwrap
+    /// either blob, so it can never decrypt messages.
     /// </summary>
     public class ChatKeyRepo : IChatKeyRepo
     {
-        public static readonly TimeSpan PreKeyLifetime = TimeSpan.FromDays(7);
-
         private const int P256KeySize = 256;
-        private const int P256SignatureLength = 64; // IEEE P1363 r||s
-        private const int MaxBase64Length = 512;
+        private const int MaxPublicKeyBase64Length = 256;
+        private const int MaxParticipantsPerRequest = 200;
+
+        // Wrapped blob = [12-byte IV | AES-GCM(pkcs8)] — at least IV + 16-byte tag + 1 byte
+        private const int MinWrappedLength = 12 + 16 + 1;
+        private const int MaxWrappedLength = 1024;
+        private const int MinSaltLength = 16;
+        private const int MaxSaltLength = 64;
 
         private readonly IDomainService _domainService;
         private readonly ILoginContextService _loginContext;
@@ -35,101 +40,72 @@ namespace APIGateWay.BusinessLayer.Repository
             _stepContext = stepContext;
         }
 
-        public async Task<ChatKeyStatusDto> GetStatusAsync(Guid deviceId)
+        public async Task<ChatUserKeyBundleDto?> GetMyKeyBundleAsync()
         {
-            RequireDeviceId(deviceId);
-            var userId = _loginContext.userId;
-
-            var identity = await FindActiveIdentityAsync(userId, deviceId, tracking: false);
-            var preKey = identity == null ? null : await FindActivePreKeyAsync(identity.IdentityKeyId, tracking: false);
-
-            return BuildStatus(deviceId, identity, preKey);
+            var key = await _domainService.Query<ChatUserKey>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == _loginContext.userId);
+            return key == null ? null : ToBundle(key);
         }
 
-        public async Task<ChatKeyStatusDto> RegisterIdentityKeyAsync(RegisterIdentityKeyDto dto)
+        public async Task<ChatUserKeyBundleDto> RegisterMyKeyAsync(RegisterChatUserKeyDto dto)
         {
-            RequireDeviceId(dto.DeviceId);
-            var spki = DecodeBase64(dto.PublicKey, "PublicKey");
-            using (var ecdsa = ImportP256<ECDsa>(spki, ECDsa.Create, "PublicKey")) { }
+            ValidatePublicKey(dto.PublicKey);
+            var wrappedByPassword = DecodeWrapped(dto.WrappedByPassword, "WrappedByPassword");
+            var passwordSalt = DecodeSalt(dto.PasswordSalt, "PasswordSalt");
+            var wrappedByRecovery = DecodeWrapped(dto.WrappedByRecovery, "WrappedByRecovery");
+            var recoverySalt = DecodeSalt(dto.RecoverySalt, "RecoverySalt");
 
-            var fingerprint = Convert.ToHexString(SHA256.HashData(spki));
             var userId = _loginContext.userId;
 
-            return await _domainService.ExecuteInTransactionAsync(async () =>
+            var existing = await _domainService.Query<ChatUserKey>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+            if (existing != null)
+                return SameRegistrationOrConflict(existing, dto.PublicKey);
+
+            try
             {
-                var timer = _stepContext.StartStep();
-                try
+                return await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    var existing = await FindActiveIdentityAsync(userId, dto.DeviceId, tracking: true);
-
-                    // Same key re-sent (e.g. every login) — nothing to change
-                    if (existing != null && existing.Fingerprint == fingerprint)
+                    var timer = _stepContext.StartStep();
+                    try
                     {
-                        var currentPreKey = await FindActivePreKeyAsync(existing.IdentityKeyId, tracking: false);
-                        _stepContext.Success("ChatIdentityKeys", "NOOP", existing.IdentityKeyId.ToString(), timer);
-                        return BuildStatus(dto.DeviceId, existing, currentPreKey);
-                    }
-
-                    var now = IndiaNow();
-
-                    // Device came back with a different identity (browser data cleared, reinstall):
-                    // revoke the old identity and every pre-key signed by it.
-                    if (existing != null)
-                    {
-                        existing.Status = ChatKeyStatus.Revoked;
-                        existing.RevokedAt = now;
-
-                        var oldPreKeys = await _domainService.Query<ChatSignedPreKey>()
-                            .Where(x => x.IdentityKeyId == existing.IdentityKeyId && x.IsActive)
-                            .ToListAsync();
-                        foreach (var p in oldPreKeys)
+                        var entity = new ChatUserKey
                         {
-                            p.IsActive = false;
-                            p.RotatedAt = now;
-                        }
+                            UserId = userId,
+                            PublicKey = dto.PublicKey,
+                            WrappedByPassword = wrappedByPassword,
+                            PasswordSalt = passwordSalt,
+                            WrappedByRecovery = wrappedByRecovery,
+                            RecoverySalt = recoverySalt,
+                            KeyVersion = 1,
+                            CreatedAt = IndiaNow(),
+                        };
+                        await _domainService.SaveEntityAsync(entity);
 
-                        // Saved before the insert so the filtered unique index sees the revoke first
-                        await _domainService.UpdateEntitiesAsync(oldPreKeys);
-                        await _domainService.UpdateAsync(existing);
+                        _stepContext.Success("ChatUserKeys", "INSERT", userId.ToString(), timer);
+                        return ToBundle(entity);
                     }
-
-                    var entity = new ChatIdentityKey
+                    catch (Exception ex)
                     {
-                        IdentityKeyId = Guid.NewGuid(),
-                        UserId = userId,
-                        DeviceId = dto.DeviceId,
-                        PublicKey = dto.PublicKey,
-                        Fingerprint = fingerprint,
-                        DeviceInfo = dto.DeviceInfo,
-                        Status = ChatKeyStatus.Active,
-                        CreatedAt = now,
-                    };
-                    await _domainService.SaveEntityAsync(entity);
-
-                    _stepContext.Success("ChatIdentityKeys", "INSERT", entity.IdentityKeyId.ToString(), timer);
-                    return BuildStatus(dto.DeviceId, entity, null);
-                }
-                catch (Exception ex)
-                {
-                    _stepContext.Failure("ChatIdentityKeys", "INSERT", ex.Message, ex.InnerException?.Message, timer);
-                    throw;
-                }
-            });
+                        _stepContext.Failure("ChatUserKeys", "INSERT", ex.Message, ex.InnerException?.Message, timer);
+                        throw;
+                    }
+                });
+            }
+            catch (DbUpdateException)
+            {
+                // Two tabs registered at the same moment — the primary key rejected ours
+                var winner = await _domainService.Query<ChatUserKey>().AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.UserId == userId);
+                if (winner == null) throw;
+                return SameRegistrationOrConflict(winner, dto.PublicKey);
+            }
         }
 
-        public async Task<ChatKeyStatusDto> RegisterSignedPreKeyAsync(RegisterSignedPreKeyDto dto)
+        public async Task<ChatUserKeyBundleDto> RewrapMyKeyAsync(RewrapChatUserKeyDto dto)
         {
-            RequireDeviceId(dto.DeviceId);
-            if (dto.KeyId <= 0)
-                throw new Exceptionlist.InvalidDataException("KeyId must be a positive number.");
-
-            var preKeySpki = DecodeBase64(dto.PublicKey, "PublicKey");
-            using (var ecdh = ImportP256<ECDiffieHellman>(preKeySpki, ECDiffieHellman.Create, "PublicKey")) { }
-
-            var signature = DecodeBase64(dto.Signature, "Signature");
-            if (signature.Length != P256SignatureLength)
-                throw new Exceptionlist.InvalidDataException("Signature must be a 64-byte P-256 signature.");
-
+            var wrappedByPassword = DecodeWrapped(dto.WrappedByPassword, "WrappedByPassword");
+            var passwordSalt = DecodeSalt(dto.PasswordSalt, "PasswordSalt");
             var userId = _loginContext.userId;
 
             return await _domainService.ExecuteInTransactionAsync(async () =>
@@ -137,154 +113,112 @@ namespace APIGateWay.BusinessLayer.Repository
                 var timer = _stepContext.StartStep();
                 try
                 {
-                    var identity = await FindActiveIdentityAsync(userId, dto.DeviceId, tracking: false)
-                        ?? throw new Exceptionlist.InvalidDataException("Register the identity key for this device first.");
+                    var key = await _domainService.Query<ChatUserKey>()
+                        .FirstOrDefaultAsync(x => x.UserId == userId)
+                        ?? throw new Exceptionlist.DataNotFoundException("No chat key is registered for this user.");
 
-                    // Only the owner of the identity private key can publish a pre-key for it
-                    using (var ecdsa = ImportP256<ECDsa>(Convert.FromBase64String(identity.PublicKey), ECDsa.Create, "IdentityKey"))
-                    {
-                        if (!ecdsa.VerifyData(preKeySpki, signature, HashAlgorithmName.SHA256))
-                            throw new Exceptionlist.InvalidDataException("Pre-key signature is invalid.");
-                    }
+                    // The client unwrapped an older bundle (e.g. another tab already re-wrapped) — make it reload
+                    if (key.KeyVersion != dto.KeyVersion)
+                        throw new Exceptionlist.InvalidDataException("Chat key has changed. Reload and try again.");
 
-                    var current = await FindActivePreKeyAsync(identity.IdentityKeyId, tracking: true);
+                    key.WrappedByPassword = wrappedByPassword;
+                    key.PasswordSalt = passwordSalt;
+                    key.KeyVersion += 1;
+                    key.RotatedAt = IndiaNow();
+                    await _domainService.UpdateAsync(key);
 
-                    // Retry of the same upload — nothing to change
-                    if (current != null && current.KeyId == dto.KeyId && current.PublicKey == dto.PublicKey)
-                    {
-                        _stepContext.Success("ChatSignedPreKeys", "NOOP", current.PreKeyId.ToString(), timer);
-                        return BuildStatus(dto.DeviceId, identity, current);
-                    }
-
-                    var keyIdUsed = await _domainService.Query<ChatSignedPreKey>()
-                        .AnyAsync(x => x.IdentityKeyId == identity.IdentityKeyId && x.KeyId == dto.KeyId);
-                    if (keyIdUsed)
-                        throw new Exceptionlist.InvalidDataException($"Pre-key {dto.KeyId} already exists for this device.");
-
-                    var now = IndiaNow();
-
-                    if (current != null)
-                    {
-                        current.IsActive = false;
-                        current.RotatedAt = now;
-                        await _domainService.UpdateAsync(current);
-                    }
-
-                    var entity = new ChatSignedPreKey
-                    {
-                        PreKeyId = Guid.NewGuid(),
-                        IdentityKeyId = identity.IdentityKeyId,
-                        UserId = userId,
-                        DeviceId = dto.DeviceId,
-                        KeyId = dto.KeyId,
-                        PublicKey = dto.PublicKey,
-                        Signature = dto.Signature,
-                        IsActive = true,
-                        CreatedAt = now,
-                        ExpiresAt = now.Add(PreKeyLifetime),
-                    };
-                    await _domainService.SaveEntityAsync(entity);
-
-                    _stepContext.Success("ChatSignedPreKeys", "INSERT", entity.PreKeyId.ToString(), timer);
-                    return BuildStatus(dto.DeviceId, identity, entity);
+                    _stepContext.Success("ChatUserKeys", "UPDATE", userId.ToString(), timer);
+                    return ToBundle(key);
                 }
                 catch (Exception ex)
                 {
-                    _stepContext.Failure("ChatSignedPreKeys", "INSERT", ex.Message, ex.InnerException?.Message, timer);
+                    _stepContext.Failure("ChatUserKeys", "UPDATE", ex.Message, ex.InnerException?.Message, timer);
                     throw;
                 }
             });
         }
 
-        public async Task<List<ParticipantKeysDto>> GetParticipantKeysAsync(IReadOnlyCollection<Guid> userIds)
+        public async Task<List<ParticipantPublicKeyDto>> GetParticipantKeysAsync(IReadOnlyCollection<Guid> userIds)
         {
             if (userIds == null || userIds.Count == 0)
                 throw new Exceptionlist.InvalidDataException("At least one userId is required.");
-            if (userIds.Count > 200)
-                throw new Exceptionlist.InvalidDataException("Too many userIds in a single request (max 200).");
+            if (userIds.Count > MaxParticipantsPerRequest)
+                throw new Exceptionlist.InvalidDataException($"Too many userIds in a single request (max {MaxParticipantsPerRequest}).");
 
-            var distinctIds = userIds.Distinct().ToList();
-            var now = IndiaNow();
+            var distinctIds = userIds.Where(id => id != Guid.Empty).Distinct().ToList();
 
-            // Only devices with BOTH an active identity AND a still-valid (not expired/rotated) pre-key —
-            // that is the only pair another client can actually encrypt to right now.
-            var rows = await (
-                from identity in _domainService.Query<ChatIdentityKey>().AsNoTracking()
-                join preKey in _domainService.Query<ChatSignedPreKey>().AsNoTracking()
-                    on identity.IdentityKeyId equals preKey.IdentityKeyId
-                where distinctIds.Contains(identity.UserId)
-                      && identity.Status == ChatKeyStatus.Active
-                      && preKey.IsActive
-                      && preKey.ExpiresAt > now
-                select new { identity, preKey }
-            ).ToListAsync();
-
-            return distinctIds
-                .Select(userId => new ParticipantKeysDto
+            return await _domainService.Query<ChatUserKey>().AsNoTracking()
+                .Where(x => distinctIds.Contains(x.UserId))
+                .Select(x => new ParticipantPublicKeyDto
                 {
-                    UserId = userId,
-                    Devices = rows
-                        .Where(r => r.identity.UserId == userId)
-                        .Select(r => new DeviceKeysDto
-                        {
-                            DeviceId = r.identity.DeviceId,
-                            IdentityPublicKey = r.identity.PublicKey,
-                            IdentityFingerprint = r.identity.Fingerprint,
-                            PreKeyId = r.preKey.KeyId,
-                            PreKeyPublicKey = r.preKey.PublicKey,
-                            PreKeySignature = r.preKey.Signature,
-                            PreKeyExpiresAt = r.preKey.ExpiresAt,
-                        })
-                        .ToList(),
+                    UserId = x.UserId,
+                    PublicKey = x.PublicKey,
+                    KeyVersion = x.KeyVersion,
                 })
-                .ToList();
+                .ToListAsync();
         }
 
         #region Helpers
 
-        private Task<ChatIdentityKey?> FindActiveIdentityAsync(Guid userId, Guid deviceId, bool tracking)
+        /// <summary>A retry with the same public key is a no-op; a different key must not overwrite the existing one.</summary>
+        private static ChatUserKeyBundleDto SameRegistrationOrConflict(ChatUserKey existing, string publicKey)
         {
-            var query = _domainService.Query<ChatIdentityKey>();
-            if (!tracking) query = query.AsNoTracking();
-            return query.FirstOrDefaultAsync(x =>
-                x.UserId == userId && x.DeviceId == deviceId && x.Status == ChatKeyStatus.Active);
+            if (existing.PublicKey == publicKey)
+                return ToBundle(existing);
+
+            throw new Exceptionlist.UserAlreadyExistsException("A chat key is already registered for this user.");
         }
 
-        private Task<ChatSignedPreKey?> FindActivePreKeyAsync(Guid identityKeyId, bool tracking)
+        private static ChatUserKeyBundleDto ToBundle(ChatUserKey key) => new()
         {
-            var query = _domainService.Query<ChatSignedPreKey>();
-            if (!tracking) query = query.AsNoTracking();
-            return query.FirstOrDefaultAsync(x => x.IdentityKeyId == identityKeyId && x.IsActive);
-        }
+            UserId = key.UserId,
+            PublicKey = key.PublicKey,
+            WrappedByPassword = Convert.ToBase64String(key.WrappedByPassword),
+            PasswordSalt = Convert.ToBase64String(key.PasswordSalt),
+            WrappedByRecovery = Convert.ToBase64String(key.WrappedByRecovery),
+            RecoverySalt = Convert.ToBase64String(key.RecoverySalt),
+            KeyVersion = key.KeyVersion,
+            CreatedAt = key.CreatedAt,
+            RotatedAt = key.RotatedAt,
+        };
 
-        private static ChatKeyStatusDto BuildStatus(Guid deviceId, ChatIdentityKey? identity, ChatSignedPreKey? preKey)
+        private static void ValidatePublicKey(string? publicKey)
         {
-            return new ChatKeyStatusDto
+            if (string.IsNullOrWhiteSpace(publicKey) || publicKey.Length > MaxPublicKeyBase64Length)
+                throw new Exceptionlist.InvalidDataException("PublicKey is required.");
+
+            try
             {
-                DeviceId = deviceId,
-                IdentityFingerprint = identity?.Fingerprint,
-                PreKeyId = preKey?.KeyId,
-                PreKeyExpiresAt = preKey?.ExpiresAt,
-                RotationDue = preKey == null || preKey.ExpiresAt <= IndiaNow(),
-            };
+                using var ecdh = ECDiffieHellman.Create();
+                ecdh.ImportSubjectPublicKeyInfo(DecodeBase64(publicKey, "PublicKey"), out _);
+                if (ecdh.KeySize != P256KeySize)
+                    throw new Exceptionlist.InvalidDataException("PublicKey must be a P-256 key.");
+            }
+            catch (CryptographicException)
+            {
+                throw new Exceptionlist.InvalidDataException("PublicKey is not a valid public key.");
+            }
         }
 
-        // Same clock the rest of the gateway writes to the database
-        private static DateTime IndiaNow()
+        private static byte[] DecodeWrapped(string? value, string field)
         {
-            var ist = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist);
+            var bytes = DecodeBase64(value, field);
+            if (bytes.Length < MinWrappedLength || bytes.Length > MaxWrappedLength)
+                throw new Exceptionlist.InvalidDataException($"{field} has an unexpected length.");
+            return bytes;
         }
 
-        private static void RequireDeviceId(Guid deviceId)
+        private static byte[] DecodeSalt(string? value, string field)
         {
-            if (deviceId == Guid.Empty)
-                throw new Exceptionlist.InvalidDataException("DeviceId is required.");
+            var bytes = DecodeBase64(value, field);
+            if (bytes.Length < MinSaltLength || bytes.Length > MaxSaltLength)
+                throw new Exceptionlist.InvalidDataException($"{field} must be {MinSaltLength}-{MaxSaltLength} bytes.");
+            return bytes;
         }
 
         private static byte[] DecodeBase64(string? value, string field)
         {
-            if (string.IsNullOrWhiteSpace(value) || value.Length > MaxBase64Length)
+            if (string.IsNullOrWhiteSpace(value))
                 throw new Exceptionlist.InvalidDataException($"{field} is required.");
             try
             {
@@ -296,29 +230,11 @@ namespace APIGateWay.BusinessLayer.Repository
             }
         }
 
-        private static T ImportP256<T>(byte[] spki, Func<T> create, string field) where T : AsymmetricAlgorithm
+        // Same clock the rest of the gateway writes to the database
+        private static DateTime IndiaNow()
         {
-            var key = create();
-            try
-            {
-                switch (key)
-                {
-                    case ECDsa ecdsa: ecdsa.ImportSubjectPublicKeyInfo(spki, out _); break;
-                    case ECDiffieHellman ecdh: ecdh.ImportSubjectPublicKeyInfo(spki, out _); break;
-                }
-            }
-            catch (CryptographicException)
-            {
-                key.Dispose();
-                throw new Exceptionlist.InvalidDataException($"{field} is not a valid public key.");
-            }
-
-            if (key.KeySize != P256KeySize)
-            {
-                key.Dispose();
-                throw new Exceptionlist.InvalidDataException($"{field} must be a P-256 key.");
-            }
-            return key;
+            var ist = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist);
         }
 
         #endregion

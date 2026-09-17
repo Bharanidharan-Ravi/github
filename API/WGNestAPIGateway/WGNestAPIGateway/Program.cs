@@ -87,7 +87,6 @@ builder.Services.AddScoped<IMeetingSchedulerRepo, MeetingSchedulerRepo>();
 builder.Services.AddScoped<IEmojiReactionRepo, EmojiReactionRepo>();
 builder.Services.AddScoped<ICurrentHolderRepo, CurrentHolderRepo>();
 builder.Services.AddScoped<IChatKeyRepo, ChatKeyRepo>();
-builder.Services.AddScoped<IChatRepo, ChatRepo>();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Layer
