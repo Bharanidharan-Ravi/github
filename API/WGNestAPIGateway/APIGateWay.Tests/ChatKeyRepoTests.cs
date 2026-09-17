@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using APIGateWay.BusinessLayer.Repository;
+using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
 using APIGateWay.ModelLayer.ErrorException;
 using APIGateWay.Tests.Fakes;
@@ -30,6 +31,8 @@ namespace APIGateWay.Tests
             return bytes;
         }
 
+        private static string ValidRecoveryCode() => "ABCD-EFGH-2345-6789-JKMN-PQRS";
+
         private static RegisterChatUserKeyDto ValidRegisterDto() => new()
         {
             PublicKey = ValidPublicKeyBase64(),
@@ -37,13 +40,14 @@ namespace APIGateWay.Tests
             PasswordSalt = Salt(),
             WrappedByRecovery = WrappedBlob(),
             RecoverySalt = Salt(),
+            RecoveryCode = ValidRecoveryCode(),
         };
 
         private static (ChatKeyRepo repo, FakeDomainService db, FakeLoginContextService login) MakeRepo()
         {
             var db = new FakeDomainService();
             var login = new FakeLoginContextService();
-            var repo = new ChatKeyRepo(db, login, new FakeRequestStepContext());
+            var repo = new ChatKeyRepo(db, login, new FakeRequestStepContext(), new FakeChatRecoveryEscrowCipher());
             return (repo, db, login);
         }
 
@@ -164,6 +168,57 @@ namespace APIGateWay.Tests
             dto.PasswordSalt = Salt(saltLength);
 
             await Assert.ThrowsAsync<Exceptionlist.InvalidDataException>(() => repo.RegisterMyKeyAsync(dto));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("not-a-recovery-code")]
+        [InlineData("ABCD-EFGH-2345-6789-JKMN-PQR")] // one char short
+        [InlineData("abcd-efgh-2345-6789-jkmn-pqrs")] // lowercase
+        public async Task RegisterMyKey_Throws_OnInvalidRecoveryCode(string badCode)
+        {
+            var (repo, _, _) = MakeRepo();
+            var dto = ValidRegisterDto();
+            dto.RecoveryCode = badCode;
+
+            await Assert.ThrowsAsync<Exceptionlist.InvalidDataException>(() => repo.RegisterMyKeyAsync(dto));
+        }
+
+        // ── GetRecoveryEscrowAsync ──────────────────────────────────────────
+
+        [Fact]
+        public async Task GetRecoveryEscrow_ReturnsDecryptedCode_ForAdmin()
+        {
+            var (repo, _, login) = MakeRepo();
+            login.role = AppRoles.Admin;
+            var dto = ValidRegisterDto();
+            await repo.RegisterMyKeyAsync(dto);
+
+            var result = await repo.GetRecoveryEscrowAsync(login.userId);
+
+            Assert.Equal(login.userId, result.UserId);
+            Assert.Equal(dto.RecoveryCode, result.RecoveryCode);
+        }
+
+        [Fact]
+        public async Task GetRecoveryEscrow_Throws_ForNonAdmin()
+        {
+            var (repo, _, login) = MakeRepo();
+            login.role = AppRoles.Viewer;
+            await repo.RegisterMyKeyAsync(ValidRegisterDto());
+
+            await Assert.ThrowsAsync<Exceptionlist.UnauthorizedException>(
+                () => repo.GetRecoveryEscrowAsync(login.userId));
+        }
+
+        [Fact]
+        public async Task GetRecoveryEscrow_Throws_WhenNoneEscrowed()
+        {
+            var (repo, _, login) = MakeRepo();
+            login.role = AppRoles.Admin;
+
+            await Assert.ThrowsAsync<Exceptionlist.DataNotFoundException>(
+                () => repo.GetRecoveryEscrowAsync(Guid.NewGuid()));
         }
 
         // ── RewrapMyKeyAsync ────────────────────────────────────────────────

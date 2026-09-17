@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
 using APIGateWay.ModalLayer.ChatsModal.Master;
 using APIGateWay.ModelLayer.ErrorException;
@@ -26,18 +29,25 @@ namespace APIGateWay.BusinessLayer.Repository
         private const int MinSaltLength = 16;
         private const int MaxSaltLength = 64;
 
+        // "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" — Crockford Base32 (digits + A-Z minus I/L/O/U)
+        private static readonly Regex RecoveryCodePattern =
+            new(@"^([0-9A-HJKMNPQRSTVWXYZ]{4}-){5}[0-9A-HJKMNPQRSTVWXYZ]{4}$", RegexOptions.Compiled);
+
         private readonly IDomainService _domainService;
         private readonly ILoginContextService _loginContext;
         private readonly IRequestStepContext _stepContext;
+        private readonly IChatRecoveryEscrowCipher _escrowCipher;
 
         public ChatKeyRepo(
             IDomainService domainService,
             ILoginContextService loginContext,
-            IRequestStepContext stepContext)
+            IRequestStepContext stepContext,
+            IChatRecoveryEscrowCipher escrowCipher)
         {
             _domainService = domainService;
             _loginContext = loginContext;
             _stepContext = stepContext;
+            _escrowCipher = escrowCipher;
         }
 
         public async Task<ChatUserKeyBundleDto?> GetMyKeyBundleAsync()
@@ -54,6 +64,7 @@ namespace APIGateWay.BusinessLayer.Repository
             var passwordSalt = DecodeSalt(dto.PasswordSalt, "PasswordSalt");
             var wrappedByRecovery = DecodeWrapped(dto.WrappedByRecovery, "WrappedByRecovery");
             var recoverySalt = DecodeSalt(dto.RecoverySalt, "RecoverySalt");
+            ValidateRecoveryCode(dto.RecoveryCode);
 
             var userId = _loginContext.userId;
 
@@ -81,6 +92,12 @@ namespace APIGateWay.BusinessLayer.Repository
                             CreatedAt = IndiaNow(),
                         };
                         await _domainService.SaveEntityAsync(entity);
+                        await _domainService.SaveEntityAsync(new ChatUserKeyRecoveryEscrow
+                        {
+                            UserId = userId,
+                            EncryptedRecoveryCode = _escrowCipher.Encrypt(dto.RecoveryCode),
+                            CreatedAt = entity.CreatedAt,
+                        });
 
                         _stepContext.Success("ChatUserKeys", "INSERT", userId.ToString(), timer);
                         return ToBundle(entity);
@@ -158,6 +175,23 @@ namespace APIGateWay.BusinessLayer.Repository
                 .ToListAsync();
         }
 
+        public async Task<ChatRecoveryEscrowDto> GetRecoveryEscrowAsync(Guid userId)
+        {
+            if (_loginContext.role != AppRoles.Admin)
+                throw new Exceptionlist.UnauthorizedException("Only an administrator can view an escrowed recovery code.");
+
+            var escrow = await _domainService.Query<ChatUserKeyRecoveryEscrow>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId)
+                ?? throw new Exceptionlist.DataNotFoundException("No recovery code is escrowed for this user.");
+
+            return new ChatRecoveryEscrowDto
+            {
+                UserId = escrow.UserId,
+                RecoveryCode = _escrowCipher.Decrypt(escrow.EncryptedRecoveryCode),
+                CreatedAt = escrow.CreatedAt,
+            };
+        }
+
         #region Helpers
 
         /// <summary>A retry with the same public key is a no-op; a different key must not overwrite the existing one.</summary>
@@ -206,6 +240,12 @@ namespace APIGateWay.BusinessLayer.Repository
             if (bytes.Length < MinWrappedLength || bytes.Length > MaxWrappedLength)
                 throw new Exceptionlist.InvalidDataException($"{field} has an unexpected length.");
             return bytes;
+        }
+
+        private static void ValidateRecoveryCode(string? recoveryCode)
+        {
+            if (string.IsNullOrWhiteSpace(recoveryCode) || !RecoveryCodePattern.IsMatch(recoveryCode))
+                throw new Exceptionlist.InvalidDataException("RecoveryCode must look like XXXX-XXXX-XXXX-XXXX-XXXX-XXXX.");
         }
 
         private static byte[] DecodeSalt(string? value, string field)

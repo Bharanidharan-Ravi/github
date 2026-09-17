@@ -37,6 +37,10 @@ namespace APIGateWay.ModalLayer.ChatsModal.Master
 
         [Column(TypeName = "datetime2")]
         public DateTime JoinedAt { get; set; }
+
+        /// <summary>Messages created after this are unread for this member; null = never opened.</summary>
+        [Column(TypeName = "datetime2")]
+        public DateTime? LastReadAt { get; set; }
     }
 
     public enum ChatConversationType : byte

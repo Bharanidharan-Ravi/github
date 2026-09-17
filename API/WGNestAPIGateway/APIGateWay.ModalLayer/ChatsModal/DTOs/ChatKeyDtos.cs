@@ -27,6 +27,20 @@ namespace APIGateWay.ModalLayer.ChatsModal.DTOs
         public string PasswordSalt { get; set; } = string.Empty;
         public string WrappedByRecovery { get; set; } = string.Empty;
         public string RecoverySalt { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Plaintext recovery code (e.g. "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"). Escrowed encrypted
+        /// with the admin-held ChatRecoveryEscrow key so support can re-issue it later.
+        /// </summary>
+        public string RecoveryCode { get; set; } = string.Empty;
+    }
+
+    /// <summary>GET /api/ChatKeys/{userId}/recovery-escrow — admin-only.</summary>
+    public class ChatRecoveryEscrowDto
+    {
+        public Guid UserId { get; set; }
+        public string RecoveryCode { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 
     /// <summary>POST /api/ChatKeys/rewrap — re-wrap with the new password after a recovery-code unlock.</summary>

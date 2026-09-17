@@ -117,6 +117,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
         public DbSet<ChatRoom> ChatRoom { get; set; }
         public DbSet<ChatUserKey> ChatUserKeys { get; set; }
+        public DbSet<ChatUserKeyRecoveryEscrow> ChatUserKeyRecoveryEscrows { get; set; }
         public DbSet<ChatConversation> ChatConversations { get; set; }
         public DbSet<ChatConversationMember> ChatConversationMembers { get; set; }
         public DbSet<ChatEncryptedMessage> ChatEncryptedMessages { get; set; }
@@ -282,8 +283,14 @@ namespace APIGateWay.DomainLayer.DBContext
                 .HasIndex(c => c.DirectKey).IsUnique().HasFilter("[DirectKey] IS NOT NULL");
             modelBuilder.Entity<ChatEncryptedMessage>()
                 .HasIndex(m => new { m.SenderUserId, m.ClientMessageId }).IsUnique();
+            modelBuilder.Entity<ChatEncryptedMessage>()
+                .HasIndex(m => m.ReplyToMessageId).HasFilter("[ReplyToMessageId] IS NOT NULL");
             modelBuilder.Entity<ChatMessageReaction>()
                 .HasIndex(r => new { r.MessageId, r.UserId, r.Emoji }).IsUnique();
+            modelBuilder.Entity<ChatMessageTag>()
+                .HasIndex(t => t.MessageId);
+            modelBuilder.Entity<ChatMediaAttachment>()
+                .HasIndex(a => a.MessageId);
         }
         #endregion
     }

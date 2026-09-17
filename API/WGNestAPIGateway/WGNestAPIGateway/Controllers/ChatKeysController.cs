@@ -77,5 +77,17 @@ namespace APIGateway.Controllers
             var result = await _chatKeyRepo.GetParticipantKeysAsync(userIds);
             return Ok(ApiResponseHelper.Success(result, "NO"));
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GET /api/ChatKeys/{userId}/recovery-escrow
+        // Admin-only. Decrypts the recovery code escrowed at registration so
+        // support can re-issue it to a user who lost theirs.
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpGet("{userId:guid}/recovery-escrow")]
+        public async Task<IActionResult> RecoveryEscrow(Guid userId)
+        {
+            var result = await _chatKeyRepo.GetRecoveryEscrowAsync(userId);
+            return Ok(ApiResponseHelper.Success(result, "NO"));
+        }
     }
 }
