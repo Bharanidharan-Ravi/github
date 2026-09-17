@@ -116,6 +116,12 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ChatMessage> ChatMessage { get; set; }
         public DbSet<ChatParticipant> ChatParticipant { get; set; }
         public DbSet<ChatRoom> ChatRoom { get; set; }
+        public DbSet<ChatIdentityKey> ChatIdentityKeys { get; set; }
+        public DbSet<ChatSignedPreKey> ChatSignedPreKeys { get; set; }
+        public DbSet<ChatConversation> ChatConversations { get; set; }
+        public DbSet<ChatConversationMember> ChatConversationMembers { get; set; }
+        public DbSet<ChatEncryptedMessage> ChatEncryptedMessages { get; set; }
+        public DbSet<ChatMessageKey> ChatMessageKeys { get; set; }
         public DbSet<Emoji_Reactions> Emoji_Reactions { get; set; }
         public DbSet<GetStaleTicketsForAssignee> GetStaleTicketsForAssignee { get; set; }
         #region SaveChanges Override (Audit)
