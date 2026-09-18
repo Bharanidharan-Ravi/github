@@ -5,6 +5,7 @@ using APIGateWay.ModalLayer.ChatsModal.Master;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModelLayer.ErrorException;
 using APIGateWay.Tests.Fakes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
@@ -40,7 +41,8 @@ namespace APIGateWay.Tests
             var db = new FakeDomainService();
             var login = new FakeLoginContextService();
             var hub = new FakeHubContext();
-            var repo = new ChatRepo(db, login, new FakeRequestStepContext(), hub, new FakeLogger<ChatRepo>(), TestConfiguration());
+            var httpContextAccessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+            var repo = new ChatRepo(db, login, new FakeRequestStepContext(), hub, new FakeLogger<ChatRepo>(), TestConfiguration(), httpContextAccessor);
             return (repo, db, login, hub);
         }
 

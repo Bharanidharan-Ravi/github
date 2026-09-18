@@ -1,4 +1,5 @@
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
+using Microsoft.AspNetCore.Http;
 
 namespace APIGateWay.Business_Layer.Interface
 {
@@ -8,6 +9,10 @@ namespace APIGateWay.Business_Layer.Interface
         Task<ConversationDto> OpenDirectConversationAsync(Guid otherUserId);
         Task<ConversationDto> OpenGroupConversationAsync(CreateGroupConversationDto dto);
         Task<ConversationDto> UpdateGroupMembersAsync(Guid conversationId, ManageGroupMembersDto dto);
+
+        /// <summary>Admin only. Saves the image to disk (plain static file — group icons aren't
+        /// end-to-end encrypted) and updates ChatConversation.GroupIconUrl.</summary>
+        Task<ConversationDto> UpdateGroupIconAsync(Guid conversationId, IFormFile icon);
 
         /// <summary>Oldest-first page of messages created before <paramref name="before"/>.</summary>
         Task<List<ChatMessageDto>> GetMessagesAsync(Guid conversationId, DateTime? before, int take);

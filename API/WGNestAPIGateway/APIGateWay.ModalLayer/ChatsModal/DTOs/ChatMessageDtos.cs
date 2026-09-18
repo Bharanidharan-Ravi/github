@@ -28,6 +28,12 @@ namespace APIGateWay.ModalLayer.ChatsModal.DTOs
         public List<Guid> RemoveUserIds { get; set; } = new();
     }
 
+    /// <summary>POST /api/Chats/{conversationId}/icon — Admin only, multipart/form-data.</summary>
+    public class UploadGroupIconDto
+    {
+        public IFormFile Icon { get; set; } = null!;
+    }
+
     public class ConversationDto
     {
         public Guid ConversationId { get; set; }
@@ -35,7 +41,13 @@ namespace APIGateWay.ModalLayer.ChatsModal.DTOs
         /// <summary>1 = Direct, 2 = Group</summary>
         public int Type { get; set; }
         public string? Title { get; set; }
+
+        /// <summary>Group photo URL; null for Direct conversations and groups without one set.</summary>
+        public string? GroupIconUrl { get; set; }
         public List<Guid> MemberUserIds { get; set; } = new();
+
+        /// <summary>Admin | Member per member; group conversations only (empty for Direct).</summary>
+        public Dictionary<Guid, string> MemberRoles { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime? LastMessageAt { get; set; }
 

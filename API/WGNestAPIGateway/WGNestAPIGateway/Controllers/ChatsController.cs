@@ -76,6 +76,23 @@ namespace APIGateway.Controllers
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // POST /api/Chats/{conversationId}/icon   multipart/form-data: Icon
+        // Admin only. Group icons aren't end-to-end encrypted — a plain static file,
+        // same trust level as an employee profile photo.
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("{conversationId:guid}/icon")]
+        [RequestSizeLimit(5_242_880)] // 5 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 5_242_880)]
+        public async Task<IActionResult> UpdateIcon(Guid conversationId, [FromForm] UploadGroupIconDto dto)
+        {
+            if (dto == null)
+                return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Request body is required." });
+
+            var result = await _chatRepo.UpdateGroupIconAsync(conversationId, dto.Icon);
+            return Ok(ApiResponseHelper.Success(result, "NO"));
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // GET /api/Chats/{conversationId}/messages?before={datetime}&take=50
         // Oldest-first page; each message carries only the caller's wrapped key.
         // ─────────────────────────────────────────────────────────────────────

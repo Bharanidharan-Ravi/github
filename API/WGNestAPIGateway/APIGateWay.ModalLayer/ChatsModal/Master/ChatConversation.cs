@@ -16,6 +16,9 @@ namespace APIGateWay.ModalLayer.ChatsModal.Master
         /// <summary>Group name; null for Direct conversations.</summary>
         public string? Title { get; set; }
 
+        /// <summary>Group photo URL; null for Direct conversations and groups without one set.</summary>
+        public string? GroupIconUrl { get; set; }
+
         /// <summary>"minUserId|maxUserId" for Direct conversations (unique); null for Group.</summary>
         public string? DirectKey { get; set; }
 

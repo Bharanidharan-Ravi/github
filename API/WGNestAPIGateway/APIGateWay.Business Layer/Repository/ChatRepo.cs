@@ -5,6 +5,7 @@ using APIGateWay.ModalLayer.ChatsModal.DTOs;
 using APIGateWay.ModalLayer.ChatsModal.Master;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModelLayer.ErrorException;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -50,12 +51,21 @@ namespace APIGateWay.BusinessLayer.Repository
         private const int MaxOriginalFileNameLength = 255;
         private const int MaxMimeTypeLength = 100;
 
+        // Group icon — not end-to-end encrypted, same trust level as an employee profile photo
+        private const long MaxGroupIconBytes = 5 * 1024 * 1024; // 5 MB
+        private const string GroupIconSubfolder = "ChatGroupIcons";
+        private static readonly HashSet<string> AllowedGroupIconContentTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/png", "image/gif", "image/webp",
+        };
+
         private readonly IDomainService _domainService;
         private readonly ILoginContextService _loginContext;
         private readonly IRequestStepContext _stepContext;
         private readonly IHubContext<RealtimeHub> _hub;
         private readonly ILogger<ChatRepo> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public ChatRepo(
             IDomainService domainService,
@@ -63,7 +73,8 @@ namespace APIGateWay.BusinessLayer.Repository
             IRequestStepContext stepContext,
             IHubContext<RealtimeHub> hub,
             ILogger<ChatRepo> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHttpContextAccessor httpContextAccessor)
         {
             _domainService = domainService;
             _loginContext = loginContext;
@@ -71,10 +82,14 @@ namespace APIGateWay.BusinessLayer.Repository
             _hub = hub;
             _logger = logger;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         private string MediaStorageRoot => _configuration["ChatMedia:StorageFolder"]
             ?? throw new InvalidOperationException("Configuration \"ChatMedia:StorageFolder\" is required.");
+
+        private string GroupIconStorageRoot => _configuration["FileSettings:OriginalFolder"]
+            ?? throw new InvalidOperationException("Configuration \"FileSettings:OriginalFolder\" is required.");
 
         public async Task<List<ConversationDto>> GetMyConversationsAsync()
         {
@@ -93,7 +108,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             var members = await _domainService.Query<ChatConversationMember>().AsNoTracking()
                 .Where(m => ids.Contains(m.ConversationId))
-                .Select(m => new { m.ConversationId, m.UserId })
+                .Select(m => new { m.ConversationId, m.UserId, m.Role })
                 .ToListAsync();
 
             var messages = _domainService.Query<ChatEncryptedMessage>().AsNoTracking();
@@ -133,7 +148,9 @@ namespace APIGateWay.BusinessLayer.Repository
                         ConversationId = c.Id,
                         Type = (int)c.Type,
                         Title = c.Title,
+                        GroupIconUrl = c.GroupIconUrl,
                         MemberUserIds = members.Where(m => m.ConversationId == c.Id).Select(m => m.UserId).ToList(),
+                        MemberRoles = members.Where(m => m.ConversationId == c.Id).ToDictionary(m => m.UserId, m => m.Role),
                         CreatedAt = c.CreatedAt,
                         LastMessageAt = last?.CreatedAt,
                         LastReadAt = myMemberships.First(m => m.ConversationId == c.Id).LastReadAt,
@@ -270,7 +287,9 @@ namespace APIGateWay.BusinessLayer.Repository
                         ConversationId = conversation.Id,
                         Type = (int)conversation.Type,
                         Title = conversation.Title,
+                        GroupIconUrl = conversation.GroupIconUrl,
                         MemberUserIds = members.Select(m => m.UserId).ToList(),
+                        MemberRoles = members.ToDictionary(m => m.UserId, m => m.Role),
                         CreatedAt = now,
                     };
                 }
@@ -354,12 +373,16 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
 
                     _stepContext.Success("ChatConversationMembers", "UPDATE", conversationId.ToString(), timer);
+                    var roles = remainingMembers.ToDictionary(m => m.UserId, m => m.Role);
+                    foreach (var id in addIds) roles[id] = ChatMemberRole.Member;
                     return new ConversationDto
                     {
                         ConversationId = conversation.Id,
                         Type = (int)conversation.Type,
                         Title = conversation.Title,
+                        GroupIconUrl = conversation.GroupIconUrl,
                         MemberUserIds = remainingMembers.Select(m => m.UserId).Concat(addIds).Distinct().ToList(),
+                        MemberRoles = roles,
                         CreatedAt = conversation.CreatedAt,
                     };
                 }
@@ -369,6 +392,98 @@ namespace APIGateWay.BusinessLayer.Repository
                     throw;
                 }
             });
+        }
+
+        /// <summary>Admin only. Group icons are a plain static file (same trust level as an employee
+        /// profile photo) — not end-to-end encrypted like messages/media.</summary>
+        public async Task<ConversationDto> UpdateGroupIconAsync(Guid conversationId, IFormFile icon)
+        {
+            var me = _loginContext.userId;
+
+            var conversation = await _domainService.Query<ChatConversation>().AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == conversationId)
+                ?? throw new Exceptionlist.DataNotFoundException("Conversation not found.");
+            if (conversation.Type != ChatConversationType.Group)
+                throw new Exceptionlist.InvalidDataException("Only group conversations have an icon.");
+
+            var members = await _domainService.Query<ChatConversationMember>().AsNoTracking()
+                .Where(m => m.ConversationId == conversationId)
+                .ToListAsync();
+            var myMembership = members.FirstOrDefault(m => m.UserId == me)
+                ?? throw new Exceptionlist.DataNotFoundException("Conversation not found.");
+            if (myMembership.Role != ChatMemberRole.Admin)
+                throw new Exceptionlist.UnauthorizedException("Only a group admin can change the group icon.");
+
+            if (icon == null || icon.Length == 0)
+                throw new Exceptionlist.InvalidDataException("An image is required.");
+            if (icon.Length > MaxGroupIconBytes)
+                throw new Exceptionlist.InvalidDataException($"Images must be {MaxGroupIconBytes / (1024 * 1024)} MB or smaller.");
+            if (!AllowedGroupIconContentTypes.Contains(icon.ContentType ?? string.Empty))
+                throw new Exceptionlist.InvalidDataException("Only JPEG, PNG, GIF or WEBP images are allowed.");
+
+            var extension = icon.ContentType.ToLowerInvariant() switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/png" => ".png",
+                "image/gif" => ".gif",
+                "image/webp" => ".webp",
+                _ => ".jpg",
+            };
+            var fileName = $"{conversationId:D}_{DateTime.Now:yyyyMMdd_HHmmss_fff}{extension}";
+            var absoluteDir = Path.Combine(GroupIconStorageRoot, GroupIconSubfolder);
+            Directory.CreateDirectory(absoluteDir);
+            var absolutePath = Path.Combine(absoluteDir, fileName);
+
+            try
+            {
+                using var fileStream = new FileStream(absolutePath, FileMode.Create, FileAccess.Write);
+                await icon.CopyToAsync(fileStream);
+            }
+            catch (Exception)
+            {
+                TryDeleteFile(absolutePath);
+                throw new Exceptionlist.InvalidDataException("Could not save the image.");
+            }
+
+            var request = _httpContextAccessor.HttpContext!.Request;
+            var baseUrl = $"{request.Scheme}://{request.Host}";
+            var groupIconUrl = $"{baseUrl}/Uploads/{GroupIconSubfolder}/{fileName}";
+
+            try
+            {
+                return await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    var timer = _stepContext.StartStep();
+                    try
+                    {
+                        await _domainService.UpdateTrackedEntityAsync<ChatConversation>(
+                            c => c.Id == conversationId,
+                            c => c.GroupIconUrl = groupIconUrl);
+
+                        _stepContext.Success("ChatConversations", "UPDATE", conversationId.ToString(), timer);
+                        return new ConversationDto
+                        {
+                            ConversationId = conversation.Id,
+                            Type = (int)conversation.Type,
+                            Title = conversation.Title,
+                            GroupIconUrl = groupIconUrl,
+                            MemberUserIds = members.Select(m => m.UserId).ToList(),
+                            MemberRoles = members.ToDictionary(m => m.UserId, m => m.Role),
+                            CreatedAt = conversation.CreatedAt,
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _stepContext.Failure("ChatConversations", "UPDATE", ex.Message, ex.InnerException?.Message, timer);
+                        throw;
+                    }
+                });
+            }
+            catch
+            {
+                TryDeleteFile(absolutePath);
+                throw;
+            }
         }
 
         public async Task<List<ChatMessageDto>> GetMessagesAsync(Guid conversationId, DateTime? before, int take)
@@ -910,6 +1025,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 ConversationId = conversation.Id,
                 Type = (int)conversation.Type,
                 Title = conversation.Title,
+                GroupIconUrl = conversation.GroupIconUrl,
                 MemberUserIds = memberIds,
                 CreatedAt = conversation.CreatedAt,
             };
