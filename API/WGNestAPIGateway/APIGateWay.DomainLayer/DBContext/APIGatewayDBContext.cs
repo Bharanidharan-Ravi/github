@@ -130,6 +130,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetAllUserOnlineStatus> GetAllUserOnlineStatus { get; set; }
         public DbSet<TicketFeedback> TicketFeedbacks { get; set; }
         public DbSet<GetTicketFeedbackDto> GetTicketFeedbackDtos { get; set; }
+        public DbSet<GetLeaveRequest> GetLeaveRequests { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -266,6 +267,7 @@ namespace APIGateWay.DomainLayer.DBContext
                 .HasColumnType("decimal(5, 2)");
 
             modelBuilder.Entity<GetEmployee>().HasNoKey();
+            modelBuilder.Entity<GetLeaveRequest>().HasNoKey();
             modelBuilder.Entity<ClientMaster>()
                 .Property(c => c.Created_On).HasColumnType("datetime");
 

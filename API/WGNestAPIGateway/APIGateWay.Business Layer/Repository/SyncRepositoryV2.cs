@@ -13,8 +13,13 @@ namespace APIGateWay.BusinessLayer.Repository
     public class SyncRepositoryV2 : ISyncRepositoryV2
     {
         private readonly ISyncExecutionService _exec;
+        private readonly ILoginContextService _loginContext;
 
-        public SyncRepositoryV2(ISyncExecutionService exec) => _exec = exec;
+        public SyncRepositoryV2(ISyncExecutionService exec, ILoginContextService loginContext)
+        {
+            _exec = exec;
+            _loginContext = loginContext;
+        }
 
         // ─────────────────────────────────────────────────────────────────────
         // Primary path — called by SyncV2Controller with enriched units
@@ -169,8 +174,19 @@ namespace APIGateWay.BusinessLayer.Repository
         private Task<RawSyncResult> ExecuteLocal(
             SyncRepositoryConfig cfg,
             DateTimeOffset? lastSync,
-            Dictionary<string, string>? param) =>
-            (Task<RawSyncResult>)typeof(ISyncExecutionService)
+            Dictionary<string, string>? param)
+        {
+            if (cfg.RequiresIdentity)
+            {
+                param = param != null
+                    ? new Dictionary<string, string>(param, StringComparer.Ordinal)
+                    : new Dictionary<string, string>(StringComparer.Ordinal);
+
+                param["UserId"] = _loginContext.userId.ToString();
+                param["IsAdmin"] = _loginContext.role == 1 ? "1" : "0";
+            }
+
+            return (Task<RawSyncResult>)typeof(ISyncExecutionService)
                 .GetMethod(nameof(ISyncExecutionService.ExecuteLocalAsync))!
                 .MakeGenericMethod(cfg.EntityType)
                 .Invoke(_exec, new object?[]
@@ -181,6 +197,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     param,
                     cfg.SourceName
                 })!;
+        }
 
         private static SyncResponseV2 NewResponse() => new()
         {

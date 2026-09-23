@@ -38,6 +38,11 @@ namespace APIGateWay.BusinessLayer.Configuration
         public string SignalREntity { get; set; }
 
         public string SignalRAction { get; set; }
+
+        // When true, SyncRepositoryV2 injects the caller's identity — @UserId
+        // (LoginContext.userId) and @IsAdmin (LoginContext.role == 1) — into the
+        // SP params before execution. The frontend never sends these.
+        public bool RequiresIdentity { get; set; }
     }
 
 

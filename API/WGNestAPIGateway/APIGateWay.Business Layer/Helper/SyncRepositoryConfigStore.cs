@@ -290,6 +290,24 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "FeedbackId",
                 DeltaEnabled = false
             },
+            ["GetLeaveRequests"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "usp_GetLeaveRequests",
+                EntityType = typeof(GetLeaveRequest),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "ID",
+                DeltaEnabled = false,
+
+                // usp_GetLeaveRequests(@UserId, @IsAdmin) — resolved from the JWT,
+                // never sent by the frontend.
+                RequiresIdentity = true
+            },
         };
     }
 }
