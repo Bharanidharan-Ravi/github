@@ -817,6 +817,13 @@ namespace APIGateWay.BusinessLayer.Repository
             try
             {
                 await _hub.Clients.Group($"user-{me}").SendAsync(ReadEvent, result);
+                var otherMemberIds = await 
+                    GetConversationMemberIdsAsync(conversationId, excludeUserId: me);
+                foreach (var memberId in otherMemberIds)
+                {
+                    await _hub.Clients.Group($"user-{memberId}")
+                        .SendAsync(ReadEvent, result);
+                }
             }
             catch (Exception ex)
             {
@@ -825,6 +832,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
             return result;
         }
+       
 
         public async Task<MessageReactionEventDto> ToggleReactionAsync(Guid messageId, ToggleReactionDto dto)
         {
@@ -1184,6 +1192,17 @@ namespace APIGateWay.BusinessLayer.Repository
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist);
         }
 
-        #endregion
-    }
+        public async Task<List<Guid>>GetConversationMemberIdsAsync(
+           Guid conversationId, Guid excludeUserId)
+            {
+            return await _domainService
+                .Query<ChatConversationMember>()
+                .Where(m => m.ConversationId == conversationId
+                && m.UserId != excludeUserId)
+                .Select(m => m.UserId)
+           .ToListAsync();
+            }
+
+    #endregion
+}
 }

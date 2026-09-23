@@ -127,6 +127,10 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ChatMediaAttachment> ChatMediaAttachments { get; set; }
         public DbSet<Emoji_Reactions> Emoji_Reactions { get; set; }
         public DbSet<GetStaleTicketsForAssignee> GetStaleTicketsForAssignee { get; set; }
+        public DbSet<GetAllUserOnlineStatus> GetAllUserOnlineStatus { get; set; }
+        public DbSet<TicketFeedback> TicketFeedbacks { get; set; }
+        public DbSet<GetTicketFeedbackDto> GetTicketFeedbackDtos { get; set; }
+
         #region SaveChanges Override (Audit)
 
         public override Task<int> SaveChangesAsync(
@@ -291,6 +295,19 @@ namespace APIGateWay.DomainLayer.DBContext
                 .HasIndex(t => t.MessageId);
             modelBuilder.Entity<ChatMediaAttachment>()
                 .HasIndex(a => a.MessageId);
+
+            modelBuilder.Entity<TicketFeedback>(entity =>
+            {
+                entity.ToTable("TicketFeedback");
+                entity.HasKey(e => e.FeedbackId);
+                entity.Property(e => e.FeedbackId).ValueGeneratedOnAdd();
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            });
+
+            modelBuilder.Entity<GetTicketFeedbackDto>(entity =>
+            {
+                entity.HasNoKey();
+            });
         }
         #endregion
     }

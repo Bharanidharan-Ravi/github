@@ -677,5 +677,31 @@ namespace APIGateWay.Business_Layer.Helper
                 Meta = comment != null ? new { Comment = comment } : null
             };
         }
+        public static TicketHistoryEntry FeedbackGiven(
+           Guid issueId,
+           string targetUserName,
+           int rating,
+           string? comment,
+           Guid actorId,
+           string actorName)
+        {
+            var stars = new string('*', Math.Clamp(rating, 1, 5));
+            return new TicketHistoryEntry
+            {
+                IssueId = issueId,
+                EventType = "FEEDBACK_SUBMITTED",
+                Summary = $"{actorName} gave feedback to {targetUserName}",
+                OldValue = null,
+                NewValue = $"{rating} Stars",
+                ActorId = actorId,
+                ActorName = actorName,
+                Meta = new
+                {
+                    TargetUserName = targetUserName,
+                    Rating = rating,
+                    Comment = comment
+                }
+            };
+        }
     }
 }

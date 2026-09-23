@@ -268,6 +268,28 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "repoId",
                 DeltaEnabled = true
             },
+            ["GetUserOnlineStatus"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetAllUserOnlineStatus",
+                EntityType = typeof(GetAllUserOnlineStatus),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "repoId",
+                DeltaEnabled = true
+            },
+            ["TicketFeedback"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetTicketFeedbacks",
+                EntityType = typeof(GetTicketFeedbackDto),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "FeedbackId",
+                DeltaEnabled = false
+            },
         };
     }
 }

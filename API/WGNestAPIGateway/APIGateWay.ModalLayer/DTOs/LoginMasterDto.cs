@@ -14,5 +14,7 @@ namespace APIGateWay.ModalLayer.DTOs
         public string? DBName { get; set; }
         public string? Status { get; set; }
     }
+   
+
 
 }
