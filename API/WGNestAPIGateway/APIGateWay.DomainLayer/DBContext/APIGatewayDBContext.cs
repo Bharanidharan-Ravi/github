@@ -131,7 +131,10 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<TicketFeedback> TicketFeedbacks { get; set; }
         public DbSet<GetTicketFeedbackDto> GetTicketFeedbackDtos { get; set; }
         public DbSet<GetLeaveRequest> GetLeaveRequests { get; set; }
+        public DbSet<LeaveType> LeaveType { get; set; }
         public DbSet<LeaveRequestMaster> LeaveRequestMaster { get; set; }
+        public DbSet<GetPermissionRequest> GetPermissionRequests { get; set; }
+        public DbSet<PermissionRequestMaster> PermissionRequestMaster { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -269,6 +272,7 @@ namespace APIGateWay.DomainLayer.DBContext
 
             modelBuilder.Entity<GetEmployee>().HasNoKey();
             modelBuilder.Entity<GetLeaveRequest>().HasNoKey();
+            modelBuilder.Entity<GetPermissionRequest>().HasNoKey();
             modelBuilder.Entity<ClientMaster>()
                 .Property(c => c.Created_On).HasColumnType("datetime");
 

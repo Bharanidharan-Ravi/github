@@ -61,7 +61,37 @@ namespace APIGateWay.DomainLayer.CommonSevice
                 .ForMember(dest => dest.CREATED_BY, opt => opt.MapFrom(src => src.CreatedBy))
                 .ForMember(dest => dest.CREATED_DATE, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.UPDATED_BY, opt => opt.MapFrom(src => src.UpdatedBy))
-                .ForMember(dest => dest.UPDATED_DATE, opt => opt.MapFrom(src => src.UpdatedAt));
+                .ForMember(dest => dest.UPDATED_DATE, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.NOT_TAKEN, opt => opt.MapFrom(src => src.NOT_TAKEN))
+                .ForMember(dest => dest.NOT_TAKEN_BY, opt => opt.MapFrom(src => src.NOT_TAKEN_BY))
+                .ForMember(dest => dest.NOT_TAKEN_DATE, opt => opt.MapFrom(src => src.NOT_TAKEN_DATE));
+
+            CreateMap<PostPermissionRequestDto, PermissionRequestMaster>()
+                .ForMember(dest => dest.PERMISSION_DATE, opt => opt.MapFrom(src => src.PermissionDate))
+                .ForMember(dest => dest.DURATION_MINUTES, opt => opt.MapFrom(src => src.DurationMinutes))
+                .ForMember(dest => dest.REMARKS, opt => opt.MapFrom(src => src.Remarks));
+
+            CreateMap<PermissionRequestMaster, GetPermissionRequest>()
+                .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+                .ForMember(dest => dest.EMPLOYEE_ID, opt => opt.MapFrom(src => src.EMPLOYEE_ID))
+                .ForMember(dest => dest.EmployeeName, opt => opt.Ignore())
+                .ForMember(dest => dest.PERMISSION_DATE, opt => opt.MapFrom(src => src.PERMISSION_DATE))
+                .ForMember(dest => dest.DURATION_MINUTES, opt => opt.MapFrom(src => src.DURATION_MINUTES))
+                .ForMember(dest => dest.REMARKS, opt => opt.MapFrom(src => src.REMARKS))
+                .ForMember(dest => dest.STATUS, opt => opt.MapFrom(src => src.STATUS))
+                .ForMember(dest => dest.REQUESTED_DATE, opt => opt.MapFrom(src => src.REQUESTED_DATE))
+                .ForMember(dest => dest.APPROVED_BY, opt => opt.MapFrom(src => src.APPROVED_BY))
+                .ForMember(dest => dest.APPROVED_DATE, opt => opt.MapFrom(src => src.APPROVED_DATE))
+                .ForMember(dest => dest.REJECT_REASON, opt => opt.MapFrom(src => src.REJECT_REASON))
+                .ForMember(dest => dest.REJECTED_BY, opt => opt.MapFrom(src => src.REJECTED_BY))
+                .ForMember(dest => dest.REJECTED_DATE, opt => opt.MapFrom(src => src.REJECTED_DATE))
+                .ForMember(dest => dest.CREATED_BY, opt => opt.MapFrom(src => src.CreatedBy))
+                .ForMember(dest => dest.CREATED_DATE, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UPDATED_BY, opt => opt.MapFrom(src => src.UpdatedBy))
+                .ForMember(dest => dest.UPDATED_DATE, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.ACTUAL_DURATION_MINUTES, opt => opt.MapFrom(src => src.ACTUAL_DURATION_MINUTES))
+                .ForMember(dest => dest.ACTUAL_DURATION_BY, opt => opt.MapFrom(src => src.ACTUAL_DURATION_BY))
+                .ForMember(dest => dest.ACTUAL_DURATION_DATE, opt => opt.MapFrom(src => src.ACTUAL_DURATION_DATE));
         }
     }
 }

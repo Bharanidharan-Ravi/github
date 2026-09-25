@@ -85,6 +85,7 @@ builder.Services.AddScoped<IEventContextProvider, ApiGatewayEventContextProvider
 builder.Services.AddScoped<IBannermessageRepo, BannerMessageRepo>();
 builder.Services.AddScoped<IMeetingSchedulerRepo, MeetingSchedulerRepo>();
 builder.Services.AddScoped<ILeaveRequestRepo, LeaveRequestRepo>();
+builder.Services.AddScoped<IPermissionRequestRepo, PermissionRequestRepo>();
 builder.Services.AddScoped<IEmojiReactionRepo, EmojiReactionRepo>();
 builder.Services.AddScoped<ICurrentHolderRepo, CurrentHolderRepo>();
 builder.Services.AddScoped<IChatKeyRepo, ChatKeyRepo>();

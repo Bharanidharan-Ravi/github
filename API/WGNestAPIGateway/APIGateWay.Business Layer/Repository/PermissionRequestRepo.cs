@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Repository
 {
-    public class LeaveRequestRepo : ILeaveRequestRepo
+    public class PermissionRequestRepo : IPermissionRequestRepo
     {
         private readonly IDomainService _domainService;
         private readonly APIGatewayDBContext _dBContext;
@@ -31,7 +31,7 @@ namespace APIGateWay.Business_Layer.Repository
         private static readonly TimeZoneInfo IndiaTimeZone =
             TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
 
-        public LeaveRequestRepo(
+        public PermissionRequestRepo(
             IDomainService domainService,
             APIGatewayDBContext dbContext,
             IMapper mapper,
@@ -49,49 +49,46 @@ namespace APIGateWay.Business_Layer.Repository
             _stepContext = stepContext;
         }
 
-        public async Task<GetLeaveRequest> CreateLeaveRequestAsync(PostLeaveRequestDto dto)
+        public async Task<GetPermissionRequest> CreatePermissionRequestAsync(PostPermissionRequestDto dto)
         {
             if (!AppRoles.LeaveRequestCreate.Contains(_loginContext.role))
-                throw new Exceptionlist.UnauthorizedException("Only employees and admins can submit leave requests.");
+                throw new Exceptionlist.UnauthorizedException("Only employees and admins can submit permission requests.");
 
-            GetLeaveRequest finalData = null;
-            LeaveRequestMaster entity = null;
+            GetPermissionRequest finalData = null;
+            PermissionRequestMaster entity = null;
 
             try
             {
-                finalData = await _domainService.ExecuteInTransactionAsync<GetLeaveRequest>(async () =>
+                finalData = await _domainService.ExecuteInTransactionAsync<GetPermissionRequest>(async () =>
                 {
-                    entity = _mapper.Map<LeaveRequestMaster>(dto);
+                    entity = _mapper.Map<PermissionRequestMaster>(dto);
                     entity.ID = Guid.NewGuid();
                     entity.EMPLOYEE_ID = _loginContext.userId;
                     entity.STATUS = "REQUESTED";
-                    // Never trust the client-computed day count — recompute from the dates.
-                    entity.NO_OF_LEAVE_DAYS =
-                        (int)(dto.LeaveTo.Date - dto.LeaveFrom.Date).TotalDays + 1;
                     entity.REQUESTED_DATE =
                         TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
 
-                    await _dBContext.Set<LeaveRequestMaster>().AddAsync(entity);
+                    await _dBContext.Set<PermissionRequestMaster>().AddAsync(entity);
 
                     var timer = _stepContext.StartStep();
                     try
                     {
                         await _dBContext.SaveChangesAsync();
-                        _stepContext.Success("LeaveRequest", "INSERT", entity.ID.ToString(), timer);
+                        _stepContext.Success("PermissionRequest", "INSERT", entity.ID.ToString(), timer);
                     }
                     catch (Exception ex)
                     {
-                        _stepContext.Failure("LeaveRequest", "INSERT",
+                        _stepContext.Failure("PermissionRequest", "INSERT",
                             ex.Message, ex.InnerException?.Message, timer);
                         throw;
                     }
 
-                    return _mapper.Map<GetLeaveRequest>(entity);
+                    return _mapper.Map<GetPermissionRequest>(entity);
                 });
             }
             catch (Exception ex)
             {
-                throw new Exception($"Leave request creation failed. Everything was rolled back safely. {ex}", ex);
+                throw new Exception($"Permission request creation failed. Everything was rolled back safely. {ex}", ex);
             }
 
             if (entity != null)
@@ -102,16 +99,16 @@ namespace APIGateWay.Business_Layer.Repository
             return finalData;
         }
 
-        public async Task<GetLeaveRequest> UpdateStatusAsync(Guid id, PostLeaveRequestStatusDto dto)
+        public async Task<GetPermissionRequest> UpdateStatusAsync(Guid id, PostPermissionRequestStatusDto dto)
         {
             if (_loginContext.role != 1)
-                throw new Exceptionlist.UnauthorizedException("Only admins can approve or reject leave requests.");
+                throw new Exceptionlist.UnauthorizedException("Only admins can approve or reject permission requests.");
 
-            var entity = await _dBContext.Set<LeaveRequestMaster>().FindAsync(id)
-                ?? throw new Exceptionlist.DataNotFoundException($"Leave request '{id}' not found.");
+            var entity = await _dBContext.Set<PermissionRequestMaster>().FindAsync(id)
+                ?? throw new Exceptionlist.DataNotFoundException($"Permission request '{id}' not found.");
 
             if (entity.STATUS != "REQUESTED")
-                throw new Exceptionlist.InvalidDataException("This leave request has already been decided.");
+                throw new Exceptionlist.InvalidDataException("This permission request has already been decided.");
 
             var timer = _stepContext.StartStep();
             try
@@ -136,72 +133,72 @@ namespace APIGateWay.Business_Layer.Repository
                     return true;
                 });
 
-                _stepContext.Success("LeaveRequest", "UPDATE", id.ToString(), timer);
+                _stepContext.Success("PermissionRequest", "UPDATE", id.ToString(), timer);
             }
             catch (Exception ex)
             {
-                _stepContext.Failure("LeaveRequest", "UPDATE",
+                _stepContext.Failure("PermissionRequest", "UPDATE",
                     ex.Message, ex.InnerException?.Message, timer);
                 throw;
             }
 
             await NotifyRequesterAsync(entity, dto.Status);
             // Refresh the requester's list and every other admin's list.
-            await BroadcastLeaveRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
+            await BroadcastPermissionRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
 
-            return _mapper.Map<GetLeaveRequest>(entity);
+            return _mapper.Map<GetPermissionRequest>(entity);
         }
 
-        public async Task<GetLeaveRequest> MarkNotTakenAsync(Guid id)
+        public async Task<GetPermissionRequest> UpdateActualDurationAsync(Guid id, PostPermissionActualDurationDto dto)
         {
             if (_loginContext.role != 1)
-                throw new Exceptionlist.UnauthorizedException("Only admins can mark a leave as not taken.");
+                throw new Exceptionlist.UnauthorizedException("Only admins can record the actual duration taken.");
 
-            var entity = await _dBContext.Set<LeaveRequestMaster>().FindAsync(id)
-                ?? throw new Exceptionlist.DataNotFoundException($"Leave request '{id}' not found.");
+            var entity = await _dBContext.Set<PermissionRequestMaster>().FindAsync(id)
+                ?? throw new Exceptionlist.DataNotFoundException($"Permission request '{id}' not found.");
 
             if (entity.STATUS != "APPROVED")
-                throw new Exceptionlist.InvalidDataException("Only an approved leave request can be marked as not taken.");
-            if (entity.NOT_TAKEN)
-                throw new Exceptionlist.InvalidDataException("This leave request has already been marked as not taken.");
+                throw new Exceptionlist.InvalidDataException("Only an approved permission request can have its actual duration recorded.");
+            if (dto.ActualDurationMinutes <= 0)
+                throw new Exceptionlist.InvalidDataException("Actual duration must be greater than zero.");
 
             var timer = _stepContext.StartStep();
             try
             {
                 await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    entity.NOT_TAKEN = true;
-                    entity.NOT_TAKEN_BY = _loginContext.userId;
-                    entity.NOT_TAKEN_DATE = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
+                    entity.ACTUAL_DURATION_MINUTES = dto.ActualDurationMinutes;
+                    entity.ACTUAL_DURATION_BY = _loginContext.userId;
+                    entity.ACTUAL_DURATION_DATE = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
 
                     await _dBContext.SaveChangesAsync();
                     return true;
                 });
 
-                _stepContext.Success("LeaveRequest", "UPDATE", id.ToString(), timer);
+                _stepContext.Success("PermissionRequest", "UPDATE", id.ToString(), timer);
             }
             catch (Exception ex)
             {
-                _stepContext.Failure("LeaveRequest", "UPDATE",
+                _stepContext.Failure("PermissionRequest", "UPDATE",
                     ex.Message, ex.InnerException?.Message, timer);
                 throw;
             }
 
-            await NotifyNotTakenAsync(entity);
-            await BroadcastLeaveRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
+            await NotifyActualDurationAsync(entity);
+            await BroadcastPermissionRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
 
-            return _mapper.Map<GetLeaveRequest>(entity);
+            return _mapper.Map<GetPermissionRequest>(entity);
         }
 
-        private async Task NotifyNotTakenAsync(LeaveRequestMaster entity)
+        private async Task NotifyActualDurationAsync(PermissionRequestMaster entity)
         {
             var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest
             {
-                EventType = "LEAVE_REQUEST_NOT_TAKEN",
-                EntityType = "LEAVE_REQUEST",
+                EventType = "PERMISSION_REQUEST_ACTUAL_DURATION_UPDATED",
+                EntityType = "PERMISSION_REQUEST",
                 EntityId = entity.ID.ToString(),
-                Title = "Leave Marked As Not Taken",
-                Message = $"Your leave request ({entity.LEAVE_FROM:dd-MMM-yyyy} - {entity.LEAVE_TO:dd-MMM-yyyy}) was marked as not taken.",
+                Title = "Permission Duration Updated",
+                Message = $"Your permission request ({entity.PERMISSION_DATE:dd-MMM-yyyy}) was recorded as {entity.ACTUAL_DURATION_MINUTES} min taken (of {entity.DURATION_MINUTES} min requested).",
                 ActorId = _loginContext.userId,
                 ActorName = _loginContext.userName,
                 Audiences = new List<NotificationAudience>
@@ -221,11 +218,11 @@ namespace APIGateWay.Business_Layer.Repository
             });
         }
 
-        private Task BroadcastLeaveRequestChangeAsync(LeaveRequestMaster entity, string action, Guid? targetUserId)
+        private Task BroadcastPermissionRequestChangeAsync(PermissionRequestMaster entity, string action, Guid? targetUserId)
         {
             return _realtimeNotifier.BroadcastAsync(new RealtimeMessage
             {
-                Entity = "LeaveRequest",
+                Entity = "PermissionRequest",
                 Action = action,
                 Payload = new { ID = entity.ID, EMPLOYEE_ID = entity.EMPLOYEE_ID, STATUS = entity.STATUS },
                 KeyField = "ID",
@@ -234,18 +231,18 @@ namespace APIGateWay.Business_Layer.Repository
             });
         }
 
-        private async Task NotifyRequesterAsync(LeaveRequestMaster entity, string status)
+        private async Task NotifyRequesterAsync(PermissionRequestMaster entity, string status)
         {
             var approved = status == "APPROVED";
             var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest
             {
-                EventType = approved ? "LEAVE_REQUEST_APPROVED" : "LEAVE_REQUEST_REJECTED",
-                EntityType = "LEAVE_REQUEST",
+                EventType = approved ? "PERMISSION_REQUEST_APPROVED" : "PERMISSION_REQUEST_REJECTED",
+                EntityType = "PERMISSION_REQUEST",
                 EntityId = entity.ID.ToString(),
-                Title = approved ? "Leave Request Approved" : "Leave Request Rejected",
+                Title = approved ? "Permission Request Approved" : "Permission Request Rejected",
                 Message = approved
-                    ? $"Your leave request ({entity.LEAVE_FROM:dd-MMM-yyyy} - {entity.LEAVE_TO:dd-MMM-yyyy}) was approved."
-                    : $"Your leave request ({entity.LEAVE_FROM:dd-MMM-yyyy} - {entity.LEAVE_TO:dd-MMM-yyyy}) was rejected. Reason: {entity.REJECT_REASON}",
+                    ? $"Your permission request ({entity.PERMISSION_DATE:dd-MMM-yyyy}, {entity.DURATION_MINUTES} min) was approved."
+                    : $"Your permission request ({entity.PERMISSION_DATE:dd-MMM-yyyy}, {entity.DURATION_MINUTES} min) was rejected. Reason: {entity.REJECT_REASON}",
                 ActorId = _loginContext.userId,
                 ActorName = _loginContext.userName,
                 Audiences = new List<NotificationAudience>
@@ -265,12 +262,12 @@ namespace APIGateWay.Business_Layer.Repository
             });
         }
 
-        private async Task NotifyAdminsAsync(LeaveRequestMaster entity)
+        private async Task NotifyAdminsAsync(PermissionRequestMaster entity)
         {
             // Data ping first: RealtimeNotifier sends non-"Notification" entities to the
             // "global-admin" SignalR group (joined from the JWT role), so every admin's
-            // Leave Requests list refreshes even if the lookup below finds nobody.
-            await BroadcastLeaveRequestChangeAsync(entity, "Created", null);
+            // Permission Requests list refreshes even if the lookup below finds nobody.
+            await BroadcastPermissionRequestChangeAsync(entity, "Created", null);
 
             // Admin = login role (LOGIN_MASTER / WGUserDetails), the same role the JWT,
             // the frontend's isAdmin and UpdateStatusAsync use. EMPLOYEEMASTER.Role is a
@@ -295,12 +292,12 @@ namespace APIGateWay.Business_Layer.Repository
 
             var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest
             {
-                EventType = "LEAVE_REQUEST_CREATED",
-                EntityType = "LEAVE_REQUEST",
+                EventType = "PERMISSION_REQUEST_CREATED",
+                EntityType = "PERMISSION_REQUEST",
                 EntityId = entity.ID.ToString(),
-                Title = "New Leave Request",
-                Message = $"{_loginContext.userName} requested {entity.NO_OF_LEAVE_DAYS} day(s) leave " +
-                          $"({entity.LEAVE_FROM:dd-MMM-yyyy} - {entity.LEAVE_TO:dd-MMM-yyyy}).",
+                Title = "New Permission Request",
+                Message = $"{_loginContext.userName} requested {entity.DURATION_MINUTES} min permission " +
+                          $"({entity.PERMISSION_DATE:dd-MMM-yyyy}).",
                 ActorId = _loginContext.userId,
                 ActorName = _loginContext.userName,
                 Audiences = audiences,

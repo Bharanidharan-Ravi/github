@@ -2,17 +2,15 @@ using System;
 
 namespace APIGateWay.ModalLayer.GETData
 {
-    // Maps 1:1 to usp_GetLeaveRequests output (scripts/leave_request_migration.sql).
-    public class GetLeaveRequest
+    // Maps 1:1 to usp_GetPermissionRequests output (scripts/permission_request_migration.sql).
+    public class GetPermissionRequest
     {
         public Guid ID { get; set; }
         public Guid EMPLOYEE_ID { get; set; }
         public string? EmployeeName { get; set; }
-        public DateTime LEAVE_FROM { get; set; }
-        public DateTime LEAVE_TO { get; set; }
-        public string LEAVE_TYPE_ID { get; set; }
-        public int NO_OF_LEAVE_DAYS { get; set; }
-        public string? COMMENTS { get; set; }
+        public DateTime PERMISSION_DATE { get; set; }
+        public int DURATION_MINUTES { get; set; }
+        public string? REMARKS { get; set; }
         public string STATUS { get; set; }
         public DateTime REQUESTED_DATE { get; set; }
         public Guid? APPROVED_BY { get; set; }
@@ -24,8 +22,8 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime CREATED_DATE { get; set; }
         public Guid? UPDATED_BY { get; set; }
         public DateTime? UPDATED_DATE { get; set; }
-        public bool NOT_TAKEN { get; set; }
-        public Guid? NOT_TAKEN_BY { get; set; }
-        public DateTime? NOT_TAKEN_DATE { get; set; }
+        public int? ACTUAL_DURATION_MINUTES { get; set; }
+        public Guid? ACTUAL_DURATION_BY { get; set; }
+        public DateTime? ACTUAL_DURATION_DATE { get; set; }
     }
 }

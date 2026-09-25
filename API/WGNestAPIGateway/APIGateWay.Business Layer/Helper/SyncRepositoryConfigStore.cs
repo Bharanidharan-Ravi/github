@@ -290,6 +290,20 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "FeedbackId",
                 DeltaEnabled = false
             },
+            ["LEAVETYPE"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "WG_LEAVETYPE",
+                EntityType = typeof(LeaveType),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "code",
+                DeltaEnabled = true
+            },
             ["GetLeaveRequests"] = new SyncRepositoryConfig
             {
                 // Execution
@@ -305,6 +319,28 @@ namespace APIGateWay.BusinessLayer.Helper
                 DeltaEnabled = false,
 
                 // usp_GetLeaveRequests(@UserId, @IsAdmin) — resolved from the JWT,
+                // never sent by the frontend.
+                IdentityParams = new Dictionary<string, IdentityField>
+                {
+                    ["UserId"] = IdentityField.UserId,
+                    ["IsAdmin"] = IdentityField.IsAdmin
+                }
+            },
+            ["GetPermissionRequests"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "usp_GetPermissionRequests",
+                EntityType = typeof(GetPermissionRequest),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "ID",
+                DeltaEnabled = false,
+
+                // usp_GetPermissionRequests(@UserId, @IsAdmin) — resolved from the JWT,
                 // never sent by the frontend.
                 IdentityParams = new Dictionary<string, IdentityField>
                 {

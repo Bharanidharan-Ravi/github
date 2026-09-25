@@ -5,9 +5,9 @@ using static APIGateWay.ModalLayer.Helper.PostHelper;
 
 namespace APIGateWay.ModalLayer.MasterData
 {
-    // Maps 1:1 to dbo.LEAVE_REQUEST (scripts/leave_request_migration.sql).
-    [Table("LEAVE_REQUEST")]
-    public class LeaveRequestMaster : IAuditableEntity, IAuditableUser
+    // Maps 1:1 to dbo.PERMISSION_REQUEST (scripts/permission_request_migration.sql).
+    [Table("PERMISSION_REQUEST")]
+    public class PermissionRequestMaster : IAuditableEntity, IAuditableUser
     {
         [Key]
         [Column("ID")]
@@ -16,21 +16,14 @@ namespace APIGateWay.ModalLayer.MasterData
         [Column("EMPLOYEE_ID")]
         public Guid EMPLOYEE_ID { get; set; }
 
-        [Column("LEAVE_FROM")]
-        public DateTime LEAVE_FROM { get; set; }
+        [Column("PERMISSION_DATE")]
+        public DateTime PERMISSION_DATE { get; set; }
 
-        [Column("LEAVE_TO")]
-        public DateTime LEAVE_TO { get; set; }
+        [Column("DURATION_MINUTES")]
+        public int DURATION_MINUTES { get; set; }
 
-        [Column("LEAVE_TYPE_ID")]
-        [MaxLength(20)]
-        public string LEAVE_TYPE_ID { get; set; }
-
-        [Column("NO_OF_LEAVE_DAYS")]
-        public int NO_OF_LEAVE_DAYS { get; set; }
-
-        [Column("COMMENTS")]
-        public string? COMMENTS { get; set; }
+        [Column("REMARKS")]
+        public string? REMARKS { get; set; }
 
         [Column("STATUS")]
         public string STATUS { get; set; }
@@ -53,14 +46,14 @@ namespace APIGateWay.ModalLayer.MasterData
         [Column("REJECTED_DATE")]
         public DateTime? REJECTED_DATE { get; set; }
 
-        [Column("NOT_TAKEN")]
-        public bool NOT_TAKEN { get; set; }
+        [Column("ACTUAL_DURATION_MINUTES")]
+        public int? ACTUAL_DURATION_MINUTES { get; set; }
 
-        [Column("NOT_TAKEN_BY")]
-        public Guid? NOT_TAKEN_BY { get; set; }
+        [Column("ACTUAL_DURATION_BY")]
+        public Guid? ACTUAL_DURATION_BY { get; set; }
 
-        [Column("NOT_TAKEN_DATE")]
-        public DateTime? NOT_TAKEN_DATE { get; set; }
+        [Column("ACTUAL_DURATION_DATE")]
+        public DateTime? ACTUAL_DURATION_DATE { get; set; }
 
         // ── Audit (auto-populated in IST by APIGatewayDBContext.SaveChangesAsync) ──
         [Column("CREATED_BY")]

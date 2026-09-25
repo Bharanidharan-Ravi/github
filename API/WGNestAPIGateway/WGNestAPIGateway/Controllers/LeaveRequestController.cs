@@ -27,7 +27,7 @@ namespace APIGateway.Controllers
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "From Date and To Date are required." });
             if (dto.LeaveTo.Date < dto.LeaveFrom.Date)
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "To Date cannot be before From Date." });
-            if (dto.LeaveTypeId <= 0)
+            if (string.IsNullOrWhiteSpace(dto.LeaveTypeId))
                 return BadRequest(new { Code = "VALIDATION_ERROR", ErrorMessage = "Leave Type is required." });
 
             var response = await _repo.CreateLeaveRequestAsync(dto);
@@ -47,6 +47,14 @@ namespace APIGateway.Controllers
             var response = await _repo.UpdateStatusAsync(id, dto);
             var message = dto.Status == "APPROVED" ? "Leave request approved." : "Leave request rejected.";
             return Ok(ApiResponseHelper.Success(response, message));
+        }
+
+        // PATCH /api/LeaveRequest/{id}/not-taken — admin only, only on an APPROVED request.
+        [HttpPatch("{id:guid}/not-taken")]
+        public async Task<IActionResult> MarkNotTaken(Guid id)
+        {
+            var response = await _repo.MarkNotTakenAsync(id);
+            return Ok(ApiResponseHelper.Success(response, "Leave marked as not taken."));
         }
     }
 }

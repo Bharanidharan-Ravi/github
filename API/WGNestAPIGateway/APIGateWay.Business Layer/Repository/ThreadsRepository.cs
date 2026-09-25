@@ -476,9 +476,29 @@ namespace APIGateWay.BusinessLayer.Repository
                 freshThreadData = threads?.FirstOrDefault(t => t.ThreadId == threadId);
             }
 
-            if (freshThreadData != null && issueRepoInfo != null)
+            // Broadcast the edit so every open ticket page refreshes — the thread
+            // itself, and the ticket %/status when the workstream changed too.
+            // Clients (repo group) only get it for client-visible threads.
+            if (freshThreadData != null)
             {
-               
+                try
+                {
+                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                    {
+                        Entity = "ThreadsList",
+                        Action = "Update",
+                        Payload = freshThreadData,
+                        KeyField = "ThreadId",
+                        IssueId = freshThreadData.Issue_Id,
+                        RepoKey = freshThreadData.toClient == true ? issueRepoInfo?.RepoId?.ToString() : null,
+                        Timestamp = DateTime.UtcNow,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // SignalR failure must never break the API response
+                    Console.WriteLine($"[ThreadsRepository] ThreadsList update broadcast failed: {ex.Message}");
+                }
             }
 
             return freshThreadData ?? finalThreadData;

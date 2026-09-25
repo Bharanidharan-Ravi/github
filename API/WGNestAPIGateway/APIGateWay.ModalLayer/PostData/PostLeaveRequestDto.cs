@@ -6,7 +6,7 @@ namespace APIGateWay.ModalLayer.PostData
     {
         public DateTime LeaveFrom { get; set; }
         public DateTime LeaveTo { get; set; }
-        public int LeaveTypeId { get; set; }
+        public string LeaveTypeId { get; set; }
         public string? Comments { get; set; }
     }
 }
