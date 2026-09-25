@@ -22,5 +22,6 @@ namespace APIGateWay.ModalLayer.MasterData
         public DateTime CreatedAt { get; set; }
         public Guid? UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public bool? ToClient { get; set; }
     }
 }

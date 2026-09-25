@@ -20,6 +20,8 @@ namespace APIGateWay.ModalLayer.GETData
         public string Status { get; set; }
         public Guid UserId { get; set; }
         public string WGUserName { get; set; }
+        public string? PreviewUrl { get; set; }
+        public string? AvatarPath { get; set; }
         
     }
 }

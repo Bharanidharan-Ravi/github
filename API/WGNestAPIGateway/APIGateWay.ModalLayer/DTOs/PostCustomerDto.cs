@@ -1,4 +1,5 @@
-﻿using System;
+﻿using APIGateWay.ModalLayer.PostData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,7 @@ namespace APIGateWay.ModalLayer.DTOs
         public string? MailId { get; set; }
         public int? Role { get; set; }
         public string? Password{ get; set; }
+        public TempReturn? temp {  get; set; }
     }
 
     public class PutCustomerdto
@@ -29,6 +31,7 @@ namespace APIGateWay.ModalLayer.DTOs
         public string? MailId { get; set; }
        
         public int? Status { get; set; }
+        public TempReturn? temp { get; set; }
 
     }
 }

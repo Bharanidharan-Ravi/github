@@ -71,6 +71,7 @@ namespace APIGateWay.Business_Layer.Repository
                     entity.CreatedAt = DateTime.UtcNow;
                     entity.UpdatedAt = DateTime.UtcNow;
                     entity.UpdatedBy = _loginContext.userId;
+                    entity.ToClient = dto.ToClient ?? entity.ToClient;
 
                     var timer = _stepContext.StartStep();
                     try
@@ -114,6 +115,7 @@ namespace APIGateWay.Business_Layer.Repository
                     entity.EndDate = dto.EndDate;
                     entity.UpdatedAt = DateTime.UtcNow;
                     entity.UpdatedBy = _loginContext.userId;
+                    entity.ToClient = dto.ToClient ?? entity.ToClient;
 
                     var timer = _stepContext.StartStep();
                     try

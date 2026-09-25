@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,12 @@ namespace APIGateWay.ModalLayer.GETData
         public string? MailId { get; set; }
         public string? Status { get; set; }
         public string? WGUserName { get; set; }
+        public string? Attachment_JSON { get; set; }
+
+        [NotMapped]
+        public string? PreviewUrl { get; set; }
+        [NotMapped]
+        public string? AvatarPath { get; set; }
         
     }
 }

@@ -3,21 +3,26 @@ using APIGateWay.BusinessLayer.Configuration;
 using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.ModalLayer.nugerModalV2;
 using APIGateWay.ModalLayer.nugetmodal;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
     public class SyncRepositoryV2 : ISyncRepositoryV2
     {
         private readonly ISyncExecutionService _exec;
+        private readonly GenerateHelper _helper;
         private readonly ILoginContextService _loginContext;
 
-        public SyncRepositoryV2(ISyncExecutionService exec, ILoginContextService loginContext)
+        public SyncRepositoryV2(ISyncExecutionService exec, GenerateHelper helper, ILoginContextService loginContext)
         {
             _exec = exec;
+            _helper = helper;
             _loginContext = loginContext;
         }
 
@@ -100,6 +105,11 @@ namespace APIGateWay.BusinessLayer.Repository
                     if (element.ValueKind == JsonValueKind.Array)
                         foreach (var row in element.EnumerateArray())
                             mergedRows.Add(row);
+                }
+
+                if (resultKey == "RepoList" && mergedRows.Count > 0)
+                {
+                    mergedRows = ResolveNestedJsonUrls (mergedRows, "RepoUserList", "avatarPath");
                 }
 
                 response.Res[resultKey] = new SyncResultV2
@@ -216,9 +226,65 @@ namespace APIGateWay.BusinessLayer.Repository
             Rid = Guid.NewGuid().ToString(),
             St = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
+
+        private List<JsonElement> ResolveNestedJsonUrls(List<JsonElement> rows, string jsonColumnName, string urlPropertyName)
+        {
+            var processedRows = new List<JsonElement>();
+            foreach (var row in rows)
+            {
+                var node = JsonNode.Parse(row.GetRawText())!.AsObject();
+                if (node.TryGetPropertyValue(jsonColumnName, out var listNode) && listNode != null)
+                {
+                    var jsonStr = listNode.GetValue<string>();
+                    if (!string.IsNullOrEmpty(jsonStr))
+                    {
+                        var nestedNode = JsonNode.Parse(jsonStr);
+                        bool modified = false;
+
+                        if (nestedNode is JsonArray nestedArray)
+                        {
+                            foreach (var item in nestedArray)
+                            {
+                                if (item is JsonObject itemObj &&
+                                    itemObj.TryGetPropertyValue(urlPropertyName, out var urlNode) &&
+                                    urlNode != null)
+                                {
+                                    var relativePath = urlNode.GetValue<string>();
+                                    if (!string.IsNullOrEmpty(relativePath))
+                                    {
+                                        itemObj[urlPropertyName] = _helper.GeneratePreviewUrl(relativePath);
+                                        modified = true;
+                                    }
+                                }
+                            }
+                        }
+                        else if (nestedNode is JsonObject singleObj)
+                        {
+                            if (singleObj.TryGetPropertyValue(urlPropertyName, out var urlNode) &&
+                                urlNode != null)
+                            {
+                                var relativePath = urlNode.GetValue<string>();
+                                if (!string.IsNullOrEmpty(relativePath))
+                                {
+                                    singleObj[urlPropertyName] = _helper.GeneratePreviewUrl(relativePath);
+                                    modified = true;
+                                }
+                            }
+                        }
+                        if (modified)
+                        {
+                            node[jsonColumnName] = nestedNode.ToJsonString();
+                        }
+                    }
+                }
+                processedRows.Add(JsonSerializer.SerializeToElement(node));
+            }
+            return processedRows;
+        }
     }
 
 }
+
 
 
 //public class SyncRepositoryV2 : ISyncRepositoryV2

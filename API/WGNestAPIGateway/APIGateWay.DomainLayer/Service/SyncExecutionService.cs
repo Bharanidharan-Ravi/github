@@ -207,6 +207,53 @@ namespace APIGateWay.DomainLayer.Service
                     }
                 }
 
+                else if (data != null && typeof(T) == typeof(GetRepoUserData))
+                {
+                    var customers = data as List<GetRepoUserData>;
+                    if (customers is not null)
+                    {
+                        foreach (var Cust in customers)
+                        {
+                            if (!string.IsNullOrWhiteSpace(Cust.Attachment_JSON))
+                            {
+                                try
+                                {
+                                    using var doc = JsonDocument.Parse(Cust.Attachment_JSON);
+                                    var root = doc.RootElement;
+
+                                    if (root.ValueKind == JsonValueKind.Array)
+                                    {
+                                        var first = root.EnumerateArray().FirstOrDefault();
+                                        if (first.ValueKind == JsonValueKind.Object &&
+                                            first.TryGetProperty("relativepath", out var relPathEl) &&
+                                            relPathEl.ValueKind == JsonValueKind.String)
+                                        {
+                                            var relativePath = relPathEl.GetString();
+                                            if (!string.IsNullOrEmpty(relativePath))
+                                            {
+                                                var encodedRelativePath = string.Join("/", relativePath
+                                                   .Replace("\\", "/")
+                                                   .Split('/')
+                                                   .Select(segment => Uri.EscapeDataString(segment))
+                                                   );
+
+                                                var fullUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                                                Cust.PreviewUrl = fullUrl;
+                                                Cust.AvatarPath = fullUrl;
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (JsonException)
+                                {
+                                    Cust.PreviewUrl = null;
+                                    Cust.AvatarPath = null;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return new RawSyncResult
                 {
                     Ok = true,

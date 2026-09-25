@@ -23,5 +23,6 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Type_Name { get; set; }
         public string? ColorCode { get; set; }
         public string? IconClass { get; set; }
+        public bool? ToClient { get; set; }
     }
 }

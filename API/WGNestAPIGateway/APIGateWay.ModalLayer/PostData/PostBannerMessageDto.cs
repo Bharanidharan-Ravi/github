@@ -13,6 +13,7 @@ namespace APIGateWay.ModalLayer.PostData
         public Guid MessageTypeId { get; set; }
         public DateTime? StartDate { get;set; }
         public DateTime? EndDate { get; set; }
+        public bool? ToClient { get; set; }
     }
     public class PutBannerMessageDto
     {
@@ -23,6 +24,7 @@ namespace APIGateWay.ModalLayer.PostData
         public string Status { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-       
+        public bool? ToClient { get; set; }
+
     }
 }

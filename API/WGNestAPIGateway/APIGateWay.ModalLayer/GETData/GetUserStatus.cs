@@ -15,6 +15,7 @@ namespace APIGateWay.ModalLayer.GETData
 
         public DateTime? LoginAt { get; set; }
         public DateTime? LogoutAt { get; set; }
+        public DateTime? LastHeartbeat { get; set; }
         public bool? IsActive { get; set; }
     }
 }
