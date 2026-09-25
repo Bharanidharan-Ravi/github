@@ -12,6 +12,18 @@ namespace APIGateWay.BusinessLayer.Configuration
         Remote
     }
 
+    // Fields SyncRepositoryV2 can pull from ILoginContextService (the decoded JWT)
+    // to inject into a Local SP call. Add a case here + one line in
+    // SyncRepositoryV2.ResolveIdentityField to support a new field — never hardcode
+    // a param name/value in the repository itself.
+    public enum IdentityField
+    {
+        UserId,
+        IsAdmin,
+        Role,
+        UserName
+    }
+
     public class SyncRepositoryConfig
     {
         // -------- Execution --------
@@ -39,10 +51,10 @@ namespace APIGateWay.BusinessLayer.Configuration
 
         public string SignalRAction { get; set; }
 
-        // When true, SyncRepositoryV2 injects the caller's identity — @UserId
-        // (LoginContext.userId) and @IsAdmin (LoginContext.role == 1) — into the
-        // SP params before execution. The frontend never sends these.
-        public bool RequiresIdentity { get; set; }
+        // SP param name -> identity field to inject from ILoginContextService before
+        // execution, e.g. { ["UserId"] = IdentityField.UserId, ["IsAdmin"] = IdentityField.IsAdmin }.
+        // The frontend never sends these; SyncRepositoryV2 resolves and adds them.
+        public Dictionary<string, IdentityField> IdentityParams { get; set; }
     }
 
 

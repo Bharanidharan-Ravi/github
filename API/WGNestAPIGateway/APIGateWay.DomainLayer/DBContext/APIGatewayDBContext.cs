@@ -131,6 +131,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<TicketFeedback> TicketFeedbacks { get; set; }
         public DbSet<GetTicketFeedbackDto> GetTicketFeedbackDtos { get; set; }
         public DbSet<GetLeaveRequest> GetLeaveRequests { get; set; }
+        public DbSet<LeaveRequestMaster> LeaveRequestMaster { get; set; }
 
         #region SaveChanges Override (Audit)
 

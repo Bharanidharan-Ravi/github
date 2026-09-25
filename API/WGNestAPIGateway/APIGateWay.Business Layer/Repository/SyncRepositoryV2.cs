@@ -176,14 +176,14 @@ namespace APIGateWay.BusinessLayer.Repository
             DateTimeOffset? lastSync,
             Dictionary<string, string>? param)
         {
-            if (cfg.RequiresIdentity)
+            if (cfg.IdentityParams is { Count: > 0 })
             {
                 param = param != null
                     ? new Dictionary<string, string>(param, StringComparer.Ordinal)
                     : new Dictionary<string, string>(StringComparer.Ordinal);
 
-                param["UserId"] = _loginContext.userId.ToString();
-                param["IsAdmin"] = _loginContext.role == 1 ? "1" : "0";
+                foreach (var (paramName, field) in cfg.IdentityParams)
+                    param[paramName] = ResolveIdentityField(field);
             }
 
             return (Task<RawSyncResult>)typeof(ISyncExecutionService)
@@ -198,6 +198,18 @@ namespace APIGateWay.BusinessLayer.Repository
                     cfg.SourceName
                 })!;
         }
+
+        // Single place mapping an IdentityField to ILoginContextService — add a case
+        // here (and to the IdentityField enum) to support a new field, never a
+        // hardcoded param name/value in ExecuteLocal.
+        private string ResolveIdentityField(IdentityField field) => field switch
+        {
+            IdentityField.UserId => _loginContext.userId.ToString(),
+            IdentityField.IsAdmin => _loginContext.role == 1 ? "1" : "0",
+            IdentityField.Role => _loginContext.role.ToString(),
+            IdentityField.UserName => _loginContext.userName,
+            _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unmapped IdentityField")
+        };
 
         private static SyncResponseV2 NewResponse() => new()
         {

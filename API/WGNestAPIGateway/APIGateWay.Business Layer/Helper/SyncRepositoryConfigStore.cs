@@ -306,7 +306,11 @@ namespace APIGateWay.BusinessLayer.Helper
 
                 // usp_GetLeaveRequests(@UserId, @IsAdmin) — resolved from the JWT,
                 // never sent by the frontend.
-                RequiresIdentity = true
+                IdentityParams = new Dictionary<string, IdentityField>
+                {
+                    ["UserId"] = IdentityField.UserId,
+                    ["IsAdmin"] = IdentityField.IsAdmin
+                }
             },
         };
     }
