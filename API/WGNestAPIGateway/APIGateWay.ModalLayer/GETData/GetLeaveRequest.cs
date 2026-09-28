@@ -11,7 +11,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime LEAVE_FROM { get; set; }
         public DateTime LEAVE_TO { get; set; }
         public string LEAVE_TYPE_ID { get; set; }
-        public int NO_OF_LEAVE_DAYS { get; set; }
+        public decimal NO_OF_LEAVE_DAYS { get; set; }
         public string? COMMENTS { get; set; }
         public string STATUS { get; set; }
         public DateTime REQUESTED_DATE { get; set; }
@@ -27,5 +27,8 @@ namespace APIGateWay.ModalLayer.GETData
         public bool NOT_TAKEN { get; set; }
         public Guid? NOT_TAKEN_BY { get; set; }
         public DateTime? NOT_TAKEN_DATE { get; set; }
+
+        // [{"date":"2026-09-30","session":"FIRST_HALF"}, ...] from LEAVE_REQUEST_DAY.
+        public string? DAYS_JSON { get; set; }
     }
 }

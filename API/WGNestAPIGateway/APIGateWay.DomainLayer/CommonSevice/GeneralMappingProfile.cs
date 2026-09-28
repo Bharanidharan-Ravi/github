@@ -64,7 +64,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
                 .ForMember(dest => dest.UPDATED_DATE, opt => opt.MapFrom(src => src.UpdatedAt))
                 .ForMember(dest => dest.NOT_TAKEN, opt => opt.MapFrom(src => src.NOT_TAKEN))
                 .ForMember(dest => dest.NOT_TAKEN_BY, opt => opt.MapFrom(src => src.NOT_TAKEN_BY))
-                .ForMember(dest => dest.NOT_TAKEN_DATE, opt => opt.MapFrom(src => src.NOT_TAKEN_DATE));
+                .ForMember(dest => dest.NOT_TAKEN_DATE, opt => opt.MapFrom(src => src.NOT_TAKEN_DATE))
+                .ForMember(dest => dest.DAYS_JSON, opt => opt.Ignore());
 
             CreateMap<PostPermissionRequestDto, PermissionRequestMaster>()
                 .ForMember(dest => dest.PERMISSION_DATE, opt => opt.MapFrom(src => src.PermissionDate))

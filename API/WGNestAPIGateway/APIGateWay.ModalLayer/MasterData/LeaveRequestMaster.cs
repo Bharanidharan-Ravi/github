@@ -27,7 +27,7 @@ namespace APIGateWay.ModalLayer.MasterData
         public string LEAVE_TYPE_ID { get; set; }
 
         [Column("NO_OF_LEAVE_DAYS")]
-        public int NO_OF_LEAVE_DAYS { get; set; }
+        public decimal NO_OF_LEAVE_DAYS { get; set; }
 
         [Column("COMMENTS")]
         public string? COMMENTS { get; set; }

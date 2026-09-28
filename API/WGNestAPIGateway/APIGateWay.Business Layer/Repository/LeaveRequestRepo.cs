@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace APIGateWay.Business_Layer.Repository
@@ -54,6 +55,10 @@ namespace APIGateWay.Business_Layer.Repository
             if (!AppRoles.LeaveRequestCreate.Contains(_loginContext.role))
                 throw new Exceptionlist.UnauthorizedException("Only employees and admins can submit leave requests.");
 
+            var nowIst = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
+            var days = BuildLeaveDays(dto.LeaveFrom, dto.LeaveTo, dto.Days, nowIst, allowPast: false);
+            await EnsureNoOverlapAsync(_loginContext.userId, days);
+
             GetLeaveRequest finalData = null;
             LeaveRequestMaster entity = null;
 
@@ -65,13 +70,14 @@ namespace APIGateWay.Business_Layer.Repository
                     entity.ID = Guid.NewGuid();
                     entity.EMPLOYEE_ID = _loginContext.userId;
                     entity.STATUS = "REQUESTED";
-                    // Never trust the client-computed day count — recompute from the dates.
-                    entity.NO_OF_LEAVE_DAYS =
-                        (int)(dto.LeaveTo.Date - dto.LeaveFrom.Date).TotalDays + 1;
-                    entity.REQUESTED_DATE =
-                        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
+                    // Never trust the client-computed day count — recompute from the day sessions.
+                    entity.NO_OF_LEAVE_DAYS = days.Sum(d => LeaveDaySession.Days(d.DAY_SESSION));
+                    entity.REQUESTED_DATE = nowIst;
+
+                    days.ForEach(d => d.LEAVE_REQUEST_ID = entity.ID);
 
                     await _dBContext.Set<LeaveRequestMaster>().AddAsync(entity);
+                    await _dBContext.Set<LeaveRequestDayMaster>().AddRangeAsync(days);
 
                     var timer = _stepContext.StartStep();
                     try
@@ -86,7 +92,13 @@ namespace APIGateWay.Business_Layer.Repository
                         throw;
                     }
 
-                    return _mapper.Map<GetLeaveRequest>(entity);
+                    var result = _mapper.Map<GetLeaveRequest>(entity);
+                    result.DAYS_JSON = JsonSerializer.Serialize(days.Select(d => new
+                    {
+                        date = d.LEAVE_DATE.ToString("yyyy-MM-dd"),
+                        session = d.DAY_SESSION,
+                    }));
+                    return result;
                 });
             }
             catch (Exception ex)
@@ -102,6 +114,82 @@ namespace APIGateWay.Business_Layer.Repository
             return finalData;
         }
 
+        // allowPast: admins re-adjusting an existing request may move it onto past
+        // dates, and the "only 2nd half left today" rule doesn't apply to them.
+        private static List<LeaveRequestDayMaster> BuildLeaveDays(
+            DateTime leaveFrom, DateTime leaveTo, List<PostLeaveDayDto>? requestedDays, DateTime nowIst, bool allowPast)
+        {
+            var from = leaveFrom.Date;
+            var to = leaveTo.Date;
+            var today = nowIst.Date;
+
+            if (to < from)
+                throw new Exceptionlist.InvalidDataException("To Date cannot be before From Date.");
+            if (!allowPast && from < today)
+                throw new Exceptionlist.InvalidDataException("Leave cannot start on a past date.");
+
+            var requested = new Dictionary<DateTime, string>();
+            foreach (var day in requestedDays ?? new List<PostLeaveDayDto>())
+            {
+                var date = day.Date.Date;
+                if (date < from || date > to)
+                    throw new Exceptionlist.InvalidDataException($"{date:dd-MMM-yyyy} is outside the selected leave dates.");
+                if (!LeaveDaySession.All.Contains(day.Session))
+                    throw new Exceptionlist.InvalidDataException($"Invalid session '{day.Session}' for {date:dd-MMM-yyyy}.");
+                if (!requested.TryAdd(date, day.Session))
+                    throw new Exceptionlist.InvalidDataException($"{date:dd-MMM-yyyy} is listed more than once.");
+            }
+
+            var days = new List<LeaveRequestDayMaster>();
+            for (var date = from; date <= to; date = date.AddDays(1))
+            {
+                var session = requested.TryGetValue(date, out var s) ? s : LeaveDaySession.Full;
+
+                if (!allowPast && date == today && nowIst.TimeOfDay >= LeaveDaySession.FirstHalfEnd && session != LeaveDaySession.SecondHalf)
+                    throw new Exceptionlist.InvalidDataException("Only the 2nd half (2:00 PM – 6:30 PM) is left for today.");
+
+                days.Add(new LeaveRequestDayMaster
+                {
+                    ID = Guid.NewGuid(),
+                    LEAVE_DATE = date,
+                    DAY_SESSION = session,
+                });
+            }
+
+            return days;
+        }
+
+        // A day clashes when either side is FULL, or both are the same half.
+        // excludeRequestId: the request being re-adjusted, so it doesn't clash with itself.
+        private async Task EnsureNoOverlapAsync(Guid employeeId, List<LeaveRequestDayMaster> days, Guid? excludeRequestId = null)
+        {
+            var rangeStart = days.First().LEAVE_DATE;
+            var rangeEnd = days.Last().LEAVE_DATE;
+
+            var taken = await (
+                from d in _dBContext.Set<LeaveRequestDayMaster>()
+                join r in _dBContext.Set<LeaveRequestMaster>() on d.LEAVE_REQUEST_ID equals r.ID
+                where r.EMPLOYEE_ID == employeeId
+                      && r.ID != excludeRequestId
+                      && (r.STATUS == "REQUESTED" || (r.STATUS == "APPROVED" && !r.NOT_TAKEN))
+                      && d.LEAVE_DATE >= rangeStart && d.LEAVE_DATE <= rangeEnd
+                select new { d.LEAVE_DATE, d.DAY_SESSION }
+            ).ToListAsync();
+
+            foreach (var day in days)
+            {
+                var clash = taken.FirstOrDefault(t =>
+                    t.LEAVE_DATE.Date == day.LEAVE_DATE &&
+                    (t.DAY_SESSION == LeaveDaySession.Full
+                     || day.DAY_SESSION == LeaveDaySession.Full
+                     || t.DAY_SESSION == day.DAY_SESSION));
+
+                if (clash != null)
+                    throw new Exceptionlist.InvalidDataException(
+                        $"You already have leave on {day.LEAVE_DATE:dd-MMM-yyyy} ({LeaveDaySession.Label(clash.DAY_SESSION)}).");
+            }
+        }
+
         public async Task<GetLeaveRequest> UpdateStatusAsync(Guid id, PostLeaveRequestStatusDto dto)
         {
             if (_loginContext.role != 1)
@@ -110,16 +198,45 @@ namespace APIGateWay.Business_Layer.Repository
             var entity = await _dBContext.Set<LeaveRequestMaster>().FindAsync(id)
                 ?? throw new Exceptionlist.DataNotFoundException($"Leave request '{id}' not found.");
 
-            if (entity.STATUS != "REQUESTED")
-                throw new Exceptionlist.InvalidDataException("This leave request has already been decided.");
+            // Admins may re-decide an already decided request (re-approve a "not taken"
+            // or rejected leave, reject an approved one) and re-adjust its dates.
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
+            var existingDays = await _dBContext.Set<LeaveRequestDayMaster>()
+                .Where(d => d.LEAVE_REQUEST_ID == id)
+                .ToListAsync();
+
+            List<LeaveRequestDayMaster>? newDays = null;
+            if (dto.LeaveFrom.HasValue && dto.LeaveTo.HasValue)
+            {
+                newDays = BuildLeaveDays(dto.LeaveFrom.Value, dto.LeaveTo.Value, dto.Days, now, allowPast: true);
+                newDays.ForEach(d => d.LEAVE_REQUEST_ID = id);
+            }
+
+            // Only an approved leave occupies the calendar, so only check clashes then.
+            var effectiveDays = newDays ?? existingDays;
+            if (dto.Status == "APPROVED" && effectiveDays.Count > 0)
+                await EnsureNoOverlapAsync(entity.EMPLOYEE_ID, effectiveDays.OrderBy(d => d.LEAVE_DATE).ToList(), id);
 
             var timer = _stepContext.StartStep();
             try
             {
                 await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
+                    if (newDays != null)
+                    {
+                        _dBContext.Set<LeaveRequestDayMaster>().RemoveRange(existingDays);
+                        await _dBContext.Set<LeaveRequestDayMaster>().AddRangeAsync(newDays);
+                        entity.LEAVE_FROM = newDays.First().LEAVE_DATE;
+                        entity.LEAVE_TO = newDays.Last().LEAVE_DATE;
+                        entity.NO_OF_LEAVE_DAYS = newDays.Sum(d => LeaveDaySession.Days(d.DAY_SESSION));
+                    }
+
                     entity.STATUS = dto.Status;
+                    // A fresh decision resets any earlier "not taken" mark.
+                    entity.NOT_TAKEN = false;
+                    entity.NOT_TAKEN_BY = null;
+                    entity.NOT_TAKEN_DATE = null;
+
                     if (dto.Status == "APPROVED")
                     {
                         entity.APPROVED_BY = _loginContext.userId;
@@ -164,6 +281,10 @@ namespace APIGateWay.Business_Layer.Repository
                 throw new Exceptionlist.InvalidDataException("Only an approved leave request can be marked as not taken.");
             if (entity.NOT_TAKEN)
                 throw new Exceptionlist.InvalidDataException("This leave request has already been marked as not taken.");
+            // "Not taken" is only known once the leave is over; before that the admin rejects it instead.
+            var todayIst = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone).Date;
+            if (entity.LEAVE_TO.Date >= todayIst)
+                throw new Exceptionlist.InvalidDataException("A leave can only be marked as not taken after its last day is over. Reject it instead.");
 
             var timer = _stepContext.StartStep();
             try
@@ -299,7 +420,7 @@ namespace APIGateWay.Business_Layer.Repository
                 EntityType = "LEAVE_REQUEST",
                 EntityId = entity.ID.ToString(),
                 Title = "New Leave Request",
-                Message = $"{_loginContext.userName} requested {entity.NO_OF_LEAVE_DAYS} day(s) leave " +
+                Message = $"{_loginContext.userName} requested {entity.NO_OF_LEAVE_DAYS:0.#} day(s) leave " +
                           $"({entity.LEAVE_FROM:dd-MMM-yyyy} - {entity.LEAVE_TO:dd-MMM-yyyy}).",
                 ActorId = _loginContext.userId,
                 ActorName = _loginContext.userName,
