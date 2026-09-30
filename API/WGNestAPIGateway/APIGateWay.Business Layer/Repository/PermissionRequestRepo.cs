@@ -54,8 +54,6 @@ namespace APIGateWay.Business_Layer.Repository
             if (!AppRoles.LeaveRequestCreate.Contains(_loginContext.role))
                 throw new Exceptionlist.UnauthorizedException("Only employees and admins can submit permission requests.");
 
-            ValidateDuration(dto);
-
             GetPermissionRequest finalData = null;
             PermissionRequestMaster entity = null;
 
@@ -99,36 +97,6 @@ namespace APIGateWay.Business_Layer.Repository
             }
 
             return finalData;
-        }
-
-        // 1, 2 or 3 whole hours. On today the cap shrinks as 6:30 PM
-        // approaches: till 3:30 PM → 3, till 4:30 PM → 2, till 6:30 PM → 1.
-        // Mirrors permissionLimits.js on the frontend.
-        private const int MaxPermissionHours = 3;
-        private static readonly TimeSpan OfficeEnd = new TimeSpan(18, 30, 0);
-
-        private static void ValidateDuration(PostPermissionRequestDto dto)
-        {
-            if (dto.DurationMinutes <= 0 || dto.DurationMinutes % 60 != 0 || dto.DurationMinutes > MaxPermissionHours * 60)
-                throw new Exceptionlist.InvalidDataException("Permission must be 1, 2 or 3 hours.");
-
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
-            var date = dto.PermissionDate.Date;
-
-            if (date < now.Date)
-                throw new Exceptionlist.InvalidDataException("Permission date cannot be in the past.");
-
-            if (date == now.Date)
-            {
-                var minutesLeft = (now.Date + OfficeEnd - now).TotalMinutes;
-                if (minutesLeft <= 0)
-                    throw new Exceptionlist.InvalidDataException("No time left for a permission today (office ends at 6:30 PM).");
-
-                var maxHours = Math.Min(MaxPermissionHours, Math.Max(1, (int)Math.Floor(minutesLeft / 60)));
-                if (dto.DurationMinutes / 60 > maxHours)
-                    throw new Exceptionlist.InvalidDataException(
-                        $"Only {maxHours} hour{(maxHours > 1 ? "s" : "")} can be taken today (office ends at 6:30 PM).");
-            }
         }
 
         public async Task<GetPermissionRequest> UpdateStatusAsync(Guid id, PostPermissionRequestStatusDto dto)

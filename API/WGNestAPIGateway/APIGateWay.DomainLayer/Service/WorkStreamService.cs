@@ -2,12 +2,17 @@
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
 using ReverseMarkdown.Converters;
+using System.Globalization;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -26,8 +31,10 @@ namespace APIGateWay.BusinessLayer.Repository
             ILoginContextService loginContext,
             APIGateWayCommonService commonService,
             IAttachmentService attachmentService,
-            IRequestStepContext stepContext)                          // ← ADDED
+            IRequestStepContext stepContext                        // ← ADDED
+            )
         {
+
             _db = db;
             _domainService = domainService;
             _loginContext = loginContext;
@@ -42,6 +49,7 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<PostWorkStreamResponse> PostWorkStreamAsync(PostWorkStreamDto dto)
         {
             ProcessedAttachmentResult attachmentResult = null;
+            var issueLogPermanentPaths = new List<string>();
             string oldFlagIds = null;
             string newFlagIds = null;
             string actionType = "";
@@ -74,7 +82,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             var currentLog = activeLogs.FirstOrDefault();
                             decimal newPercentage = dto.TicketOverallPercentage ?? 0;
                             string oldFlagValue = currentLog?.Flag;
-                          
+
 
                             var flagMasters = await _db.Set<FlagMaster>().ToListAsync();
                             var flagIds = new List<int>();
@@ -154,7 +162,7 @@ namespace APIGateWay.BusinessLayer.Repository
                             if (ticketMaster != null)
                             {
                                 ticketMaster.OverallPercentage = newPercentage;
-                              
+
 
                             }
 
@@ -195,7 +203,7 @@ namespace APIGateWay.BusinessLayer.Repository
                         }
                     }
                     // =========================================================================
-                
+
                     // ── TYPE 1: Pure assignment ───────────────────────────────
                     if (dto.AssignOnly)
                     {
@@ -278,8 +286,15 @@ namespace APIGateWay.BusinessLayer.Repository
                     }
 
                     // ── Thread ────────────────────────────────────────────────
+                    // Issue Logger submits its new issues with the thread form: the
+                    // comment becomes "Issue:" (each new issue as #IssueLogId +
+                    // description) followed by "General comments:" (what was typed
+                    // in the form), so one thread holds them all — and one is
+                    // created even when no comment was typed.
                     var (threadId, threadCreated) =
-                        await HandleThreadAsync(dto, posterId, handoffToUpdate?.HandsOffId, attachmentResult);
+                        await HandleThreadAsync(dto, posterId, handoffToUpdate?.HandsOffId, attachmentResult, issueLogPermanentPaths);
+
+
 
                     int? activeHandoffId = handoffToUpdate?.HandsOffId;
                     await ValidateStatusTransitionAsync(targetStatusId, posterId, dto.IssueId);
@@ -509,13 +524,13 @@ namespace APIGateWay.BusinessLayer.Repository
                       );
 
                     //return BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
-                    var response = BuildResponse(dto,stream, targetStatusId, threadId,threadCreated,ticketStatus2);
+                    var response = BuildResponse(dto, stream, targetStatusId, threadId, threadCreated, ticketStatus2);
                     if (AppRoles.AdminManager.Contains(_loginContext.role))
                     {
                         response.OldFlagIds = oldFlagIds;
                         response.NewFlagIds = newFlagIds;
                     }
-                   
+
 
                     return response;
                 });
@@ -524,6 +539,8 @@ namespace APIGateWay.BusinessLayer.Repository
             {
                 if (attachmentResult?.PermanentFilePathsCreated?.Any() == true)
                     _attachmentService.RollbackPhysicalFiles(attachmentResult.PermanentFilePathsCreated);
+                if (issueLogPermanentPaths.Any())
+                    _attachmentService.RollbackPhysicalFiles(issueLogPermanentPaths);
                 throw;
             }
         }
@@ -535,8 +552,14 @@ namespace APIGateWay.BusinessLayer.Repository
             PostWorkStreamDto dto,
             Guid posterId,
             int? HandsoffId,
-            ProcessedAttachmentResult? attachmentResult)
+            ProcessedAttachmentResult? attachmentResult,
+            List<string> issueLogPermanentPaths)
         {
+            var issueLogs = dto.IssueLogs?.Where(i => !string.IsNullOrWhiteSpace(i.Description)).ToList()
+                ?? new List<BulkIssueLogItemDto>();
+            var issueUpdates = dto.IssueLogUpdates?.Where(u => u.IssueLogId > 0).ToList()
+                ?? new List<BulkIssueLogUpdateItemDto>();
+
             if (dto.UseLastThread == true)
             {
                 var last = await _db.ISSUETHREADS
@@ -551,7 +574,7 @@ namespace APIGateWay.BusinessLayer.Repository
                 return (last.ThreadId, false);
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.CommentText))
+            if (!string.IsNullOrWhiteSpace(dto.CommentText) || issueLogs.Any() || issueUpdates.Any())
             {
                 var seq = await _commonService.GetNextSequenceAsync("ISSUETHREADS");
                 var threadId = seq.CurrentValue;
@@ -568,6 +591,25 @@ namespace APIGateWay.BusinessLayer.Repository
                         threadId.ToString(), "ThreadMaster");
 
                     finalHtml = attachmentResult.UpdatedHtml;
+                    if (attachmentResult.PermanentFilePathsCreated?.Any() == true)
+                        issueLogPermanentPaths.AddRange(attachmentResult.PermanentFilePathsCreated);
+                }
+
+                // ── Issue Logger: one IssueLog row per new issue and one
+                // ISSUEACTIVITY row per edited issue, all on this thread; the
+                // thread's comment then shows a "New issues" and an "Updated
+                // issues" table, then "General comments".
+                if (issueLogs.Any() || issueUpdates.Any())
+                {
+                    var created = new List<IssueThreadRow>();
+                    foreach (var item in issueLogs)
+                        created.Add(await InsertIssueLogAsync(dto.IssueId, dto.Hours, threadId, posterId, item, issueLogPermanentPaths));
+
+                    var updated = new List<IssueThreadRow>();
+                    foreach (var item in issueUpdates)
+                        updated.Add(await InsertIssueUpdateActivityAsync(dto.IssueId, dto.Hours, threadId, posterId, item, issueLogPermanentPaths));
+
+                    finalHtml = BuildIssueThreadHtml(created, updated, finalHtml);
                 }
 
                 var thread = new ThreadMaster
@@ -647,6 +689,13 @@ namespace APIGateWay.BusinessLayer.Repository
                     throw;
                 }
 
+                // Disabled for now — reply → issue remarks. When on, a reply to a
+                // thread with issues on it becomes a remark on each of those issues
+                // (an Issue Logger submit never replies). Uncomment to turn it back on,
+                // together with the reply banner hint in TicketThreads.jsx.
+                //if (!issueLogs.Any() && !issueUpdates.Any())
+                //    await AddReplyRemarksAsync(dto, threadId, finalHtml, posterId);
+
                 if (dto.temp?.temps != null && dto.temp.temps.Any())
                     await _attachmentService.CleanupTempFiles(dto.temp);
 
@@ -654,6 +703,432 @@ namespace APIGateWay.BusinessLayer.Repository
             }
 
             return (0, false);
+        }
+
+        // =====================================================================
+        // INSERT ISSUE LOG — one row for the "Issue Logger" tab, linked to the
+        // thread created in the same request. IssueLogId is an IDENTITY column,
+        // so the row is saved first to get the number its attachment folder and
+        // the thread comment use; then its temp files are copied to permanent
+        // storage and their URLs rewritten in Html. Its status, priority,
+        // remarks and hours go in its first ISSUEACTIVITY row. Returns the
+        // issue as the thread comment shows it.
+        // =====================================================================
+        private async Task<IssueThreadRow> InsertIssueLogAsync(
+            Guid issueId, string hours, long threadId, Guid posterId, BulkIssueLogItemDto item, List<string> permanentPaths)
+        {
+            // Next number within this ticket. Each issue is saved before the next
+            // one, so several issues in one submit get 1, 2, 3 in order.
+            var lastNo = await _db.IssueLog
+                .Where(x => x.Issue_Id == issueId)
+                .MaxAsync(x => (int?)x.IssueLogId) ?? 0;
+
+            var issueLog = new IssueLog
+            {
+                Issue_Id = issueId,
+                IssueLogId = lastNo + 1,
+                Status = string.IsNullOrWhiteSpace(item.Status) ? "Open" : item.Status,
+                Html = item.Description,
+                Description = GetIssueText(item.Description),
+            };
+
+            var timer = _stepContext.StartStep();
+            try
+            {
+                await _domainService.SaveEntityWithAttachmentsAsync(issueLog, null);
+
+                if (item.temp?.temps != null && item.temp.temps.Any())
+                {
+                    var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+                    var relativePath = $"{permUserId}/{issueLog.IssueLogId}-{issueId}";
+
+                    var result = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+                        item.Description, item.temp.temps, relativePath,
+                        issueLog.IssueLogId.ToString(), "IssueLog");
+
+                    if (result.PermanentFilePathsCreated?.Any() == true)
+                        permanentPaths.AddRange(result.PermanentFilePathsCreated);
+
+                    issueLog.Html = result.UpdatedHtml;
+                    _db.IssueLog.Update(issueLog);
+                    if (result.Attachments?.Any() == true)
+                        _db.AttachmentMaster.AddRange(result.Attachments);
+                    await _db.SaveChangesAsync();
+
+                    await _attachmentService.CleanupTempFiles(item.temp);
+                }
+
+                _stepContext.Success("IssueLog", "INSERT", issueLog.IssueLogId.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("IssueLog", "INSERT",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
+
+            // ── ISSUEACTIVITY INSERT ──────────────────────────────────────────
+            var activity = new IssueActivity
+            {
+                Issue_Id = issueId,
+                ThreadId = threadId,
+                IssuelogId = issueLog.IssueLogId,
+                Hours = hours,
+                Status = string.IsNullOrWhiteSpace(item.Status) ? "Open" : item.Status,
+                Priority = string.IsNullOrWhiteSpace(item.Priority) ? "Medium" : item.Priority,
+                Remarks = item.Remarks,
+                ChangedBy = posterId,
+            };
+
+            var activityTimer = _stepContext.StartStep();
+            try
+            {
+                _db.IssueActivity.Add(activity);
+                await _db.SaveChangesAsync();
+                _stepContext.Success("IssueActivity", "INSERT", activity.ActivityId.ToString(), activityTimer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("IssueActivity", "INSERT",
+                    ex.Message, ex.InnerException?.Message, activityTimer);
+                throw;
+            }
+
+            return new IssueThreadRow(
+                issueLog.IssueLogId, issueLog.Description,
+                activity.Status, activity.Priority, activity.Remarks, issueLog.Html);
+        }
+
+        // The thread form's Total Hours arrives as "HH:MM"; ISSUEACTIVITY.Hours is
+        // decimal hours, so "01:30" → 1.50. Blank or unreadable → null (none logged).
+        //private static decimal? ToDecimalHours(string? value)
+        //{
+        //    if (string.IsNullOrWhiteSpace(value)) return null;
+
+        //    var parts = value.Trim().Split(':');
+        //    if (parts.Length >= 2 &&
+        //        int.TryParse(parts[0], out var h) &&
+        //        int.TryParse(parts[1], out var m))
+        //        return Math.Round(h + m / 60m, 2);
+
+        //    return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var d)
+        //        ? d : null;
+        //}
+
+        // One issue as the thread comment shows it. Only the <img> / file-attachment
+        // links in AttachmentsHtml are used. For an edit (IsUpdate), OldStatus /
+        // OldPriority are the values before it, so a changed field shows old → new.
+        private sealed record IssueThreadRow(
+            int IssueLogId, string? Description,
+            string? Status, string? Priority, string? Remarks, string? AttachmentsHtml,
+            bool IsUpdate = false, string? OldStatus = null, string? OldPriority = null);
+
+        // =====================================================================
+        // INSERT ISSUE UPDATE ACTIVITY — an issue edited inline in the Issue
+        // Logger. The IssueLog row is left as it is; the edit becomes a new
+        // ISSUEACTIVITY row on the thread created in the same request. Status /
+        // Priority left blank keep the issue's current value (its latest
+        // activity that set one), so every row carries the full state. Files
+        // added with the edit are copied to their own folder (the row is saved
+        // first for its ActivityId) and kept on the row as AttachmentsHtml.
+        // =====================================================================
+        private async Task<IssueThreadRow> InsertIssueUpdateActivityAsync(
+            Guid issueId, string Hours, long threadId, Guid posterId, BulkIssueLogUpdateItemDto item, List<string> permanentPaths)
+        {
+            var issueLog = await _db.IssueLog
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Issue_Id == issueId && x.IssueLogId == item.IssueLogId)
+                ?? throw new InvalidOperationException($"Issue #{item.IssueLogId} was not found on this ticket.");
+
+            var (oldStatus, oldPriority) =
+                (await GetCurrentIssueStatesAsync(issueId, new[] { issueLog.IssueLogId }))[issueLog.IssueLogId];
+
+            var activity = new IssueActivity
+            {
+                Issue_Id = issueId,
+                ThreadId = threadId,
+                Hours = Hours,
+                IssuelogId = issueLog.IssueLogId,
+                Status = string.IsNullOrWhiteSpace(item.Status) ? oldStatus : item.Status,
+                Priority = string.IsNullOrWhiteSpace(item.Priority) ? oldPriority : item.Priority,
+                Remarks = string.IsNullOrWhiteSpace(item.Remarks) ? null : item.Remarks.Trim(),
+                ChangedBy = posterId,
+            };
+
+            var timer = _stepContext.StartStep();
+            try
+            {
+                _db.IssueActivity.Add(activity);
+                await _db.SaveChangesAsync();
+
+                if (item.temp?.temps != null && item.temp.temps.Any())
+                {
+                    // Own folder per edit: files are stored by name, so one called
+                    // like an earlier file of the issue must not overwrite it.
+                    var permUserId = $"{_loginContext.userId}-{_loginContext.userName}";
+                    var relativePath = $"{permUserId}/{issueLog.IssueLogId}-{issueId}/activity-{activity.ActivityId}";
+
+                    var result = await _attachmentService.ProcessAndCopyAttachmentsAsync(
+                        item.AttachmentsHtml ?? "", item.temp.temps, relativePath,
+                        activity.ActivityId.ToString(), "IssueActivity");
+
+                    if (result.PermanentFilePathsCreated?.Any() == true)
+                        permanentPaths.AddRange(result.PermanentFilePathsCreated);
+
+                    activity.AttachmentsHtml = string.IsNullOrWhiteSpace(result.UpdatedHtml) ? null : result.UpdatedHtml;
+                    if (result.Attachments?.Any() == true)
+                        _db.AttachmentMaster.AddRange(result.Attachments);
+                    await _db.SaveChangesAsync();
+
+                    await _attachmentService.CleanupTempFiles(item.temp);
+                }
+
+                _stepContext.Success("IssueActivity", "INSERT", activity.ActivityId.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("IssueActivity", "INSERT",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
+
+            // Older IssueLog rows may hold HTML in Description; the table shows text.
+            return new IssueThreadRow(
+                issueLog.IssueLogId, GetIssueText(issueLog.Description),
+                activity.Status, activity.Priority, activity.Remarks, activity.AttachmentsHtml,
+                IsUpdate: true, OldStatus: oldStatus, OldPriority: oldPriority);
+        }
+
+        // Each issue's current Status / Priority: from its latest ISSUEACTIVITY row
+        // that set one, else (Status only) the IssueLog row's own value.
+        private async Task<Dictionary<int, (string? Status, string? Priority)>> GetCurrentIssueStatesAsync(
+            Guid issueId, IReadOnlyCollection<int> issueLogIds)
+        {
+            var ids = issueLogIds.ToList();
+
+            var activities = await _db.IssueActivity
+                .Where(a => a.Issue_Id == issueId && ids.Contains(a.IssuelogId))
+                .OrderByDescending(a => a.ActivityId)
+                .Select(a => new { a.IssuelogId, a.Status, a.Priority })
+                .ToListAsync();
+
+            var issueStatuses = await _db.IssueLog
+                .Where(x => x.Issue_Id == issueId && ids.Contains(x.IssueLogId))
+                .ToDictionaryAsync(x => x.IssueLogId, x => x.Status);
+
+            return ids.ToDictionary(id => id, id =>
+            {
+                var rows = activities.Where(a => a.IssuelogId == id).ToList();
+                return (
+                    rows.Select(a => a.Status).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s))
+                        ?? issueStatuses.GetValueOrDefault(id),
+                    rows.Select(a => a.Priority).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p)));
+            });
+        }
+
+        // =====================================================================
+        // REPLY REMARKS — a reply (Ref_Id) to a thread that has Issue Logger
+        // issues on it (ISSUEACTIVITY rows with that ThreadId) adds a new
+        // ISSUEACTIVITY row to each of those issues, linked to the reply: its
+        // text becomes the Remarks and its files the AttachmentsHtml, while
+        // Status / Priority keep each issue's current values. A reply with
+        // neither text nor files (e.g. hours only) adds nothing. Replying to
+        // such a reply works the same way, since it has activity rows too.
+        // =====================================================================
+        private async Task AddReplyRemarksAsync(
+            PostWorkStreamDto dto, long replyThreadId, string? finalHtml, Guid posterId)
+        {
+            if (!long.TryParse(dto.Ref_Id, out var refThreadId)) return;
+
+            var issueLogIds = await _db.IssueActivity
+                .Where(a => a.Issue_Id == dto.IssueId && a.ThreadId == refThreadId)
+                .Select(a => a.IssuelogId)
+                .Distinct()
+                .ToListAsync();
+            if (!issueLogIds.Any()) return;
+
+            // finalHtml already carries the permanent URLs of the reply's files.
+            var remark = GetIssueText(finalHtml);
+            var files = string.Concat(AttachmentTagRegex.Matches(finalHtml ?? "").Select(m => m.Value));
+            if (string.IsNullOrWhiteSpace(remark) && files.Length == 0) return;
+
+            var states = await GetCurrentIssueStatesAsync(dto.IssueId, issueLogIds);
+            var activities = issueLogIds.OrderBy(id => id).Select(id => new IssueActivity
+            {
+                Issue_Id = dto.IssueId,
+                ThreadId = replyThreadId,
+                IssuelogId = id,
+                Status = states[id].Status,
+                Priority = states[id].Priority,
+                Remarks = string.IsNullOrWhiteSpace(remark) ? null : remark,
+                AttachmentsHtml = files.Length == 0 ? null : files,
+                Hours = dto.Hours,
+                ChangedBy = posterId,
+            }).ToList();
+
+            var timer = _stepContext.StartStep();
+            try
+            {
+                _db.IssueActivity.AddRange(activities);
+                await _db.SaveChangesAsync();
+                _stepContext.Success("IssueActivity", "INSERT",
+                    string.Join(",", activities.Select(a => a.ActivityId)), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("IssueActivity", "INSERT",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
+        }
+
+
+        // Image / file-attachment tags as the Issue Logger writes them into HTML.
+        private static readonly Regex AttachmentTagRegex = new(
+            @"<img\b[^>]*>|<a\b[^>]*data-type=""file-attachment""[^>]*>.*?</a>",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        // An issue's plain-text description: its HTML without the attachments.
+        private static string GetIssueText(string? html) =>
+            HtmlUtilities.ConvertToPlainText(AttachmentTagRegex.Replace(html ?? "", "")) ?? "";
+
+        private static string ToHtmlText(string? text) =>
+            WebUtility.HtmlEncode(text ?? "").Replace("\r\n", "\n").Replace("\n", "<br>");
+
+        // Badge colours (background, text), the same as the Issue Logger's badges.
+        private static readonly Dictionary<string, (string Bg, string Fg)> StatusBadgeColors =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Open"] = ("#fef2f2", "#b91c1c"),
+                ["In Progress"] = ("#fffbeb", "#b45309"),
+                ["Retest"] = ("#eff6ff", "#1d4ed8"),
+                ["Passed"] = ("#ecfdf5", "#047857"),
+                ["Failed"] = ("#fff1f2", "#be123c"),
+                ["Not Required"] = ("#f1f5f9", "#475569"),
+                ["Closed"] = ("#f0fdf4", "#15803d"),
+            };
+
+        private static readonly Dictionary<string, (string Bg, string Fg)> PriorityBadgeColors =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Low"] = ("#f8fafc", "#475569"),
+                ["Medium"] = ("#f0f9ff", "#0369a1"),
+                ["High"] = ("#fff7ed", "#c2410c"),
+                ["Critical"] = ("#dc2626", "#ffffff"),
+            };
+
+        private const string EmptyCellHtml = "<span style=\"color:#94a3b8\">—</span>";
+
+        private static string BadgeHtml(string? value, Dictionary<string, (string Bg, string Fg)> colors)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return EmptyCellHtml;
+            var (bg, fg) = colors.TryGetValue(value, out var c) ? c : ("#f1f5f9", "#475569");
+            return $"<span style=\"display:inline-block;padding:1px 8px;border-radius:9999px;" +
+                   $"font-size:11px;font-weight:600;white-space:nowrap;background:{bg};color:{fg}\">" +
+                   $"{WebUtility.HtmlEncode(value)}</span>";
+        }
+
+        // A field the edit changed shows as the old value struck through → the new
+        // badge; anything else (or a new issue) shows just its badge.
+        private static string FieldHtml(
+            bool isUpdate, string? oldValue, string? value, Dictionary<string, (string Bg, string Fg)> colors)
+        {
+            if (!isUpdate || string.Equals(oldValue, value, StringComparison.OrdinalIgnoreCase))
+                return BadgeHtml(value, colors);
+
+            var old = string.IsNullOrWhiteSpace(oldValue)
+                ? EmptyCellHtml
+                : $"<s style=\"color:#94a3b8\">{WebUtility.HtmlEncode(oldValue)}</s>";
+            return $"{old} → {BadgeHtml(value, colors)}";
+        }
+
+        // One attachment per line in a table cell. Images become small thumbnails
+        // (the thread view would otherwise show them up to 200px tall); file
+        // links keep their pill.
+        private static string AttachmentCellHtml(string attachmentTag) =>
+            "<div style=\"margin:2px 0\">" +
+            (attachmentTag.StartsWith("<img", StringComparison.OrdinalIgnoreCase)
+                ? "<img style=\"max-height:56px\"" + attachmentTag[4..]
+                : attachmentTag) +
+            "</div>";
+
+        // One section: a heading with the count, then a table with a row per issue.
+        // The Remarks / Attachments columns only appear when some issue has one.
+        // The table is exactly as wide as the thread (fixed layout), so long text
+        // wraps onto the next line in its column instead of widening the table:
+        // #, Status, Priority and Attachments have fixed widths (a badge never
+        // splits) and Issue / Remarks share the rest. Only when the thread is
+        // too narrow to give each of those at least 100px (phones) does the
+        // table keep that minimum and scroll sideways instead.
+        private const string IssueCellStyle = "padding:6px 10px";
+
+        private static void AppendIssueTable(StringBuilder sb, string title, List<IssueThreadRow> rows)
+        {
+            if (!rows.Any()) return;
+
+            var items = rows
+                .Select(r => (Row: r, Files: AttachmentTagRegex.Matches(r.AttachmentsHtml ?? "")
+                    .Select(m => AttachmentCellHtml(m.Value)).ToList()))
+                .ToList();
+            bool showRemarks = rows.Any(r => !string.IsNullOrWhiteSpace(r.Remarks));
+            bool showFiles = items.Any(i => i.Files.Any());
+
+            sb.Append($"<p><strong>{title}</strong> <span style=\"color:#64748b\">({rows.Count})</span></p>");
+            string th(string text) => $"<th style=\"{IssueCellStyle}\">{text}</th>";
+            string td(string html) => $"<td style=\"{IssueCellStyle}\">{html}</td>";
+
+            int minWidth = 48 + 124 + 96 + 100 + (showRemarks ? 100 : 0) + (showFiles ? 120 : 0);
+
+            sb.Append($"<table style=\"width:100%;min-width:{minWidth}px;table-layout:fixed;overflow-wrap:break-word;margin-top:0\">")
+              .Append("<colgroup><col style=\"width:48px\"><col><col style=\"width:124px\"><col style=\"width:96px\">");
+            if (showRemarks) sb.Append("<col>");
+            if (showFiles) sb.Append("<col style=\"width:120px\">");
+            sb.Append("</colgroup><thead><tr>")
+              .Append(th("#")).Append(th("Issue")).Append(th("Status")).Append(th("Priority"));
+            if (showRemarks) sb.Append(th("Remarks"));
+            if (showFiles) sb.Append(th("Attachments"));
+            sb.Append("</tr></thead><tbody>");
+
+            foreach (var (r, files) in items)
+            {
+                sb.Append("<tr>")
+                  .Append(td($"<strong>#{r.IssueLogId}</strong>"))
+                  .Append(td(ToHtmlText(r.Description)))
+                  .Append(td(FieldHtml(r.IsUpdate, r.OldStatus, r.Status, StatusBadgeColors)))
+                  .Append(td(FieldHtml(r.IsUpdate, r.OldPriority, r.Priority, PriorityBadgeColors)));
+                if (showRemarks)
+                    sb.Append(td(string.IsNullOrWhiteSpace(r.Remarks) ? EmptyCellHtml : ToHtmlText(r.Remarks)));
+                if (showFiles)
+                    sb.Append(td(files.Any() ? string.Concat(files) : EmptyCellHtml));
+                sb.Append("</tr>");
+            }
+
+            sb.Append("</tbody></table>");
+        }
+
+        // Thread comment for an Issue Logger submit, each section only when it has something:
+        //   New issues (n)       # | Issue | Status | Priority | Remarks | Attachments
+        //   Updated issues (n)   same columns; a changed Status / Priority shows as
+        //                        ~~old~~ → new
+        //   General comments     what was typed in the form, with its attachments
+        // Attachment links already carry their permanent URLs (temp files were
+        // copied when each row was saved), so the thread shows the same files.
+        private static string BuildIssueThreadHtml(
+            List<IssueThreadRow> created, List<IssueThreadRow> updated, string? generalCommentsHtml)
+        {
+            var sb = new StringBuilder();
+
+            AppendIssueTable(sb, "New issues", created);
+            AppendIssueTable(sb, "Updated issues", updated);
+
+            bool hasGeneralComments = !string.IsNullOrWhiteSpace(generalCommentsHtml) &&
+                (!string.IsNullOrWhiteSpace(GetIssueText(generalCommentsHtml)) ||
+                 AttachmentTagRegex.IsMatch(generalCommentsHtml));
+
+            if (hasGeneralComments)
+                sb.Append("<p><strong>General comments</strong></p>").Append(generalCommentsHtml);
+
+            return sb.ToString();
         }
 
         // =====================================================================
@@ -909,9 +1384,9 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<TicketStatusResult> ComputeAndUpdateTicketStatusAsync(
     Guid? issueId, int? forceTerminalStatusId = null, bool isReopenRequest = false, Guid? reopenedBy = null,
     bool isCloseRequested = false, bool PriorityRequest = false, bool FuncResponse = false, bool WebResponse = false,
-    bool TechnicalResponse = false, bool AdminResponse = false , bool? toClient = false, bool updateTicketFlags = true)
+    bool TechnicalResponse = false, bool AdminResponse = false, bool? toClient = false, bool updateTicketFlags = true)
         {
-            if(isReopenRequest)
+            if (isReopenRequest)
             {
                 var staleSubtasks = await _db.WorkStreams
                     .Where(ws => ws.IssueId == issueId &&
@@ -1248,7 +1723,7 @@ namespace APIGateWay.BusinessLayer.Repository
         // =====================================================================
         // BULK UPSERT — called from TicketRepo (multiple assignees)
         // =====================================================================
-        public async Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx, bool updateTicketFlags =true)
+        public async Task<WorkStreamResult> UpsertWorkStreamsAsync(WorkStreamContext ctx, bool updateTicketFlags = true)
         {
             int? streamName = await GetDepartmentNameAsync(ctx.ResourceId);
             var stream = streamName.ToString();
@@ -1342,7 +1817,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     StreamStatus = resolvedStatus,
                     WasInserted = true,
                     TicketStatus = ticketStatus2,
-                  
+
                 };
             }
         }
@@ -1766,5 +2241,8 @@ Duration : {(int)duration.TotalHours:D2}:{duration.Minutes:D2}
 Summary
 {dto.MeetingSummary}";
         }
+
+
+
     }
 }

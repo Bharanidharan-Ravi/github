@@ -99,6 +99,9 @@ namespace APIGateWay.ModalLayer.PostData
         public bool IsTicketProgressOnly { get; set; }
         public bool IsSupport { get; set; }
         public string? Flag { get; set; }
+        public List<BulkIssueLogItemDto>? IssueLogs { get; set; }
+      
+        public List<BulkIssueLogUpdateItemDto>? IssueLogUpdates { get; set; }
     }
     public class CoContributorItemDto
     {

@@ -1,4 +1,6 @@
-﻿using APIGateWay.BusinessLayer.Auth;
+﻿using APIGateWay.Business_Layer.Helper;
+using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -28,6 +30,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly APIGatewayDBContext _dBContext;
         private readonly IWorkStreamService _workStreamService;
         private readonly IRequestStepContext _stepContext;            // ← ADDED
+        private readonly ITicketHistoryRepository _historyRepository;
 
         public ThreadsRepository(
             IDomainService domainService,
@@ -40,7 +43,8 @@ namespace APIGateWay.BusinessLayer.Repository
             IRealtimeNotifier realtimeNotifier,
             ISyncExecutionService syncExecutionService,
             IWorkStreamService workStreamService,
-            IRequestStepContext stepContext)                          // ← ADDED
+            IRequestStepContext stepContext,
+            ITicketHistoryRepository historyRepository)                          // ← ADDED
         {
             _domainService = domainService;
             _commonService = service;
@@ -53,6 +57,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _dBContext = dbContext;
             _workStreamService = workStreamService;
             _stepContext = stepContext;                      // ← ADDED
+            _historyRepository = historyRepository;
         }
 
         private static readonly HashSet<string> _selfResourceStreams =
@@ -236,6 +241,16 @@ namespace APIGateWay.BusinessLayer.Repository
                     var existingThread = await _dBContext.ISSUETHREADS.FindAsync(threadId);
                     if (existingThread == null)
                         throw new Exception("Thread not found");
+
+                    //toclient toggle
+                    bool toClientChanged = false;
+                    bool newToClientValue = false;
+
+                    if (dto.toClient.HasValue && existingThread.toClient != dto.toClient.Value)
+                    {
+                        toClientChanged = true;
+                        newToClientValue = dto.toClient.Value;
+                    }
 
                     // ── Resolve existing WorkStream ───────────────────────────
                     WorkStream existingWorkStream = null;
@@ -433,6 +448,31 @@ namespace APIGateWay.BusinessLayer.Repository
 
 
                             throw new Exception(ex.Message);
+                        }
+                    }
+
+                    //log history - toClient
+                    if (toClientChanged)
+                    {
+                        var timer = _stepContext.StartStep();
+                        try
+                        {
+                            var historyEntry = TicketHistoryHelper.ThreadClientCommitmentChanged(
+                                existingThread.Issue_Id,
+                                threadId,
+                                newToClientValue,
+                                _loginContext.userId,
+                                _loginContext.userName
+                                );
+
+                            await _historyRepository.LogAsync(historyEntry);
+                            _stepContext.Success("TicketHistory", "INSERT", threadId.ToString(), timer);
+                        }
+                        catch (Exception ex )
+                        {
+                            _stepContext.Failure("TicketHistory", "INSERT",
+                                ex.Message, ex.InnerException?.Message, timer);
+                            throw;
                         }
                     }
 

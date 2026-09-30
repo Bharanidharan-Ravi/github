@@ -16,6 +16,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+using APIGateWay.Business_Layer.Session;
 
 namespace APIGateWay.Business_Layer.Repository
 {
@@ -28,6 +30,7 @@ namespace APIGateWay.Business_Layer.Repository
         private readonly IRealtimeNotifier _realtimeNotifier;
         private readonly IRequestStepContext _stepContext;
         private readonly APIGateWayCommonService _commonService;
+        private readonly INotificationRepository _notificationRepository;
 
         public TicketFeedbackRepo(
             APIGatewayDBContext db,
@@ -36,7 +39,8 @@ namespace APIGateWay.Business_Layer.Repository
             ITicketHistoryRepository historyRepository,
             IRealtimeNotifier realtimeNotifier,
             IRequestStepContext stepContext,
-            APIGateWayCommonService commonService)
+            APIGateWayCommonService commonService,
+            INotificationRepository notificationRepository)
         {
             _db = db;
             _domainService = domainService;
@@ -45,6 +49,7 @@ namespace APIGateWay.Business_Layer.Repository
             _realtimeNotifier = realtimeNotifier;
             _stepContext = stepContext;
             _commonService = commonService;
+            _notificationRepository = notificationRepository;   
         }
 
         public async Task<bool> SubmitFeedbackAsync(PostTicketFeedbackDto dto)
@@ -58,10 +63,14 @@ namespace APIGateWay.Business_Layer.Repository
                 .Select(e => new { e.EmployeeID, e.EmployeeName })
                 .ToListAsync();
 
+            var userNotifications = new List<(Guid UserId, string Message)>();
+            var isThread = dto.FeedbackType == "Thread";
+
             await _domainService.ExecuteInTransactionAsync(async () =>
             {
                 var entries = new List<TicketFeedback>();
                 var historyEntries = new List<TicketHistoryEntry>();
+                var feedbackType = string.IsNullOrEmpty(dto.FeedbackType) ? "Ticket" : dto.FeedbackType;
 
                 foreach (var userId in dto.UserIds)
                 {
@@ -74,20 +83,24 @@ namespace APIGateWay.Business_Layer.Repository
                         Rating = dto.Rating,
                         Comment = dto.Comment,
                         CreatedBy = actorId,
-                        CreatedAt = now
+                        CreatedAt = now,
+                        ThreadId = dto.ThreadId,
+                        FeedbackType = feedbackType
                     });
 
                     var targetUser = users.FirstOrDefault(u => u.EmployeeID == userId);
                     var targetName = targetUser?.EmployeeName ?? "Assigned Member";
 
-                    historyEntries.Add(TicketHistoryHelper.FeedbackGiven(
+                   var historyEntry = TicketHistoryHelper.FeedbackGiven(
                         dto.TicketId,
                         targetName,
                         dto.Rating,
                         dto.Comment,
                         actorId,
                         actorName
-                        ));
+                        );
+                    historyEntries.Add(historyEntry);
+                    userNotifications.Add((userId, historyEntry.Summary));
                 }
 
                 var timer = _stepContext.StartStep();
@@ -107,15 +120,67 @@ namespace APIGateWay.Business_Layer.Repository
                 return true;
             });
 
-            await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+            if (isThread && dto.ThreadId.HasValue)
             {
-                Entity = "TicketHistory",
-                Action = "Create",
-                Payload = new { IssueId = dto.TicketId },
-                KeyField = "IssueId",
-                RepoKey = $"repo-{dto.RepoId}",
-                Timestamp = DateTime.UtcNow
-            });
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "ThreadList",
+                    Action = "Update",
+                    Payload = new { IssueId = dto.TicketId, ThreadId = dto.ThreadId.Value },
+                    KeyField = "ThreadId",
+                    RepoKey = $"repo-{dto.RepoId}",
+                    Timestamp = DateTime.UtcNow
+
+                });
+            }
+            else
+            {
+                await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                {
+                    Entity = "TicketHistory",
+                    Action = "Create",
+                    Payload = new { IssueId = dto.TicketId },
+                    KeyField = "IssueId",
+                    RepoKey = $"repo-{dto.RepoId}",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+
+            try
+            {
+                 isThread = string.Equals(dto.FeedbackType, "Thread", StringComparison.OrdinalIgnoreCase);
+                foreach (var notification in userNotifications)
+                {
+                    var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest
+                    {
+                        EventType = isThread ? "THREAD_FEEDBACK" : "TICKET_FEEDBACK",
+                        EntityType = "TICKET",
+                        EntityId = dto.TicketId.ToString(),
+                        Title = isThread ? "New Thread Feedback" : "New Ticket Feedback",
+                        Message = notification.Message,
+                        ActorId = actorId,
+                        ActorName = actorName,
+                        Audiences = new List<NotificationAudience>
+                        {
+                            new NotificationAudience { AudienceType = "USER", AudienceValue = notification.UserId.ToString() }
+                        }
+                    });
+
+                    await _realtimeNotifier.BroadcastAsync(new RealtimeMessage
+                    {
+                        Entity = "Notification",
+                        Action = "Created",
+                        Payload = new { NotificationId = notificationId, CreatedByUserId = actorId },
+                        KeyField = "NotificationId",
+                        TargetUserId = notification.UserId,
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("error");
+            }
 
             return true;
         }

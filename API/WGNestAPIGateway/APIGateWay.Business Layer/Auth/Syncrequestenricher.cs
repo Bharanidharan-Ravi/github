@@ -105,6 +105,17 @@ namespace APIGateWay.BusinessLayer.Auth
                         continue;
                     }
 
+                    // One unit with every repo (paged / counted SPs)
+                    if (rule.RepoListParamKey != null)
+                    {
+                        var unitParams = new Dictionary<string, string>(baseParams)
+                        {
+                            [rule.RepoListParamKey] = string.Join(",", allowedRepos.Select(r => r.RepoId))
+                        };
+                        enriched.Units.Add(Unit(key, lastSync, unitParams));
+                        continue;
+                    }
+
                     foreach (var repo in allowedRepos)
                     {
                         var unitParams = new Dictionary<string, string>(baseParams)

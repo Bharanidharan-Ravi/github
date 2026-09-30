@@ -73,6 +73,8 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetProject> getProjects { get; set; }
         public DbSet<GetRepo> getRepos { get; set; }
         public DbSet<GetTickets> getTickets { get; set; }
+        public DbSet<GetTicketListRow> getTicketListRows { get; set; }
+        public DbSet<GetTicketListCount> getTicketListCounts { get; set; }
         public DbSet<LabelMaster> labelMaster { get; set; }
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
@@ -95,6 +97,9 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<ApiLog> ApiLogs { get; set; }
         public DbSet<ApiLogStep> ApiLogSteps { get; set; }
         public DbSet<TicketHistory> TicketHistories { get; set; }
+        public DbSet<IssueLog> IssueLog { get; set; }
+        public DbSet<IssueActivity> IssueActivity { get; set; }
+        public DbSet<GetIssueLogList> GetIssueLogList { get; set; }
         public DbSet<TicketProgressLog> TicketProgressLogs { get; set; }
         public DbSet<TicketProgressLogDto> TicketProgressLogDtos { get; set; }
         public DbSet<ThreadCoContributor> ThreadCoContributors { get; set; }
@@ -133,9 +138,9 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetLeaveRequest> GetLeaveRequests { get; set; }
         public DbSet<LeaveType> LeaveType { get; set; }
         public DbSet<LeaveRequestMaster> LeaveRequestMaster { get; set; }
-        public DbSet<LeaveRequestDayMaster> LeaveRequestDayMaster { get; set; }
         public DbSet<GetPermissionRequest> GetPermissionRequests { get; set; }
         public DbSet<PermissionRequestMaster> PermissionRequestMaster { get; set; }
+        public DbSet<AllHour> AllHour { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -273,16 +278,6 @@ namespace APIGateWay.DomainLayer.DBContext
 
             modelBuilder.Entity<GetEmployee>().HasNoKey();
             modelBuilder.Entity<GetLeaveRequest>().HasNoKey();
-            modelBuilder.Entity<GetLeaveRequest>()
-                .Property(l => l.NO_OF_LEAVE_DAYS).HasColumnType("decimal(5, 1)");
-            modelBuilder.Entity<LeaveRequestMaster>()
-                .Property(l => l.NO_OF_LEAVE_DAYS).HasColumnType("decimal(5, 1)");
-            // Declared so EF inserts the parent LEAVE_REQUEST row before its day rows.
-            modelBuilder.Entity<LeaveRequestDayMaster>()
-                .HasOne<LeaveRequestMaster>()
-                .WithMany()
-                .HasForeignKey(d => d.LEAVE_REQUEST_ID)
-                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<GetPermissionRequest>().HasNoKey();
             modelBuilder.Entity<ClientMaster>()
                 .Property(c => c.Created_On).HasColumnType("datetime");

@@ -39,6 +39,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly ITicketHistoryRepository _historyRepository;
         private readonly IApiLoggerService _apiLogger;
         private readonly IEventCenter _eventCenter;
+        private readonly ILoginContextService _loginContext;
 
         // Update your constructor to include IApiLoggerService
         public WorkStreamRepo(
@@ -52,7 +53,8 @@ namespace APIGateWay.BusinessLayer.Repository
             ISyncExecutionService syncExecutionService,
             ITicketHistoryRepository historyRepository,
             IApiLoggerService apiLogger,
-            IEventCenter eventCenter) // <--- ADDED HERE
+            IEventCenter eventCenter,
+            ILoginContextService loginContextService) // <--- ADDED HERE
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -65,6 +67,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _historyRepository = historyRepository;
             _apiLogger = apiLogger;
             _eventCenter = eventCenter;
+            _loginContextService = loginContext;
         }
 
 
@@ -103,6 +106,21 @@ namespace APIGateWay.BusinessLayer.Repository
             // UseLastThread=true or pure % update → no new thread → skip
             var action = "Create";
             if (response.ThreadCreated && response.ThreadId.HasValue)
+            {
+                if (dto.toClient.HasValue && dto.toClient.Value && response.ThreadId.HasValue)
+                {
+                    var historyEntry = TicketHistoryHelper.ThreadClientCommitmentChanged(
+                        dto.IssueId,
+                        response.ThreadId.Value,
+                        true,
+                        _loginContextService.userId,
+                        _loginContextService.userName
+                        );
+                    await _historyRepository.LogAsync(historyEntry);
+                       
+
+                }
+            }
             {
                 await BroadcastThreadCreatedAsync(
                     issueId: dto.IssueId,

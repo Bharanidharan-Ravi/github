@@ -60,6 +60,56 @@ namespace APIGateWay.BusinessLayer.Helper
 
             },
 
+            // Slim ticket list (ids only). UI sends one "Filters" JSON param;
+            // new filters/sorts are rows in dbo.TicketListQueryDef, no API change.
+            // Detail / edit keep using "TicketsList".
+            ["TicketListV2"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetTicketList_V2",
+                EntityType = typeof(GetTicketListRow),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Issue_Id",
+                DeltaEnabled = true,
+
+                // Resolved from the JWT, never trusted from the frontend.
+                IdentityParams = new Dictionary<string, IdentityField>
+                {
+                    ["Role"] = IdentityField.Role,
+                    ["UserId"] = IdentityField.UserId
+                }
+            },
+
+            // Total + per-value counts for the TicketListV2 dropdowns / status
+            // tabs (same "Filters" JSON). New facets are rows in
+            // dbo.TicketListQueryDef (Kind 'C'), no API change.
+            ["TicketListCountsV2"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetTicketListCounts_V2",
+                EntityType = typeof(GetTicketListCount),
+                SourceName = "SyncExecutionService",
+
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Id",
+                DeltaEnabled = false,
+
+                // Resolved from the JWT, never trusted from the frontend.
+                IdentityParams = new Dictionary<string, IdentityField>
+                {
+                    ["Role"] = IdentityField.Role,
+                    ["UserId"] = IdentityField.UserId
+                }
+            },
+
             ["EmployeeList"] = new SyncRepositoryConfig
             {
                 // Execution
@@ -112,6 +162,19 @@ namespace APIGateWay.BusinessLayer.Helper
                 EntityType = typeof(ThreadList),
                 SourceName = "SyncExecutionService",
 
+                // Aggregation
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "IssuesId",
+                DeltaEnabled = true
+            },
+            ["TicketIssueLog"] = new SyncRepositoryConfig
+            {
+                // Execution
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GETTICKETISSUELOG",
+                EntityType = typeof(GetIssueLogList),
+                SourceName = "SyncExecutionService",
                 // Aggregation
                 Type = "array",
                 Strategy = "merge",
@@ -325,6 +388,17 @@ namespace APIGateWay.BusinessLayer.Helper
                     ["UserId"] = IdentityField.UserId,
                     ["IsAdmin"] = IdentityField.IsAdmin
                 }
+            },
+            ["AllHour"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetIssueLoggedHours",
+                EntityType = typeof(AllHour),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Issue_Id",
+                DeltaEnabled = false
             },
             ["GetPermissionRequests"] = new SyncRepositoryConfig
             {

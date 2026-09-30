@@ -60,6 +60,57 @@ namespace APIGateWay.ModalLayer.GETData
     }
 
 
+    // Row of GetTicketList_V2 (config key "TicketListV2"): ids only, the UI maps
+    // names from its masters. *_Ids are comma-separated lower-case ids.
+    public class GetTicketListRow
+    {
+        [Key]
+        public Guid Issue_Id { get; set; }
+        public string? Issue_Code { get; set; }
+        public string? Title { get; set; }
+        public int? StatusId { get; set; }
+        public string? Priority { get; set; }
+        public bool? IsPrivate { get; set; }
+        public bool RaiseToClient { get; set; }
+        public string? ProjKey { get; set; }
+        public string? RepoKey { get; set; }
+        public Guid? Project_Id { get; set; }
+        public Guid? RepoId { get; set; }
+        public Guid? Assignee_Id { get; set; }
+        public Guid CreatedBy { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public Guid? UpdatedBy { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public DateTime? Due_Date { get; set; }
+        public string? Hours { get; set; }
+        public decimal? CompletionPct { get; set; }
+        public decimal? OverallPercentage { get; set; }
+        public bool IsCloseRequested { get; set; }
+        public bool PriorityRequest { get; set; }
+        public bool FuncResponse { get; set; }
+        public bool WebResponse { get; set; }
+        public bool TechnicalResponse { get; set; }
+        public bool AdminResponse { get; set; }
+        public Guid? ReopenedBy { get; set; }
+        public int ThreadCount { get; set; }
+        public int? TotalConsumeMinutes { get; set; }
+        public string? commenttext { get; set; }
+        public string? Label_Ids { get; set; }
+        public string? Assignee_Ids { get; set; }
+        public string? Handler_Ids { get; set; }
+    }
+
+    // Row of GetTicketListCounts_V2 (config key "TicketListCountsV2").
+    // Facet "total" has Value null; other facets use the filter value format.
+    public class GetTicketListCount
+    {
+        [Key]
+        public string Id { get; set; } = "";
+        public string Facet { get; set; } = "";
+        public string? Value { get; set; }
+        public int Cnt { get; set; }
+    }
+
     public class GetLabelForIssues
     {
         [Key]
@@ -76,7 +127,23 @@ namespace APIGateWay.ModalLayer.GETData
         public string PublicUrl { get; set; }
         public string RelativePath { get; set; }
     }
+    public class GetIssueLogList
+    {
+        // Keyed on IssueLogId: several issues share one ThreadId when they are
+        // submitted together.
+        public Guid Issue_Id { get; set; }
+        [Key]
+        public int IssuelogId { get; set; }
+        public string? Description { get; set; }
 
+        public string? Status { get; set; }
+
+        // Latest ISSUEACTIVITY row for the issue.
+        public string? Activities { get; set; }
+
+
+
+    }
     public class ThreadList
     {
         [Key]
@@ -103,6 +170,8 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid? MeetingId { get; set; }
         public int? team { get; set; }
         public bool? toClient { get; set; }
+        public string? AdminFeedback { get; set; }
+        public int? AdminRating { get; set; }
     }
 
     public class IssueRepositoryInfo

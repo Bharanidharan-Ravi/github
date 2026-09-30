@@ -11,7 +11,7 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime LEAVE_FROM { get; set; }
         public DateTime LEAVE_TO { get; set; }
         public string LEAVE_TYPE_ID { get; set; }
-        public decimal NO_OF_LEAVE_DAYS { get; set; }
+        public Decimal NO_OF_LEAVE_DAYS { get; set; }
         public string? COMMENTS { get; set; }
         public string STATUS { get; set; }
         public DateTime REQUESTED_DATE { get; set; }

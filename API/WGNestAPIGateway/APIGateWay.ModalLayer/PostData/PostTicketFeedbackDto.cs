@@ -13,5 +13,7 @@ namespace APIGateWay.ModalLayer.PostData
         public List<Guid> UserIds { get; set; } = new();
         public int Rating { get; set; }
         public string? Comment { get; set; }
+        public long? ThreadId { get; set; }
+        public string? FeedbackType { get; set; } = "Ticket";
     }
 }

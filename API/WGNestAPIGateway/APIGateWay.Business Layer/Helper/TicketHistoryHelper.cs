@@ -703,5 +703,28 @@ namespace APIGateWay.Business_Layer.Helper
                 }
             };
         }
+
+        public static TicketHistoryEntry ThreadClientCommitmentChanged(
+            Guid issueId,
+            long threadId,
+            bool isCommitted,
+            Guid actorId,
+            string actorName)
+        {
+            var action = isCommitted
+                ? "committed a thread to the client"
+                : "removed client visibility from a thread";
+
+            return new TicketHistoryEntry
+            {
+                IssueId = issueId,
+                EventType = "THREAD_UPDATED",
+                Summary = $"{actorName} {action}",
+                ThreadId = threadId,
+                ActorId = actorId,
+                ActorName = actorName,
+                Meta = new { IsCommittedToClinet = isCommitted }
+            };
+        }
     }
 }

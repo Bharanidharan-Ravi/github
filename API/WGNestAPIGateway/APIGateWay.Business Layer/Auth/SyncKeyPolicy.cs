@@ -22,6 +22,14 @@ namespace APIGateWay.BusinessLayer.Auth
 
         /// <summary>SP param name for the repo filter. Defaults to "repoId".</summary>
         public string RepoParamKey { get; init; } = "repoId";
+
+        /// <summary>
+        /// When set (and IsRepoScoped): instead of fanning out, ONE unit is
+        /// executed with every allowed repo id as a CSV in this param. Needed
+        /// by SPs that page or count — per-repo calls would each return their
+        /// own page / counts.
+        /// </summary>
+        public string? RepoListParamKey { get; init; }
     }
 
     public static class SyncKeyPolicy
@@ -43,6 +51,24 @@ namespace APIGateWay.BusinessLayer.Auth
                     AllowedRoles = AppRoles.All,
                     IsRepoScoped = true,
                     RepoParamKey = "repoId"
+                },
+
+                // Same scoping as TicketsList — without this entry Role 3
+                // would pass through unscoped and see every repo. Paged, so all
+                // repos go in one call (@RepoIds) instead of a fan-out.
+                ["TicketListV2"] = new SyncKeyRule
+                {
+                    AllowedRoles = AppRoles.All,
+                    IsRepoScoped = true,
+                    RepoListParamKey = "repoIds"
+                },
+
+                // Filter / tab counts for TicketListV2 — same scope.
+                ["TicketListCountsV2"] = new SyncKeyRule
+                {
+                    AllowedRoles = AppRoles.All,
+                    IsRepoScoped = true,
+                    RepoListParamKey = "repoIds"
                 },
 
                 ["ProjectList"] = new SyncKeyRule
