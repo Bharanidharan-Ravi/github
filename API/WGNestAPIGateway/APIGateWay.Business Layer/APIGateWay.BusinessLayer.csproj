@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Bootstrap for DbMigrationService (creates SYS_DBSNAPSHOT + SPs on first use per database). -->
+    <EmbeddedResource Include="DbMigration\DbSnapshot.sql" LogicalName="APIGateWay.Business_Layer.DbSnapshotBootstrap.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\APIGateWay.DomainLayer\APIGateWay.DomainLayer.csproj" />
     <ProjectReference Include="..\APIGateWay.ModalLayer\APIGateWay.ModalLayer.csproj" />
   </ItemGroup>

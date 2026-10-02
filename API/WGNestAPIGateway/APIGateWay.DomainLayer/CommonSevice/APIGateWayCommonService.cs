@@ -59,7 +59,8 @@ namespace APIGateWay.DomainLayer.CommonSevice
             }
             catch (Exception ex)
             {
-                throw new InvalidDataException(ex.Message);
+                // GetBaseException: surface the real SqlException, not EF's generic "transient failure" wrapper.
+                throw new InvalidDataException(ex.GetBaseException().Message, ex);
             }
         }
         public async Task<DataSet> ExecuteReturnAsync(

@@ -50,6 +50,13 @@ namespace APIGateWay.ModelLayer.ErrorException
             public UnauthorizedException(string message, Exception inner)
                 : base(message, inner) { }
         }
+        public class ForbiddenException : Exception
+        {
+            public ForbiddenException() { }
+
+            public ForbiddenException(string message)
+                : base(message) { }
+        }
         // LoginException specifically for login errors with a status code
         public class LoginException : Exception
         {

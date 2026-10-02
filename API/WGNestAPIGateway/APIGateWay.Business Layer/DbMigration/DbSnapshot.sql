@@ -1,0 +1,94 @@
+-- DB snapshot / schema-migration tracking — SQL Server, schema dbo.
+--
+-- One row per snapshot (MANUAL / POST_MIGRATE) and per migration (MIGRATION) run through
+-- DbMigrationController. Files live under appsettings "DbMigration:SnapshotPath":
+--   FILEPATH          structure snapshot (.json) — or, for a MIGRATION, the uploaded snapshot copy
+--   SQLFILEPATH       full backup (.sql: DDL + data INSERTs) of a snapshot
+--   ROLLBACKFILEPATH  MIGRATION only: applied steps + their rollback (.json)
+--
+-- DbMigrationService runs this file itself (embedded resource) in each database where the SPs
+-- are missing, so it does not have to be applied by hand. Re-runnable. Batches split on GO.
+
+IF OBJECT_ID(N'[dbo].[SYS_DBSNAPSHOT]', N'U') IS NULL
+CREATE TABLE [dbo].[SYS_DBSNAPSHOT] (
+    [SNAPSHOTID] INT IDENTITY(1,1) NOT NULL,
+    [SNAPSHOTTYPE] NVARCHAR(20) NOT NULL,
+    [STATUS] NVARCHAR(20) NOT NULL,
+    [FILENAME] NVARCHAR(255) NULL,
+    [FILEPATH] NVARCHAR(1000) NULL,
+    [SQLFILEPATH] NVARCHAR(1000) NULL,
+    [ROLLBACKFILEPATH] NVARCHAR(1000) NULL,
+    [SIZEBYTES] BIGINT NULL,
+    [SUMMARY] NVARCHAR(MAX) NULL,
+    [CREATEDAT] DATETIME2 NOT NULL CONSTRAINT [DF_SYS_DBSNAPSHOT_CREATEDAT] DEFAULT (SYSDATETIME()),
+    [CREATEDBY] NVARCHAR(100) NULL,
+    [UPDATEDAT] DATETIME2 NULL,
+    CONSTRAINT [PK_SYS_DBSNAPSHOT] PRIMARY KEY ([SNAPSHOTID])
+);
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[SP_SYS_DBSNAPSHOT_SAVE]
+    @P_SNAPSHOTTYPE NVARCHAR(20),
+    @P_STATUS NVARCHAR(20),
+    @P_FILENAME NVARCHAR(255),
+    @P_FILEPATH NVARCHAR(1000),
+    @P_SQLFILEPATH NVARCHAR(1000),
+    @P_ROLLBACKFILEPATH NVARCHAR(1000),
+    @P_SIZEBYTES BIGINT,
+    @P_SUMMARY NVARCHAR(MAX),
+    @P_CREATEDBY NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO [dbo].[SYS_DBSNAPSHOT]
+        ([SNAPSHOTTYPE], [STATUS], [FILENAME], [FILEPATH], [SQLFILEPATH], [ROLLBACKFILEPATH],
+         [SIZEBYTES], [SUMMARY], [CREATEDAT], [CREATEDBY])
+    VALUES
+        (@P_SNAPSHOTTYPE, @P_STATUS, @P_FILENAME, @P_FILEPATH, @P_SQLFILEPATH, @P_ROLLBACKFILEPATH,
+         @P_SIZEBYTES, @P_SUMMARY, SYSDATETIME(), @P_CREATEDBY);
+
+    SELECT CAST(SCOPE_IDENTITY() AS INT) AS [SnapshotId];
+END;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[SP_SYS_DBSNAPSHOT_LIST]
+    @P_SNAPSHOTID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        [SNAPSHOTID] AS [SnapshotId],
+        [SNAPSHOTTYPE] AS [SnapshotType],
+        [STATUS] AS [Status],
+        [FILENAME] AS [FileName],
+        [FILEPATH] AS [FilePath],
+        [SQLFILEPATH] AS [SqlFilePath],
+        [ROLLBACKFILEPATH] AS [RollbackFilePath],
+        [SIZEBYTES] AS [SizeBytes],
+        [SUMMARY] AS [Summary],
+        [CREATEDAT] AS [CreatedAt],
+        [CREATEDBY] AS [CreatedBy],
+        [UPDATEDAT] AS [UpdatedAt]
+    FROM [dbo].[SYS_DBSNAPSHOT]
+    WHERE @P_SNAPSHOTID IS NULL OR [SNAPSHOTID] = @P_SNAPSHOTID
+    ORDER BY [SNAPSHOTID] DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[SP_SYS_DBSNAPSHOT_SET_STATUS]
+    @P_SNAPSHOTID INT,
+    @P_STATUS NVARCHAR(20),
+    @P_SUMMARY NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE [dbo].[SYS_DBSNAPSHOT]
+    SET [STATUS] = @P_STATUS,
+        [SUMMARY] = ISNULL(@P_SUMMARY, [SUMMARY]),
+        [UPDATEDAT] = SYSDATETIME()
+    WHERE [SNAPSHOTID] = @P_SNAPSHOTID;
+END;
+GO
