@@ -26,7 +26,8 @@ namespace APIGateWay.BusinessLayer.Helpers.token
              Guid sessionId,
              Guid jwtId,
              DateTime tokenIssuedAt,
-             DateTime tokenExpiresAt
+             DateTime tokenExpiresAt,
+             IEnumerable<int>? roles = null
          )
         {
             var securityKey = new SymmetricSecurityKey(
@@ -43,6 +44,9 @@ namespace APIGateWay.BusinessLayer.Helpers.token
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, userName),
                 new Claim(ClaimTypes.Role, role.ToString()),
+                // Effective roles (own + ROLESMASTER parents), e.g. "4,2". ClaimTypes.Role
+                // stays single so existing role == x checks are unchanged.
+                new Claim("Roles", string.Join(",", roles ?? (role.HasValue ? new[] { role.Value } : Array.Empty<int>()))),
                 new Claim("Team", Team ?? ""),
                 new Claim("DbName", dbName ?? ""),
                 new Claim("PreviewUrl", PreviewUrl ?? ""),

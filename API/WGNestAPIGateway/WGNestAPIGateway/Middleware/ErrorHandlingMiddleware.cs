@@ -53,6 +53,7 @@ namespace APIGateWay.Middelware
                 Exceptionlist.InvalidDataException => (int)HttpStatusCode.BadRequest,
                 Exceptionlist.LoginException => (int)HttpStatusCode.Unauthorized,
                 Exceptionlist.UnauthorizedException => (int)HttpStatusCode.Unauthorized,
+                Exceptionlist.ForbiddenException => (int)HttpStatusCode.Forbidden,
                 UserAlreadyExistsException => (int)HttpStatusCode.Conflict,
                 _ => (int)HttpStatusCode.InternalServerError
             };

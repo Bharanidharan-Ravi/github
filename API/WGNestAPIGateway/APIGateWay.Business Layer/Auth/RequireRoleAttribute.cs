@@ -32,7 +32,13 @@ namespace APIGateWay.BusinessLayer.Auth
                 return;
             }
 
-            if (!_allowedRoles.Contains(role))
+            // Child roles inherit their parents: "Roles" claim holds e.g. "4,2"
+            var effectiveRoles = (context.HttpContext.User?.FindFirst("Roles")?.Value ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(v => int.TryParse(v, out var r) ? r : 0)
+                .Append(role);
+
+            if (!effectiveRoles.Any(_allowedRoles.Contains))
             {
                 context.Result = new ObjectResult(new
                 {

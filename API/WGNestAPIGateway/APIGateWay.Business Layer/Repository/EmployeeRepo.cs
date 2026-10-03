@@ -180,7 +180,9 @@ namespace APIGateWay.Business_Layer.Repository
                                         entity.EmployeeName = dto.Employee.EmployeeName;
                                         entity.Status = dto.Login.Status;
                                         entity.Team = dto.Employee.Team;
-                                        entity.Role = dto.Employee.Role;
+                                        // Only Admin may grant/revoke a child role (e.g. Ticket Admin)
+                                        if (_loginContextService.role == 1 && IsAllowedEmployeeRole(dto.Employee.Role))
+                                            entity.Role = dto.Employee.Role;
                                         entity.Specialization = dto.Employee.Specialization;
                                         entity.Email = dto.Employee.Email;
                                         entity.PhoneNumber = dto.Employee.PhoneNumber;
@@ -240,6 +242,10 @@ namespace APIGateWay.Business_Layer.Repository
 
             return finalData;
         }
+
+        // Employee (2) or a ROLESMASTER role whose ParentRoleID is Employee (e.g. 4 = Ticket Admin)
+        private bool IsAllowedEmployeeRole(int? role) =>
+            role == 2 || (role.HasValue && _dbContext.RolesMaster.Any(r => r.ID == role && r.ParentRoleID == 2));
     }
 }
 

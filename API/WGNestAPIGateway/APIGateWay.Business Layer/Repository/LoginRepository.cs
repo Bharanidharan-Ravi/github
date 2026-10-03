@@ -124,6 +124,8 @@ namespace APIGateWay.BusinessLayer.Repository
             //.EnsureUserStateAsync(
             //     user.UserId);
 
+            var effectiveRoles = await _loginService.GetEffectiveRolesAsync(user.UserId, user.Role);
+
             var token =
             _tokenGeneration.GenerateJwtToken(
                 user.UserId,
@@ -136,7 +138,8 @@ namespace APIGateWay.BusinessLayer.Repository
                 sessionId,
                 jwtId,
                 tokenIssuedAt,
-                tokenExpiresAt
+                tokenExpiresAt,
+                effectiveRoles
             );
 
            

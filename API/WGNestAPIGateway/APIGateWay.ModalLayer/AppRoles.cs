@@ -11,6 +11,8 @@ namespace APIGateWay.ModalLayer
         public const int Admin = 1;  // Master admin  — full access, zero additional checks
         public const int Manager = 2;  // Manager       — all views scoped to their repos, no repo creation
         public const int Viewer = 3;  // Viewer        — project + ticket only, scoped to their repos
+        public const int TicketAdmin = 4;  // Child of Employee (ROLESMASTER.ParentRoleID = 2) — also holds role 2.
+                                           // Check with ILoginContextService.HasRole(AppRoles.TicketAdmin).
 
         public static readonly int[] All = { Admin, Manager, Viewer };
         public static readonly int[] AdminManager = { Admin, Manager };

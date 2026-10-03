@@ -91,6 +91,8 @@ builder.Services.AddScoped<ICurrentHolderRepo, CurrentHolderRepo>();
 builder.Services.AddScoped<IChatKeyRepo, ChatKeyRepo>();
 builder.Services.AddSingleton<IChatRecoveryEscrowCipher, ChatRecoveryEscrowCipher>();
 builder.Services.AddScoped<IChatRepo, ChatRepo>();
+builder.Services.AddScoped<ITicketFeedbackRepo, TicketFeedbackRepo>();
+builder.Services.AddScoped<IEmployeeAreaRepo, EmployeeAreaRepo>();
 builder.Services.Configure<APIGateWay.ModalLayer.DTOs.DbMigrationOptions>(
     builder.Configuration.GetSection(APIGateWay.ModalLayer.DTOs.DbMigrationOptions.SectionName));
 builder.Services.AddScoped<IDbMigrationService, DbMigrationService>();

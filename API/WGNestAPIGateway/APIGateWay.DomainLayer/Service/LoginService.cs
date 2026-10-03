@@ -202,12 +202,19 @@ namespace APIGateWay.DomainLayer.Service
                     _context.LOGIN_MASTER.Add(newUser);
                     await _context.SaveChangesAsync();
 
+                    // Employee role: 2, or a child role of Employee (ROLESMASTER.ParentRoleID = 2, e.g. 4 = Ticket Admin) set by Admin
+                    var employeeRole = request.Employee.Role;
+                    bool isChildRole = employeeRole.HasValue && await _context.RolesMaster
+                        .AnyAsync(r => r.ID == employeeRole && r.ParentRoleID == 2);
+                    if (_loginContext.role != 1 || !isChildRole)
+                        employeeRole = 2;
+
                     // Create EmployeeMaster linked to login
                     var employee = new EMPLOYEEMASTER
                     {
                         EmployeeName = request.Employee.EmployeeName,
                         //Team = request.Employee.Team,
-                        Role = request.Employee.Role,
+                        Role = employeeRole,
                         Specialization = request.Employee.Specialization,
                         Email = request.Employee.Email,
                         PhoneNumber = request.Employee.PhoneNumber,
@@ -297,6 +304,44 @@ namespace APIGateWay.DomainLayer.Service
             return (hashedPassword, saltBase);
         }
 
+        #endregion
+
+        #region Effective roles
+        /// <summary>
+        /// Login role + EMPLOYEEMASTER.Role, each expanded with its ROLESMASTER parent chain.
+        /// e.g. login 2 + employee role 4 (ParentRoleID 2) → [2, 4].
+        /// </summary>
+        public async Task<List<int>> GetEffectiveRolesAsync(Guid userId, int? loginRole)
+        {
+            var roles = new List<int>();
+            if (loginRole.HasValue) roles.Add(loginRole.Value);
+
+            var employeeRole = await _context.eMPLOYEEMASTERs
+                .Where(e => e.EmployeeID == userId)
+                .Select(e => e.Role)
+                .FirstOrDefaultAsync();
+            if (employeeRole.HasValue && !roles.Contains(employeeRole.Value))
+                roles.Add(employeeRole.Value);
+
+            if (roles.Count == 0) return roles;
+
+            var parentOf = await _context.RolesMaster
+                .Where(r => r.ParentRoleID != null)
+                .ToDictionaryAsync(r => r.ID, r => r.ParentRoleID!.Value);
+
+            foreach (var start in roles.ToList())
+            {
+                var current = start;
+                // Walk up the hierarchy; the Contains check also stops a bad cyclic row
+                while (parentOf.TryGetValue(current, out var parent) && !roles.Contains(parent))
+                {
+                    roles.Add(parent);
+                    current = parent;
+                }
+            }
+
+            return roles;
+        }
         #endregion
 
         //public async Task<List<GetEmployee>> GetEmployeeMaster()

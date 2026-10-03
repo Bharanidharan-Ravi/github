@@ -16,6 +16,7 @@ using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
+using APIGateWay.ModelLayer.ErrorException;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using ReverseMarkdown.Converters;
@@ -72,6 +73,29 @@ namespace APIGateWay.BusinessLayer.Repository
             _eventCenter = eventCenter;
         }
 
+        private const int TicketStatusActive = 1;
+        private const int TicketStatusInQueue = 18;
+
+        // A plain Employee (role 2) cannot make a ticket Active — only Admin or a
+        // Ticket Admin (role 4, which also holds role 2) can.
+        private bool CanActivateTicket =>
+            _loginContext.role != AppRoles.Manager || _loginContext.HasRole(AppRoles.TicketAdmin);
+
+        // Runs before the transaction so the 403 is not wrapped as a generic failure.
+        // Re-saving a ticket that is already Active is allowed.
+        private async Task EnsureCanSetStatusAsync(Guid ticketId, int? newStatus)
+        {
+            if (newStatus != TicketStatusActive || CanActivateTicket) return;
+
+            var currentStatus = await _db.ISSUEMASTER
+                .Where(t => t.Issue_Id == ticketId)
+                .Select(t => t.Status)
+                .FirstOrDefaultAsync();
+
+            if (currentStatus != TicketStatusActive)
+                throw new Exceptionlist.ForbiddenException("Only an Admin or Ticket Admin can make a ticket Active.");
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // CREATE
         // POST /api/ticket/CreateTicket
@@ -116,7 +140,10 @@ namespace APIGateWay.BusinessLayer.Repository
 
                     ticketMaster.Status = isReady
                         ? ticketDto.Status
-                        : 18; // InQueue
+                        : TicketStatusInQueue;
+
+                    if (ticketMaster.Status == TicketStatusActive && !CanActivateTicket)
+                        ticketMaster.Status = TicketStatusInQueue;
 
                     if (!ticketDto.RepoId.HasValue)
                         throw new Exception("Repo_Id is required to create a Ticket.");
@@ -386,6 +413,8 @@ namespace APIGateWay.BusinessLayer.Repository
             GetTickets finalTicketData = null;
             var changedFields = new List<string>();
             string updatedStatusName = null;
+
+            await EnsureCanSetStatusAsync(ticketId, dto.Status);
 
             try
             {
@@ -839,6 +868,8 @@ namespace APIGateWay.BusinessLayer.Repository
         public async Task<GetTickets> UpdateTicketStatusAsync(Guid ticketId, UpdateTicketStatusDto dto)
         {
             GetTickets finalTicketData = null;
+
+            await EnsureCanSetStatusAsync(ticketId, dto.Status);
 
             try
             {

@@ -48,6 +48,27 @@ namespace APIGateWay.DomainLayer.Service
             }
         }
 
+        // "Roles" claim = comma-separated effective roles, e.g. "4,2" for a Ticket Admin.
+        // Tokens issued before this claim existed fall back to the single role.
+        public IReadOnlyList<int> roles
+        {
+            get
+            {
+                var parsed = (User?.FindFirst("Roles")?.Value ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(v => int.TryParse(v, out var r) ? r : 0)
+                    .Where(r => r > 0)
+                    .ToList();
+
+                if (role > 0 && !parsed.Contains(role)) parsed.Add(role);
+                return parsed;
+            }
+        }
+
+        public bool HasRole(int r) => roles.Contains(r);
+
+        public bool HasAnyRole(IEnumerable<int> allowed) => allowed.Any(HasRole);
+
         public string JwtToken =>
             HttpContext?.Request.Headers["Authorization"]
                 .FirstOrDefault()?.Replace("Bearer ", "");
