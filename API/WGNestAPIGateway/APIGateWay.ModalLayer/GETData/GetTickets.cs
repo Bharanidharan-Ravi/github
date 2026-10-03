@@ -94,6 +94,7 @@ namespace APIGateWay.ModalLayer.GETData
         public Guid? ReopenedBy { get; set; }
         public int ThreadCount { get; set; }
         public int? TotalConsumeMinutes { get; set; }
+        public int? TeamConsumeMinutes { get; set; }
         public string? commenttext { get; set; }
         public string? Label_Ids { get; set; }
         public string? Assignee_Ids { get; set; }

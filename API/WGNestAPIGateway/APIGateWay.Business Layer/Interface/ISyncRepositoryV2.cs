@@ -9,5 +9,9 @@ namespace APIGateWay.BusinessLayer.Interface
     {
         Task<SyncResponseV2> ExecuteAsync(DynamicSyncRequest request);
         Task<SyncResponseV2> ExecuteUnitsAsync(List<SyncExecutionUnit> units);
+
+        /// <summary>Role-checked run of config keys: the whole /sync/v2 flow, reusable by other endpoints.</summary>
+        Task<SyncResponseV2> RunAsync(DynamicSyncRequest request);
+        Task<SyncResponseV2> RunAsync(params string[] configKeys);
     }
 }

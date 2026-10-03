@@ -17,5 +17,10 @@ namespace APIGateWay.ModalLayer.GETData
         public DateTime? LogoutAt { get; set; }
         public DateTime? LastHeartbeat { get; set; }
         public bool? IsActive { get; set; }
+
+        // Presence computed by the SP: online → since login, offline → since the
+        // last session ended (null = never logged in)
+        public bool IsOnline { get; set; }
+        public DateTime? StatusSince { get; set; }
     }
 }

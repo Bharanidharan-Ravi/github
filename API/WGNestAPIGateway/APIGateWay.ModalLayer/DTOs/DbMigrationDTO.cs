@@ -22,6 +22,57 @@ namespace APIGateWay.ModalLayer.DTOs
         public string Schema { get; set; } = "dbo";
 
         public int CommandTimeoutSeconds { get; set; } = 600;
+
+        /// <summary>
+        /// Databases /clone may overwrite, besides TestConnection's database (always allowed).
+        /// DefaultConnection's (live) database is never a valid target, even if listed.
+        /// </summary>
+        public List<string> CloneTargets { get; set; } = new();
+
+        /// <summary>Folder ON THE SQL SERVER for the clone's .bak file; empty = the instance's default backup folder.</summary>
+        public string? CloneBackupPath { get; set; }
+
+        /// <summary>Timeout of the BACKUP and RESTORE statements of /clone.</summary>
+        public int CloneTimeoutSeconds { get; set; } = 3600;
+    }
+
+    public class DbCloneRequest
+    {
+        /// <summary>Database to copy (structure + data). Defaults to DefaultConnection's database (live).</summary>
+        public string? SourceDatabase { get; set; }
+
+        /// <summary>Database to create/replace. Defaults to TestConnection's database.</summary>
+        public string? TargetDatabase { get; set; }
+
+        /// <summary>Must be true when the target already exists: it is dropped and replaced by the copy.</summary>
+        public bool Overwrite { get; set; }
+
+        /// <summary>Point procedures/views/functions/triggers that name the source DB (WG_APP.dbo.X) at the target. Default true.</summary>
+        public bool RewriteReferences { get; set; } = true;
+
+        /// <summary>Only check and return the plan; nothing is changed. Defaults to true — send false to clone.</summary>
+        public bool? DryRun { get; set; }
+    }
+
+    public class DbCloneReportDto
+    {
+        public bool Success { get; set; }
+        public bool DryRun { get; set; }
+        public string? Error { get; set; }
+        public string Server { get; set; } = string.Empty;
+        public string SourceDatabase { get; set; } = string.Empty;
+        public string TargetDatabase { get; set; } = string.Empty;
+        public bool TargetExisted { get; set; }
+        public long? SourceSizeMb { get; set; }
+        /// <summary>The COPY_ONLY backup, on the SQL Server machine. Kept so the clone can be restored again.</summary>
+        public string? BackupFile { get; set; }
+        /// <summary>Logical file -> new physical file of the target.</summary>
+        public List<string> Files { get; set; } = new();
+        /// <summary>Modules that name the source DB and were (or, on a dry run, would be) pointed at the target.</summary>
+        public List<string> RewrittenModules { get; set; } = new();
+        public List<DbMigrationNoteDto> RewriteFailures { get; set; } = new();
+        public string Summary { get; set; } = string.Empty;
+        public int? CloneId { get; set; }
     }
 
     /// <summary>SYS_DBSNAPSHOT row (SP_SYS_DBSNAPSHOT_LIST).</summary>

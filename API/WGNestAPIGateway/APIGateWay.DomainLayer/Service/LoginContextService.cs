@@ -1,4 +1,5 @@
 ﻿using APIGateWay.DomainLayer.Interface;
+using APIGateWay.DomainLayer.Utilities;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -7,10 +8,12 @@ namespace APIGateWay.DomainLayer.Service
     public class LoginContextService : ILoginContextService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IEnvironmentRoutingService _environmentRouting;
 
-        public LoginContextService(IHttpContextAccessor httpContextAccessor)
+        public LoginContextService(IHttpContextAccessor httpContextAccessor, IEnvironmentRoutingService environmentRouting)
         {
             _httpContextAccessor = httpContextAccessor;
+            _environmentRouting = environmentRouting;
         }
 
         private HttpContext HttpContext => _httpContextAccessor.HttpContext;
@@ -29,8 +32,9 @@ namespace APIGateWay.DomainLayer.Service
         public string userName =>
             User?.FindFirst(ClaimTypes.Name)?.Value;
 
+        // DbName claim, mapped to the test DB when the request is X-Environment: Test.
         public string databaseName =>
-            User?.FindFirst("DbName")?.Value;   // custom claim
+            _environmentRouting.ResolveDatabaseName(User?.FindFirst("DbName")?.Value);
 
         public string Status =>
             User?.FindFirst("Status")?.Value;   // if exists in JWT

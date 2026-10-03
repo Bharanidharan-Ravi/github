@@ -10,5 +10,6 @@ namespace APIGateWay.Business_Layer.Interface
         Task<GetLeaveRequest> CreateLeaveRequestAsync(PostLeaveRequestDto dto);
         Task<GetLeaveRequest> UpdateStatusAsync(Guid id, PostLeaveRequestStatusDto dto);
         Task<GetLeaveRequest> MarkNotTakenAsync(Guid id);
+        Task<int> CountPendingAsync();
     }
 }

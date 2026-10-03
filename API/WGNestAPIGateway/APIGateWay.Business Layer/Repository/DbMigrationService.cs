@@ -12,6 +12,7 @@ using APIGateWay.ModelLayer.ErrorException;
 using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using static APIGateWay.Business_Layer.DbMigration.SqlSchemaReader;
@@ -44,17 +45,20 @@ namespace APIGateWay.Business_Layer.Repository
 
         private readonly IEnvironmentRoutingService _environmentRouting;
         private readonly ILoginContextService _loginContext;
+        private readonly IConfiguration _configuration;
         private readonly DbMigrationOptions _options;
         private readonly ILogger<DbMigrationService> _logger;
 
         public DbMigrationService(
             IEnvironmentRoutingService environmentRouting,
             ILoginContextService loginContext,
+            IConfiguration configuration,
             IOptions<DbMigrationOptions> options,
             ILogger<DbMigrationService> logger)
         {
             _environmentRouting = environmentRouting;
             _loginContext = loginContext;
+            _configuration = configuration;
             _options = options.Value;
             _logger = logger;
         }
@@ -224,6 +228,243 @@ namespace APIGateWay.Business_Layer.Repository
                 return new DbRollbackReportDto { MigrationId = migrationId, Summary = summary, Steps = steps };
             }
             finally { Gate.Release(); }
+        }
+
+        // ---------------------------------------------------------------- clone (live -> test)
+
+        // Leading comments are kept in sys.sql_modules, so CREATE may come after them.
+        private static readonly Regex CreateModuleHead = new(
+            @"^(?<lead>(?:\s+|--[^\r\n]*(?:\r?\n|$)|/\*[\s\S]*?\*/)*)CREATE\s+(?:OR\s+ALTER\s+)?(?<kind>PROC(?:EDURE)?|VIEW|FUNCTION|TRIGGER)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// BACKUP ... COPY_ONLY of the source (the live backup chain is untouched), drop of the old target,
+        /// RESTORE as the target with its files renamed, then modules naming the source DB are pointed at
+        /// the target so the copy never reads or writes live. Runs on DefaultConnection's server via master.
+        /// </summary>
+        public async Task<DbCloneReportDto> CloneDatabaseAsync(DbCloneRequest request)
+        {
+            EnsureEnabled();
+            request ??= new DbCloneRequest();
+
+            var live = new SqlConnectionStringBuilder(_configuration.GetConnectionString("DefaultConnection"));
+            var testConnection = _configuration.GetConnectionString("TestConnection");
+            var test = string.IsNullOrWhiteSpace(testConnection) ? null : new SqlConnectionStringBuilder(testConnection);
+
+            var source = EnsureValidName(string.IsNullOrWhiteSpace(request.SourceDatabase) ? live.InitialCatalog : request.SourceDatabase.Trim(), "source database");
+            var target = EnsureValidName(string.IsNullOrWhiteSpace(request.TargetDatabase) ? test?.InitialCatalog : request.TargetDatabase.Trim(), "target database");
+
+            if (string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
+                throw new Exceptionlist.InvalidDataException("Source and target are the same database.");
+            if (string.Equals(target, live.InitialCatalog, StringComparison.OrdinalIgnoreCase))
+                throw new Exceptionlist.ForbiddenException($"{target} is the live database (DefaultConnection) and is never overwritten.");
+            var allowed = _options.CloneTargets.Append(test?.InitialCatalog).Where(n => !string.IsNullOrWhiteSpace(n));
+            if (!allowed.Contains(target, StringComparer.OrdinalIgnoreCase))
+                throw new Exceptionlist.ForbiddenException($"{target} is neither TestConnection's database nor listed in DbMigration:CloneTargets.");
+            if (test != null && string.Equals(target, test.InitialCatalog, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(test.DataSource.Trim(), live.DataSource.Trim(), StringComparison.OrdinalIgnoreCase))
+                throw new Exceptionlist.InvalidDataException(
+                    $"TestConnection is on {test.DataSource} but DefaultConnection on {live.DataSource}; the clone only works on one server.");
+
+            var timeout = Math.Max(_options.CloneTimeoutSeconds, Timeout);
+            var report = new DbCloneReportDto
+            {
+                DryRun = request.DryRun ?? true,
+                Server = live.DataSource,
+                SourceDatabase = source,
+                TargetDatabase = target
+            };
+
+            await Gate.WaitAsync();
+            try
+            {
+                await using var conn = new SqlConnection(new SqlConnectionStringBuilder(live.ConnectionString) { InitialCatalog = "master" }.ConnectionString);
+                await conn.OpenAsync();
+
+                if (await conn.ExecuteScalarAsync<int?>("SELECT DB_ID(@source)", new { source }) == null)
+                    throw new Exceptionlist.DataNotFoundException($"Database {source} does not exist on {live.DataSource}.");
+                report.TargetExisted = await conn.ExecuteScalarAsync<int?>("SELECT DB_ID(@target)", new { target }) != null;
+                if (report.TargetExisted && !request.Overwrite && !report.DryRun)
+                    throw new Exceptionlist.InvalidDataException($"{target} already exists. Send Overwrite=true to drop it and replace it with a copy of {source}.");
+                report.SourceSizeMb = await conn.ExecuteScalarAsync<long?>(
+                    "SELECT SUM(CAST(size AS BIGINT)) * 8 / 1024 FROM sys.master_files WHERE database_id = DB_ID(@source)", new { source });
+
+                var files = await CloneFilesAsync(conn, source, target);
+                report.Files = files.Select(f => $"{f.LogicalName} -> {f.NewPath}").ToList();
+
+                var backupFolder = !string.IsNullOrWhiteSpace(_options.CloneBackupPath)
+                    ? _options.CloneBackupPath
+                    : await conn.ExecuteScalarAsync<string?>("SELECT CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS NVARCHAR(4000))");
+                if (string.IsNullOrWhiteSpace(backupFolder))
+                    throw new InvalidOperationException("Set DbMigration:CloneBackupPath to a folder on the SQL Server machine.");
+                report.BackupFile = Path.Combine(backupFolder, $"{SafeName(source)}_to_{SafeName(target)}_{Stamp()}.bak");
+
+                if (report.DryRun)
+                {
+                    if (request.RewriteReferences)
+                        foreach (var m in await ModulesNamingAsync(conn, source, source))
+                            report.RewrittenModules.Add(m.Label);
+                    report.Success = true;
+                    report.Summary = $"Dry run: copy {source} ({report.SourceSizeMb} MB) to {target}"
+                        + (report.TargetExisted ? $"; {target} exists and will be DROPPED (needs Overwrite=true)" : "")
+                        + (report.RewrittenModules.Count > 0 ? $"; {report.RewrittenModules.Count} module(s) name {source} and will point at {target}" : "");
+                    return report;
+                }
+
+                var stage = "backup";
+                try
+                {
+                    await conn.ExecuteAsync($"BACKUP DATABASE {Q(source)} TO DISK = @file WITH COPY_ONLY, INIT, CHECKSUM",
+                        new { file = report.BackupFile }, commandTimeout: timeout);
+
+                    if (report.TargetExisted)
+                    {
+                        stage = "drop of the old target";
+                        await conn.ExecuteAsync($"ALTER DATABASE {Q(target)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE {Q(target)};",
+                            commandTimeout: timeout);
+                    }
+
+                    stage = "restore";
+                    var restore = new DynamicParameters();
+                    restore.Add("file", report.BackupFile);
+                    var moves = files.Select((f, i) =>
+                    {
+                        restore.Add($"l{i}", f.LogicalName);
+                        restore.Add($"p{i}", f.NewPath);
+                        return $"MOVE @l{i} TO @p{i}";
+                    }).ToList();
+                    await conn.ExecuteAsync($"RESTORE DATABASE {Q(target)} FROM DISK = @file WITH {string.Join(", ", moves)}, RECOVERY, CHECKSUM",
+                        restore, commandTimeout: timeout);
+                    // A test copy needs no log backups.
+                    await conn.ExecuteAsync($"ALTER DATABASE {Q(target)} SET RECOVERY SIMPLE", commandTimeout: Timeout);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Clone {Source} -> {Target} failed during the {Stage}.", source, target, stage);
+                    report.Error = ex.Message;
+                    report.Summary = $"Failed during the {stage}: {ex.Message}"
+                        + (stage == "restore" ? $" — {target} no longer exists; run the clone again." : "");
+                    return report;
+                }
+
+                // Pooled connections still point at the dropped database, and its tracking SPs may differ now.
+                SqlConnection.ClearAllPools();
+                foreach (var key in TrackingReady.Keys.Where(k => k.EndsWith("|" + target, StringComparison.OrdinalIgnoreCase)))
+                    TrackingReady.TryRemove(key, out _);
+
+                await using var targetConn = new SqlConnection(new SqlConnectionStringBuilder(live.ConnectionString) { InitialCatalog = target }.ConnectionString);
+                await targetConn.OpenAsync();
+
+                if (request.RewriteReferences)
+                    await RewriteReferencesAsync(targetConn, source, target, report);
+
+                report.Success = true;
+                report.Summary = $"Copied {source} ({report.SourceSizeMb} MB) to {target}"
+                    + (report.RewrittenModules.Count > 0 ? $"; {report.RewrittenModules.Count} module(s) now point at {target}" : "")
+                    + (report.RewriteFailures.Count > 0 ? $"; {report.RewriteFailures.Count} still name {source} — fix them manually" : "");
+
+                await EnsureTrackingReadyAsync(targetConn);
+                report.CloneId = await SaveRecordAsync(targetConn, DbMigrationConstants.TYPE_CLONE, DbMigrationConstants.STATUS_DONE,
+                    $"{source} -> {target}", report.BackupFile, null, null, (report.SourceSizeMb ?? 0) * 1024 * 1024, report.Summary);
+                return report;
+            }
+            finally { Gate.Release(); }
+        }
+
+        /// <summary>The source's files and where the target's copies go (source name in the file name replaced by the target's).</summary>
+        private static async Task<List<CloneFile>> CloneFilesAsync(SqlConnection conn, string source, string target)
+        {
+            var dataFolder = await conn.ExecuteScalarAsync<string?>("SELECT CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS NVARCHAR(4000))");
+            var logFolder = await conn.ExecuteScalarAsync<string?>("SELECT CAST(SERVERPROPERTY('InstanceDefaultLogPath') AS NVARCHAR(4000))");
+
+            var files = (await conn.QueryAsync<CloneFile>(@"
+                SELECT name AS LogicalName, physical_name AS PhysicalName, type AS FileType
+                FROM sys.master_files WHERE database_id = DB_ID(@source) ORDER BY file_id", new { source })).ToList();
+            foreach (var f in files)
+            {
+                var folder = (f.FileType == 1 ? logFolder : dataFolder);
+                if (string.IsNullOrWhiteSpace(folder)) folder = Path.GetDirectoryName(f.PhysicalName)!;
+                var name = Path.GetFileName(f.PhysicalName);
+                var renamed = Regex.Replace(name, Regex.Escape(source), target.Replace("$", "$$"), RegexOptions.IgnoreCase);
+                f.NewPath = Path.Combine(folder, renamed == name ? $"{target}_{name}" : renamed);
+            }
+
+            // Never restore onto a file another database (live!) uses.
+            var clash = await conn.ExecuteScalarAsync<string?>(@"
+                SELECT TOP (1) DB_NAME(database_id) + N': ' + physical_name FROM sys.master_files
+                WHERE physical_name IN @paths AND database_id <> ISNULL(DB_ID(@target), 0)",
+                new { paths = files.Select(f => f.NewPath).ToList(), target });
+            if (clash != null)
+                throw new Exceptionlist.InvalidDataException($"The copy's file would overwrite {clash}.");
+            return files;
+        }
+
+        /// <summary>Procedures, views, functions and triggers in <paramref name="database"/> whose text names <paramref name="name"/>.</summary>
+        private async Task<List<ModuleRow>> ModulesNamingAsync(SqlConnection conn, string database, string name)
+        {
+            var db = Q(database);
+            var rows = await conn.QueryAsync<ModuleRow>($@"
+                SELECT s.name AS SchemaName, o.name AS Name, o.type_desc AS TypeDesc, m.definition AS Definition,
+                       m.uses_ansi_nulls AS AnsiNulls, m.uses_quoted_identifier AS QuotedIdentifier
+                FROM {db}.sys.sql_modules m
+                JOIN {db}.sys.objects o ON o.object_id = m.object_id
+                JOIN {db}.sys.schemas s ON s.schema_id = o.schema_id
+                WHERE o.is_ms_shipped = 0 AND m.definition LIKE @pattern",
+                new { pattern = "%" + name + "%" }, commandTimeout: Timeout);
+            // LIKE treats _ as a wildcard: keep only real db.schema.object references.
+            return rows.Where(r => SchemaDiffer.RewriteName(r.Definition, name, name + "\u0001") != r.Definition).ToList();
+        }
+
+        private async Task RewriteReferencesAsync(SqlConnection conn, string source, string target, DbCloneReportDto report)
+        {
+            foreach (var m in await ModulesNamingAsync(conn, target, source))
+            {
+                var rewritten = SchemaDiffer.RewriteName(m.Definition, source, target);
+                if (!CreateModuleHead.IsMatch(rewritten))
+                {
+                    report.RewriteFailures.Add(new() { Object = m.Label, Reason = "no CREATE statement found at the start of its definition" });
+                    continue;
+                }
+                var sql = CreateModuleHead.Replace(rewritten, "${lead}CREATE OR ALTER ${kind}", 1);
+                var settings = m.AnsiNulls && m.QuotedIdentifier
+                    ? null
+                    : $"SET ANSI_NULLS {OnOff(m.AnsiNulls)}; SET QUOTED_IDENTIFIER {OnOff(m.QuotedIdentifier)};";
+                try
+                {
+                    await ExecModuleAsync(conn, null, settings, sql);
+                    report.RewrittenModules.Add(m.Label);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not point {Module} at {Target}.", m.Label, target);
+                    report.RewriteFailures.Add(new() { Object = m.Label, Reason = ex.Message });
+                }
+            }
+
+            var synonyms = await conn.QueryAsync<string>(
+                "SELECT name + N' -> ' + base_object_name FROM sys.synonyms WHERE base_object_name LIKE @pattern",
+                new { pattern = "%" + source + "%" }, commandTimeout: Timeout);
+            foreach (var s in synonyms)
+                report.RewriteFailures.Add(new() { Object = "SYNONYM " + s, Reason = $"may point at {source}; recreate it manually if so" });
+        }
+
+        private sealed class CloneFile
+        {
+            public string LogicalName { get; set; } = string.Empty;
+            public string PhysicalName { get; set; } = string.Empty;
+            public byte FileType { get; set; }               // 0 rows, 1 log, 2 filestream, 4 full-text
+            public string NewPath { get; set; } = string.Empty;
+        }
+
+        private sealed class ModuleRow
+        {
+            public string SchemaName { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string TypeDesc { get; set; } = string.Empty;
+            public string Definition { get; set; } = string.Empty;
+            public bool AnsiNulls { get; set; }
+            public bool QuotedIdentifier { get; set; }
+            public string Label => $"{TypeDesc} {SchemaName}.{Name}";
         }
 
         // ---------------------------------------------------------------- apply / undo

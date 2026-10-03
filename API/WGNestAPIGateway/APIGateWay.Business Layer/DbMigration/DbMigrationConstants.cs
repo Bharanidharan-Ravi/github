@@ -18,6 +18,7 @@ namespace APIGateWay.Business_Layer.DbMigration
         public const string TYPE_MANUAL = "MANUAL";
         public const string TYPE_POST_MIGRATE = "POST_MIGRATE";
         public const string TYPE_MIGRATION = "MIGRATION";
+        public const string TYPE_CLONE = "CLONE";            // recorded in the target DB of /clone
 
         // STATUS
         public const string STATUS_DONE = "DONE";

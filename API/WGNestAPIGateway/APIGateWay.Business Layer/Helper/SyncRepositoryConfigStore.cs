@@ -195,12 +195,14 @@ namespace APIGateWay.BusinessLayer.Helper
                 IdKey = "IssuesId",
                 DeltaEnabled = true
             },
+            // Daily plan rows only (plan id, TicketId, user); the UI loads the
+            // tickets from "TicketListV2" with the "issue" filter.
             ["CheckedTickets"] = new SyncRepositoryConfig
             {
                 // Execution
                 SourceType = SyncSourceType.Local,
-                StoredProcedure = "getdailyplan",
-                EntityType = typeof(GetDailyPlan),
+                StoredProcedure = "GetDailyPlan_V2",
+                EntityType = typeof(GetDailyPlanRow),
                 SourceName = "SyncExecutionService",
 
                 // Aggregation
@@ -329,7 +331,13 @@ namespace APIGateWay.BusinessLayer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "repoId",
-                DeltaEnabled = true
+                DeltaEnabled = true,
+
+                // Always the caller's own stale tickets (GET /notification/counts sends no params)
+                IdentityParams = new Dictionary<string, IdentityField>
+                {
+                    ["Assignee_Id"] = IdentityField.UserId
+                }
             },
             ["GetUserOnlineStatus"] = new SyncRepositoryConfig
             {

@@ -45,4 +45,17 @@ namespace APIGateWay.ModalLayer.GETData
         public decimal?OverallPercentage { get; set; }
         public string? Hours { get; set; }
     }
+
+    // Row of GetDailyPlan_V2 (config key "CheckedTickets"): plan rows only, the
+    // UI loads the tickets from "TicketListV2" by TicketId.
+    public class GetDailyPlanRow
+    {
+        public int Id { get; set; }
+        public Guid TicketId { get; set; }
+        public Guid UserId { get; set; }
+        public DateTime PlannedDate { get; set; }
+        public int Status { get; set; }
+        public string? UncheckComment { get; set; }
+        public string? ProjKey { get; set; }
+    }
 }

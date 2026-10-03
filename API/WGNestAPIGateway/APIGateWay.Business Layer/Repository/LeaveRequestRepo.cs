@@ -314,6 +314,10 @@ namespace APIGateWay.Business_Layer.Repository
             return _mapper.Map<GetLeaveRequest>(entity);
         }
 
+        // Requests still awaiting an admin decision (admin leave badge)
+        public Task<int> CountPendingAsync() =>
+            _dBContext.Set<LeaveRequestMaster>().CountAsync(r => r.STATUS == "REQUESTED");
+
         private async Task NotifyNotTakenAsync(LeaveRequestMaster entity)
         {
             var notificationId = await _notificationRepository.CreateAsync(new CreateNotificationRequest

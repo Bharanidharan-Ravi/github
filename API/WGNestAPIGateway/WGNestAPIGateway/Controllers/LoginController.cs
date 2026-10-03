@@ -1,3 +1,4 @@
+using APIGateway.Controllers;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.ModalLayer;
@@ -15,10 +16,12 @@ namespace WGNestAPIGateway.Controllers
     public class LoginController : ControllerBase
     {
         private readonly ILoginRepository _loginRepository;
+        private readonly ISyncRepositoryV2 _syncRepo;
 
-        public LoginController(ILoginRepository loginRepository)
+        public LoginController(ILoginRepository loginRepository, ISyncRepositoryV2 syncRepo)
         {
            _loginRepository = loginRepository;
+           _syncRepo = syncRepo;
         }
 
         #region User Creation 
@@ -52,6 +55,8 @@ namespace WGNestAPIGateway.Controllers
             return Ok();
         }
         #endregion
+        // Every 30 s from each open app: keeps this session online and returns everyone's
+        // presence (sync key "GetUserOnlineStatus"), so clients don't poll it separately.
         [HttpPost("heartbeat")]
         public async Task<IActionResult> Heartbeat(
         [FromBody] SessionDTO request)
@@ -59,10 +64,7 @@ namespace WGNestAPIGateway.Controllers
             await _loginRepository.UpdateHeartbeat(
                 request.SessionId);
 
-            return Ok(new
-            {
-                success = true
-            });
+            return this.SyncResult(await _syncRepo.RunAsync("GetUserOnlineStatus"));
         }
     }
 }

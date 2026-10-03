@@ -64,6 +64,18 @@ namespace APIGateway.Controllers
             return Ok(ApiResponseHelper.Success(await _service.MigrateAsync(request)));
         }
 
+        /// <summary>
+        /// Full copy (structure + data) of the live DB into the test DB, e.g.
+        /// { "SourceDatabase": "WG_APP", "TargetDatabase": "WG_APP_TEST", "Overwrite": true, "DryRun": false }.
+        /// Both default to DefaultConnection / TestConnection's databases. DryRun (default true) only returns the plan.
+        /// The target must be TestConnection's database or in DbMigration:CloneTargets — never the live one.
+        /// </summary>
+        [HttpPost("clone")]
+        public async Task<IActionResult> Clone([FromBody] DbCloneRequest? request)
+        {
+            return Ok(ApiResponseHelper.Success(await _service.CloneDatabaseAsync(request ?? new DbCloneRequest())));
+        }
+
         /// <summary>Undoes the latest applied migration.</summary>
         [HttpPost("migrations/{migrationId:int}/rollback")]
         public async Task<IActionResult> Rollback(int migrationId)

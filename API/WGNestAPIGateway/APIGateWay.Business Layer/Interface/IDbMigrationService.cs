@@ -19,5 +19,11 @@ namespace APIGateWay.Business_Layer.Interface
 
         /// <summary>Undoes the latest applied migration (tables/columns only dropped while empty).</summary>
         Task<DbRollbackReportDto> RollbackAsync(int migrationId);
+
+        /// <summary>
+        /// Full copy (structure + data) of one database into another on the same server, e.g. WG_APP -> WG_APP_TEST,
+        /// via a COPY_ONLY backup and restore. Only TestConnection's database or DbMigration:CloneTargets may be the target.
+        /// </summary>
+        Task<DbCloneReportDto> CloneDatabaseAsync(DbCloneRequest request);
     }
 }

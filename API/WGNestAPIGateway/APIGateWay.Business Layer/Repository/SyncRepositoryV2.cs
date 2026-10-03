@@ -18,12 +18,39 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly ISyncExecutionService _exec;
         private readonly GenerateHelper _helper;
         private readonly ILoginContextService _loginContext;
+        private readonly ISyncRequestEnricher _enricher;
 
-        public SyncRepositoryV2(ISyncExecutionService exec, GenerateHelper helper, ILoginContextService loginContext)
+        public SyncRepositoryV2(ISyncExecutionService exec, GenerateHelper helper, ILoginContextService loginContext, ISyncRequestEnricher enricher)
         {
             _exec = exec;
             _helper = helper;
             _loginContext = loginContext;
+            _enricher = enricher;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Full /sync/v2 flow (role enrichment → denied keys → execution).
+        // Used by SyncV2Controller and by endpoints that bundle sync keys into
+        // their own response (heartbeat, notification counts).
+        // ─────────────────────────────────────────────────────────────────────
+        public Task<SyncResponseV2> RunAsync(params string[] configKeys) =>
+            RunAsync(new DynamicSyncRequest { ConfigKeys = configKeys.ToList() });
+
+        public async Task<SyncResponseV2> RunAsync(DynamicSyncRequest request)
+        {
+            // For Role 3: auto-injects repoIds, blocks disallowed keys, fans out
+            // For Role 1/2: passes through unchanged
+            var enriched = await _enricher.EnrichAsync(request);
+
+            var response = enriched.Units.Any()
+                ? await ExecuteUnitsAsync(enriched.Units)
+                : NewResponse();
+
+            // Denied keys get an error result, no DB call
+            foreach (var (key, reason) in enriched.DeniedKeys)
+                response.Res[key] = SyncResults.Fail("ACCESS_DENIED", reason, retryable: false);
+
+            return response;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -280,6 +307,28 @@ namespace APIGateWay.BusinessLayer.Repository
                 processedRows.Add(JsonSerializer.SerializeToElement(node));
             }
             return processedRows;
+        }
+    }
+
+    /// <summary>Builds one Res[key] entry of a sync-style response.</summary>
+    public static class SyncResults
+    {
+        public static SyncResultV2 Success(object data) => new() { Ok = true, Data = data };
+
+        public static SyncResultV2 Fail(string code, string message, bool retryable = true) =>
+            new() { Ok = false, Err = new SyncErrorV2 { C = code, M = message, R = retryable } };
+
+        /// <summary>Runs one non-sync loader; a failure becomes Ok:false for that key only.</summary>
+        public static async Task<SyncResultV2> FromAsync<T>(Func<Task<T>> load)
+        {
+            try
+            {
+                return Success(await load());
+            }
+            catch (Exception ex)
+            {
+                return Fail("LOAD_FAILED", ex.Message);
+            }
         }
     }
 
