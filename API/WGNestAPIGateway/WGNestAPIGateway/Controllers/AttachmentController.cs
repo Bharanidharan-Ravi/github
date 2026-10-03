@@ -18,7 +18,7 @@ namespace APIGateway.Controllers
         }
 
         [HttpPost("tempUpload")]
-        public async Task<IActionResult>UploadFilesToTempAsync(IFormFile files)
+        public async Task<IActionResult>UploadFilesToTempAsync([FromForm] IFormFile files)
         {
             var res = await _attachmentRepo.UploadFilesToTempAsync(files);
             return Ok(ApiResponseHelper.Success(res, "File added successfully!"));

@@ -232,7 +232,9 @@ namespace APIGateWay.BusinessLayer.Repository
                     cfg.StoredProcedure,
                     lastSync,
                     param,
-                    cfg.SourceName
+                    cfg.SourceName,
+                    cfg.ProcessAttachments,
+                    cfg.AttachmentPropertyName
                 })!;
         }
 

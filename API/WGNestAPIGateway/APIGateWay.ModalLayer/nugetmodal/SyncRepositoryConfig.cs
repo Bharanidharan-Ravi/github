@@ -55,6 +55,10 @@ namespace APIGateWay.BusinessLayer.Configuration
         // execution, e.g. { ["UserId"] = IdentityField.UserId, ["IsAdmin"] = IdentityField.IsAdmin }.
         // The frontend never sends these; SyncRepositoryV2 resolves and adds them.
         public Dictionary<string, IdentityField> IdentityParams { get; set; }
+
+        //new 0110
+        public bool ProcessAttachments { get; set; } = false;
+        public string? AttachmentPropertyName {  get; set; }
     }
 
 

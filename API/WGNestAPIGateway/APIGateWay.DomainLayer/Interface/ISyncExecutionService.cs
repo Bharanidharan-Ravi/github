@@ -18,7 +18,9 @@ namespace APIGateWay.DomainLayer.Interface
             string storedProcedure,
             DateTimeOffset? lastSync,
             Dictionary<string, string> parameters,
-            string source
+            string source,
+            bool processAttachments = false,
+            string? attachmentPropertyName = null
         )
         where T : class;
     }

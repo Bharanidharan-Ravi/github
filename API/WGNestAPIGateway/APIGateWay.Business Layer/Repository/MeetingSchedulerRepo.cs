@@ -7,9 +7,10 @@ using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
+using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
+using APIGateWay.ModelLayer.ErrorException;
 using AutoMapper;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,13 @@ namespace APIGateWay.Business_Layer.Repository
             _stepContext = stepContext;
             _eventCenter = eventCenter;
         }
+
+        // Times per day is disabled for now.
+        // "9:30" / "09:30:00" -> TimeSpan; empty -> null (same result AutoMapper gives on create)
+        //private static TimeSpan? ParseTimeOrNull(string? value) =>
+        //    string.IsNullOrWhiteSpace(value)
+        //        ? null
+        //        : TimeSpan.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
 
         public async Task<GetMeetingDto> CreateMeetingAsync(PostMeetingDto meetingDto)
         {
@@ -114,7 +122,7 @@ namespace APIGateWay.Business_Layer.Repository
                     // 2b. Add Internal Participants (Employees)
                     if (meetingDto.InternalParticipants != null && meetingDto.InternalParticipants.Any())
                     {
-                        var internalIds = meetingDto.InternalParticipants.Select(p => p.Id).ToList();
+                        var internalIds = meetingDto.InternalParticipants.Select(p => p.Id).Distinct().ToList();
 
                         // Exclude host if they were somehow selected in the dropdown to prevent duplicates
                         attendees.AddRange(internalIds.Where(id => id != meetingMaster.host_id).Select(id => new MeetingAttendance
@@ -132,7 +140,7 @@ namespace APIGateWay.Business_Layer.Repository
                     // 2c. Add Client Participants (External)
                     if (meetingDto.ClientParticipants != null && meetingDto.ClientParticipants.Any())
                     {
-                        var clientIds = meetingDto.ClientParticipants.Select(p => p.Id).ToList();
+                        var clientIds = meetingDto.ClientParticipants.Select(p => p.Id).Distinct().ToList();
 
                         attendees.AddRange(clientIds.Where(id => id != meetingMaster.host_id).Select(id => new MeetingAttendance
                         {
@@ -176,42 +184,43 @@ namespace APIGateWay.Business_Layer.Repository
                 throw new Exception($"Meeting creation failed. Everything was rolled back safely. {ex.Message}", ex);
             }
 
+            // ── Step 3: Post the ticket thread (meeting is already saved) ───
             if (finalMeetingData.Ticket_Id.HasValue && meetingMasterForThread != null)
             {
-                var threadId =
-                    await _workStreamService.PostMeetingScheduledAsync(
-                        meetingMasterForThread,
-                        attendeesForThread,
-                        _loginContext.userId);
-
-                await _domainService.UpdateTrackedEntityAsync<MeetingMaster>(
-                    x => x.meeting_id == meetingMasterForThread.meeting_id,
-                    x => x.ThreadId = threadId);
-
-                meetingMasterForThread.ThreadId = threadId;
-                finalMeetingData.ThreadId = threadId;            
-                await _eventCenter.PublishAsync<GetMeetingDto>(
-                    TicketFactory.MeetingCreated(
-                        finalMeetingData.Meeting_Id,finalMeetingData.Title, notifyUsers:true));
+                finalMeetingData.ThreadId =
+                    await TryCreateMeetingThreadAsync(meetingMasterForThread, attendeesForThread);
             }
+
             // ── Step 4: Publish Event (Fires only if transaction succeeds) ───
+            await _eventCenter.PublishAsync<GetMeetingDto>(
+                TicketFactory.MeetingCreated(
+                    finalMeetingData.Meeting_Id, finalMeetingData.Title, notifyUsers: true));
+
             return finalMeetingData;
         }
 
-        public async Task<GetMeetingDto> UpdateMeetingAsync(Guid id ,PutMeetingDto meetingDto)
+        public async Task<GetMeetingDto> UpdateMeetingAsync(Guid id, PutMeetingDto meetingDto)
         {
+            // ── Step 1: Fetch Existing Meeting ──────────────────────────────
+            var existingMeeting = await _db.MeetingMaster.FirstOrDefaultAsync(m => m.meeting_id == id)
+                ?? throw new Exceptionlist.DataNotFoundException("Meeting not found.");
+
+            // The UI only shows Edit to the host; enforce it here too.
+            if (existingMeeting.host_id != _loginContext.userId)
+                throw new Exceptionlist.InvalidDataException("Only the host can edit this meeting.");
+
+            // The UI hides Edit for these; enforce it here too. Saving would also turn the
+            // completed ticket thread back into "Meeting Scheduled" and clear its hours.
+            if (existingMeeting.status is "Completed" or "Cancelled")
+                throw new Exceptionlist.InvalidDataException(
+                    $"This meeting is already {existingMeeting.status.ToLowerInvariant()} and can't be edited.");
+
             GetMeetingDto? finalMeetingData = null;
 
             try
             {
                 finalMeetingData = await _domainService.ExecuteInTransactionAsync(async () =>
                 {
-                    // ── Step 1: Fetch Existing Meeting ──────────────────────────
-                    var existingMeeting = _db.MeetingMaster.FirstOrDefault(m => m.meeting_id == id);
-
-                    if (existingMeeting == null)
-                        throw new Exception("Meeting not found.");
-
                     // ── Step 2: Update MeetingMaster Fields ─────────────────────
                     var timerMaster = _stepContext.StartStep();
                     try
@@ -232,6 +241,13 @@ namespace APIGateWay.Business_Layer.Repository
                         existingMeeting.updated_by = _loginContext.userId;
                         existingMeeting.updated_at = DateTime.UtcNow;
                         existingMeeting.days_of_week = meetingDto.Days_Of_Week;
+                        // Times per day is disabled for now.
+                        //existingMeeting.times_per_day = meetingDto.Times_Per_Day;
+                        //existingMeeting.second_start_time = ParseTimeOrNull(meetingDto.Second_Start_Time);
+                        //existingMeeting.second_end_time = ParseTimeOrNull(meetingDto.Second_End_Time);
+                        existingMeeting.meet_method = meetingDto.Meet_Method;
+                        existingMeeting.meet_link = meetingDto.Meet_Link;
+                        existingMeeting.meet_password = meetingDto.Meet_Password;
 
                         _db.MeetingMaster.Update(existingMeeting);
                         await _db.SaveChangesAsync();
@@ -248,21 +264,27 @@ namespace APIGateWay.Business_Layer.Repository
                     var timerAtt = _stepContext.StartStep();
                     try
                     {
+                        var hostId = existingMeeting.host_id;
+
                         // 1. Get all current attendees for this meeting
-                        var existingAttendees = _db.meeting_attendance.Where(a => a.meeting_id == id).ToList();
+                        var existingAttendees = await _db.meeting_attendance
+                            .Where(a => a.meeting_id == id)
+                            .ToListAsync();
 
                         // 2. Parse incoming IDs from frontend
-                        var incomingInternalIds = meetingDto.InternalParticipants?.Select(p => (p.Id)).ToList() ?? new List<Guid>();
-                        var incomingClientIds = meetingDto.ClientParticipants?.Select(p => (p.Id)).ToList() ?? new List<Guid>();
+                        var incomingInternalIds = meetingDto.InternalParticipants?.Select(p => p.Id).ToList() ?? new List<Guid>();
+                        var incomingClientIds = meetingDto.ClientParticipants?.Select(p => p.Id).ToList() ?? new List<Guid>();
 
-                        // Combine all incoming IDs, making sure the Host is safely excluded from standard participant lists
+                        // Everyone invited except the host, who is handled in step 4
                         var allIncomingIds = incomingInternalIds.Concat(incomingClientIds)
-                                                .Where(id => id != existingMeeting.host_id)
+                                                .Where(pid => pid != hostId)
+                                                .Distinct()
                                                 .ToList();
 
-                        // 3. REMOVE: Find attendees in DB that are NOT in the incoming list (and are not the Host)
+                        // 3. REMOVE: attendees no longer invited. After a host change this
+                        //    includes the previous host, unless they are still invited.
                         var attendeesToRemove = existingAttendees
-                            .Where(a => a.participant_role != "Host" && !allIncomingIds.Contains(a.participant_id))
+                            .Where(a => a.participant_id != hostId && !allIncomingIds.Contains(a.participant_id))
                             .ToList();
 
                         if (attendeesToRemove.Any())
@@ -270,28 +292,55 @@ namespace APIGateWay.Business_Layer.Repository
                             _db.meeting_attendance.RemoveRange(attendeesToRemove);
                         }
 
-                        // 4. ADD: Find incoming IDs that are NOT currently in the DB
-                        var existingParticipantIds = existingAttendees.Select(a => a.participant_id).ToList();
-                        var newIdsToAdd = allIncomingIds.Where(id => !existingParticipantIds.Contains(id)).ToList();
-
-                        var newAttendees = new List<MeetingAttendance>();
-
-                        // Re-separate internal vs client for the new additions to map the type correctly
-                        foreach (var id in newIdsToAdd)
+                        foreach (var formerHost in existingAttendees.Where(a =>
+                                     a.participant_role == "Host" &&
+                                     a.participant_id != hostId &&
+                                     allIncomingIds.Contains(a.participant_id)))
                         {
-                            string type = incomingInternalIds.Contains(id) ? "Employee" : "Client";
+                            formerHost.participant_role = "Participant";
+                        }
 
-                            newAttendees.Add(new MeetingAttendance
+                        // 4. HOST: add the host's row, or promote their participant row after a host change
+                        var hostRow = existingAttendees.FirstOrDefault(a => a.participant_id == hostId);
+
+                        if (hostRow == null && hostId != Guid.Empty)
+                        {
+                            _db.meeting_attendance.Add(new MeetingAttendance
                             {
                                 meeting_id = existingMeeting.meeting_id,
-                                participant_type = type,
-                                participant_id = id,
-                                participant_role = "Participant",
-                                invite_status = "Pending", // New additions start as pending
+                                participant_type = existingMeeting.host_type,
+                                participant_id = hostId,
+                                participant_role = "Host",
+                                invite_status = "Accepted",
+                                attendance_status = "Present",
                                 created_by = _loginContext.userId,
                                 created_at = DateTime.UtcNow
                             });
                         }
+                        else if (hostRow != null && hostRow.participant_role != "Host")
+                        {
+                            hostRow.participant_type = existingMeeting.host_type;
+                            hostRow.participant_role = "Host";
+                            hostRow.invite_status = "Accepted";
+                            hostRow.attendance_status = "Present";
+                        }
+
+                        // 5. ADD: invited IDs that are NOT currently in the DB
+                        var existingParticipantIds = existingAttendees.Select(a => a.participant_id).ToList();
+
+                        var newAttendees = allIncomingIds
+                            .Where(pid => !existingParticipantIds.Contains(pid))
+                            .Select(pid => new MeetingAttendance
+                            {
+                                meeting_id = existingMeeting.meeting_id,
+                                participant_type = incomingInternalIds.Contains(pid) ? "Employee" : "Client",
+                                participant_id = pid,
+                                participant_role = "Participant",
+                                invite_status = "Pending", // New additions start as pending
+                                created_by = _loginContext.userId,
+                                created_at = DateTime.UtcNow
+                            })
+                            .ToList();
 
                         if (newAttendees.Any())
                         {
@@ -317,91 +366,234 @@ namespace APIGateWay.Business_Layer.Repository
                 throw new Exception($"Meeting update failed. Everything was rolled back safely. {ex.Message}", ex);
             }
 
-            var updatedMeeting = await _db.MeetingMaster
-                .FirstOrDefaultAsync(m => m.meeting_id == id);
-
-            //if (updatedMeeting?.ticket_id.HasValue == true && updatedMeeting.ThreadId.HasValue)
-
-            if (updatedMeeting?.ticket_id.HasValue == true)
+            if (existingMeeting.ticket_id.HasValue)
             {
                 var attendance = await _db.meeting_attendance
-                    .Where(x => x.meeting_id == updatedMeeting.meeting_id)
+                    .Where(x => x.meeting_id == existingMeeting.meeting_id)
                     .ToListAsync();
 
-                await _workStreamService.UpdateMeetingThreadAsync(
-                    updatedMeeting,
-                    attendance,
-                    _loginContext.userId);
+                if (existingMeeting.ThreadId.HasValue)
+                {
+                    await _workStreamService.UpdateMeetingThreadAsync(
+                        existingMeeting,
+                        attendance,
+                        _loginContext.userId);
 
-                await _eventCenter.PublishAsync<ThreadList>(
-                TicketFactory.ThreadUpdated(
-                    updatedMeeting.ticket_id.Value,
-                    updatedMeeting.ThreadId.Value));
+                    await _eventCenter.PublishAsync<ThreadList>(
+                        TicketFactory.ThreadUpdated(
+                            existingMeeting.ticket_id.Value,
+                            existingMeeting.ThreadId.Value));
+                }
+                else
+                {
+                    // The thread wasn't posted when the meeting was created; post it now.
+                    finalMeetingData.ThreadId =
+                        await TryCreateMeetingThreadAsync(existingMeeting, attendance);
+                }
             }
+
+            // Refreshes the open scheduler screens and notifies the host and participants.
+            await _eventCenter.PublishAsync<GetMeetingDto>(
+                TicketFactory.MeetingUpdated(existingMeeting.meeting_id, existingMeeting.title, notifyUsers: true));
 
             return finalMeetingData;
         }
 
-        public async Task CompleteMeetingAsync(
-     MeetingCompletionDto dto,
-     Guid userId)
+        public async Task CompleteMeetingAsync(MeetingCompletionDto dto, Guid userId)
         {
-            var parameters = new[]
+            var meeting = await _db.MeetingMaster.FirstOrDefaultAsync(m => m.meeting_id == dto.MeetingId)
+                ?? throw new Exceptionlist.DataNotFoundException("Meeting not found.");
+
+            if (meeting.status is "Completed" or "Cancelled")
+                throw new Exceptionlist.InvalidDataException($"This meeting is already {meeting.status.ToLowerInvariant()}.");
+
+            if (dto.ActualEndTime <= dto.ActualStartTime)
+                throw new Exceptionlist.InvalidDataException("End Time must be after Start Time.");
+
+            // A day comment on a DAILY / WEEKLY meeting: post it as a new thread on
+            // the ticket (one day can have several). The meeting stays Scheduled
+            // unless EndSeries is set.
+            var loggedDay = dto.OccurrenceDate.HasValue && IsRecurring(meeting);
+
+            if (loggedDay)
             {
-        new SqlParameter("@MeetingId", dto.MeetingId),
-        new SqlParameter("@ActualStartTime", dto.ActualStartTime),
-        new SqlParameter("@ActualEndTime", dto.ActualEndTime),
-        new SqlParameter("@MeetingSummary", dto.MeetingSummary ?? string.Empty),
-        new SqlParameter("@CompletedBy", userId)
-    };
+                ValidateOccurrence(meeting, dto);
 
-            // Complete Meeting
-            await _commonService.ExecuteNonModalAsync(
-                "SP_MeetingComplete",
-                parameters);
+                var threadId = await _workStreamService.PostMeetingOccurrenceThreadAsync(meeting, dto, userId);
 
-            // Update Attendance
-            await UpdateAttendanceAsync(dto);
+                await _eventCenter.PublishAsync<ThreadList>(
+                    TicketFactory.ThreadCreated(meeting.ticket_id!.Value, threadId));
 
-            // Read Meeting
-            var meeting = await _domainService
-                .Query<MeetingMaster>()
-                .FirstOrDefaultAsync(x => x.meeting_id == dto.MeetingId);
-
-
-            if (meeting == null)
-                return;
-
-            // Update WorkStream Thread
-            if (meeting.ticket_id.HasValue || meeting.ThreadId.HasValue)
-            {
-                await UpdateMeetingCompletionThreadAsync(
-                    meeting,
-                    dto,
-                    userId);
+                if (!dto.EndSeries)
+                    return;
             }
 
-            // Refresh Meeting
+            var summary = dto.MeetingSummary ?? string.Empty;
+            var now = IndiaNow();
+
+            // The form sends times on today's date; for a meeting day, move them onto it.
+            var day = dto.OccurrenceDate?.Date;
+            var actualStart = day.HasValue ? day.Value + dto.ActualStartTime.TimeOfDay : dto.ActualStartTime;
+            var actualEnd = day.HasValue ? day.Value + dto.ActualEndTime.TimeOfDay : dto.ActualEndTime;
+
+            await _domainService.ExecuteInTransactionAsync(async () =>
+            {
+                var timer = _stepContext.StartStep();
+                try
+                {
+                    _db.MeetingCompletion.Add(new MeetingCompletion
+                    {
+                        completion_id = Guid.NewGuid(),
+                        meeting_id = meeting.meeting_id,
+                        actual_start_time = actualStart,
+                        actual_end_time = actualEnd,
+                        duration_minutes = (int)(actualEnd - actualStart).TotalMinutes,
+                        meeting_summary = summary,
+                        completedby = userId,
+                        completedat = now,
+                        createdAt = now,
+                        updatedAt = now,
+                        occurrence_date = day
+                            ?? (IsRecurring(meeting) ? now.Date : (meeting.meeting_date ?? now).Date),
+                    });
+
+                    meeting.meeting_summary = summary;
+                    meeting.status = "Completed";
+                    meeting.updated_by = userId;
+                    meeting.updated_at = now;
+
+                    await UpdateAttendanceAsync(dto, now);
+
+                    await _db.SaveChangesAsync();
+
+                    _stepContext.Success("MeetingCompletion", "INSERT", meeting.meeting_id.ToString(), timer);
+                }
+                catch (Exception ex)
+                {
+                    _stepContext.Failure("MeetingCompletion", "INSERT",
+                        ex.Message, ex.InnerException?.Message, timer);
+                    throw;
+                }
+
+                return true;
+            });
+
+            if (meeting.ticket_id.HasValue && meeting.ThreadId.HasValue)
+            {
+                // The day's own thread already holds its times and hours; copying them
+                // onto the main thread as well would count that day twice.
+                if (loggedDay)
+                    await _workStreamService.CloseMeetingSeriesThreadAsync(meeting, day!.Value, userId);
+                else
+                    await _workStreamService.UpdateMeetingCompletionThreadAsync(meeting, dto, userId);
+
+                await _eventCenter.PublishAsync<ThreadList>(
+                    TicketFactory.ThreadUpdated(meeting.ticket_id.Value, meeting.ThreadId.Value));
+            }
+
             await _eventCenter.PublishAsync<GetMeetingDto>(
-                TicketFactory.MeetingCompleted(
-                    meeting.meeting_id,
-                    dto.MeetingSummary ?? string.Empty,
-                    true,
-                    true));
+                TicketFactory.MeetingCompleted(meeting.meeting_id, meeting.title, notifyUsers: true));
         }
 
-        private async Task UpdateAttendanceAsync(
-    MeetingCompletionDto dto)
+        public async Task CancelMeetingAsync(Guid meetingId, Guid userId)
+        {
+            var meeting = await _db.MeetingMaster.FirstOrDefaultAsync(m => m.meeting_id == meetingId)
+                ?? throw new Exceptionlist.DataNotFoundException("Meeting not found.");
+
+            // The UI only shows Cancel to the host; enforce it here too.
+            if (meeting.host_id != userId)
+                throw new Exceptionlist.InvalidDataException("Only the host can cancel this meeting.");
+
+            if (meeting.status is "Completed" or "Cancelled")
+                throw new Exceptionlist.InvalidDataException($"This meeting is already {meeting.status.ToLowerInvariant()}.");
+
+            meeting.status = "Cancelled";
+            meeting.updated_by = userId;
+            meeting.updated_at = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            // Refreshes the open scheduler screens and notifies the host and participants.
+            await _eventCenter.PublishAsync<GetMeetingDto>(
+                TicketFactory.MeetingCancelled(meeting.meeting_id, meeting.title, notifyUsers: true));
+        }
+
+        // Posts the "Meeting Scheduled" thread on the meeting's ticket and stores its id.
+        // The meeting is already saved, so a failure is recorded instead of thrown:
+        // failing the request would make the user retry and create the meeting twice.
+        private async Task<long?> TryCreateMeetingThreadAsync(
+            MeetingMaster meeting,
+            List<MeetingAttendance> attendance)
+        {
+            var timer = _stepContext.StartStep();
+            try
+            {
+                var threadId = await _workStreamService.PostMeetingScheduledAsync(
+                    meeting,
+                    attendance,
+                    _loginContext.userId);
+
+                await _domainService.UpdateTrackedEntityAsync<MeetingMaster>(
+                    x => x.meeting_id == meeting.meeting_id,
+                    x => x.ThreadId = threadId);
+
+                meeting.ThreadId = threadId;
+
+                _stepContext.Success("MeetingMaster", "UPDATE", threadId.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("MeetingMaster", "UPDATE",
+                    ex.Message, ex.InnerException?.Message, timer);
+                return null;
+            }
+
+            await _eventCenter.PublishAsync<ThreadList>(
+                TicketFactory.ThreadCreated(meeting.ticket_id!.Value, meeting.ThreadId.Value));
+
+            return meeting.ThreadId;
+        }
+
+        private static bool IsRecurring(MeetingMaster meeting) =>
+            meeting.recurrence_type?.ToUpperInvariant() is "DAILY" or "WEEKLY";
+
+        private static DateTime IndiaNow() =>
+            TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
+
+        private static void ValidateOccurrence(MeetingMaster meeting, MeetingCompletionDto dto)
+        {
+            if (!meeting.ticket_id.HasValue)
+                throw new Exceptionlist.InvalidDataException("Link a ticket to this meeting to record comments for each day.");
+
+            var day = dto.OccurrenceDate!.Value.Date;
+
+            if (day > IndiaNow().Date)
+                throw new Exceptionlist.InvalidDataException("You can't add a comment for a day that hasn't happened yet.");
+
+            if ((meeting.valid_from_date.HasValue && day < meeting.valid_from_date.Value.Date) ||
+                (meeting.valid_to_date.HasValue && day > meeting.valid_to_date.Value.Date))
+                throw new Exceptionlist.InvalidDataException($"{day:dd MMM yyyy} is outside this meeting's dates.");
+
+            // days_of_week is a 7-char bitmask, index 0 = Sunday (same as DayOfWeek).
+            if (meeting.recurrence_type.ToUpperInvariant() == "WEEKLY" &&
+                meeting.days_of_week?.ElementAtOrDefault((int)day.DayOfWeek) != '1')
+                throw new Exceptionlist.InvalidDataException($"This meeting doesn't run on {day:dddd}s.");
+        }
+
+        // Changes the tracked rows only; the caller saves them with the completion.
+        private async Task UpdateAttendanceAsync(MeetingCompletionDto dto, DateTime now)
         {
             if (dto.Attendance == null || !dto.Attendance.Any())
                 return;
 
-            var participantIds = dto.Attendance
-                .Select(x => x.ParticipantId)
-                .ToList();
+            var byParticipant = dto.Attendance
+                .GroupBy(x => x.ParticipantId)
+                .ToDictionary(g => g.Key, g => g.First());
+            var participantIds = byParticipant.Keys.ToList();
 
-            var attendanceList = await _domainService
-                .Query<MeetingAttendance>()
+            var attendanceList = await _db.meeting_attendance
                 .Where(x =>
                     x.meeting_id == dto.MeetingId &&
                     participantIds.Contains(x.participant_id))
@@ -409,35 +601,13 @@ namespace APIGateWay.Business_Layer.Repository
 
             foreach (var attendance in attendanceList)
             {
-                var dtoAttendance = dto.Attendance.First(x =>
-                    x.ParticipantId == attendance.participant_id);
+                var dtoAttendance = byParticipant[attendance.participant_id];
 
                 attendance.attendance_status = dtoAttendance.AttendanceStatus;
                 attendance.invite_status = dtoAttendance.InviteStatus;
-                attendance.response_date = DateTime.Now;
+                attendance.response_date = now;
                 attendance.remark = dtoAttendance.Remark;
             }
-
-            await _domainService.UpdateEntitiesAsync(attendanceList);
-        }
-        private async Task UpdateMeetingCompletionThreadAsync(
-    MeetingMaster meeting,
-    MeetingCompletionDto dto,
-    Guid userId)
-        {
-            if (!meeting.ticket_id.HasValue)
-                return;
-
-            await _workStreamService.UpdateMeetingCompletionThreadAsync(
-                meeting,
-                dto,
-                userId);
-
-            await _eventCenter.PublishAsync<ThreadList>(
-        TicketFactory.ThreadUpdated(
-            meeting.ticket_id.Value,
-            meeting.ThreadId.Value));
-
         }
     }
 }

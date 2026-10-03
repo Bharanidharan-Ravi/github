@@ -8,6 +8,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.DomainLayer.Utilities;
+using APIGateWay.ModalLayer.PostData;
 
 namespace APIGateWay.DomainLayer.Service
 {
@@ -131,7 +132,10 @@ namespace APIGateWay.DomainLayer.Service
             string storedProcedure,
             DateTimeOffset? lastSync,
             Dictionary<string, string> parameters,
-            string source)
+            string source,
+            bool processAttachments = false,
+            string? attachmentPropertyName = null
+            )
             where T : class
         {
             try
@@ -161,98 +165,212 @@ namespace APIGateWay.DomainLayer.Service
                     sqlParams.ToArray()
                 );
 
-                if (data != null && typeof(T) == typeof(GetEmployee))
+                //if (data != null && typeof(T) == typeof(GetEmployee))
+                //{
+                //    var employees = data as List<GetEmployee>;
+                //    if (employees is not null)
+                //    {
+                //        foreach (var emp in employees)
+                //        {
+                //            if (!string.IsNullOrWhiteSpace(emp.Attachment_JSON))
+                //            {
+                //                try
+                //                {
+                //                    using var doc = JsonDocument.Parse(emp.Attachment_JSON);
+                //                    var root = doc.RootElement;
+
+                //                    if (root.ValueKind == JsonValueKind.Array)
+                //                    {
+                //                        var first = root.EnumerateArray().FirstOrDefault();
+
+                //                        if (first.ValueKind == JsonValueKind.Object &&
+                //                            first.TryGetProperty("relativepath", out var relPathEl) &&
+                //                            relPathEl.ValueKind == JsonValueKind.String)
+                //                        {
+                //                            var relativePath = relPathEl.GetString();
+
+                //                            if (!string.IsNullOrEmpty(relativePath))
+                //                            {
+                //                                var encodedRelativePath = string.Join("/", relativePath
+                //                                    .Replace("\\", "/")
+                //                                    .Split('/')
+                //                                    .Select(segment => Uri.EscapeDataString(segment))
+                //                                );
+
+                //                                emp.PreviewUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                //                            }
+                //                        }
+                //                    }
+                //                }
+                //                catch (JsonException)
+                //                {
+                //                    emp.PreviewUrl = null;
+                //                }
+                //            }
+                //        }
+                //    }
+                //}
+
+                //else if (data != null && typeof(T) == typeof(GetRepoUserData))
+                //{
+                //    var customers = data as List<GetRepoUserData>;
+                //    if (customers is not null)
+                //    {
+                //        foreach (var Cust in customers)
+                //        {
+                //            if (!string.IsNullOrWhiteSpace(Cust.Attachment_JSON))
+                //            {
+                //                try
+                //                {
+                //                    using var doc = JsonDocument.Parse(Cust.Attachment_JSON);
+                //                    var root = doc.RootElement;
+
+                //                    if (root.ValueKind == JsonValueKind.Array)
+                //                    {
+                //                        var first = root.EnumerateArray().FirstOrDefault();
+                //                        if (first.ValueKind == JsonValueKind.Object &&
+                //                            first.TryGetProperty("relativepath", out var relPathEl) &&
+                //                            relPathEl.ValueKind == JsonValueKind.String)
+                //                        {
+                //                            var relativePath = relPathEl.GetString();
+                //                            if (!string.IsNullOrEmpty(relativePath))
+                //                            {
+                //                                var encodedRelativePath = string.Join("/", relativePath
+                //                                   .Replace("\\", "/")
+                //                                   .Split('/')
+                //                                   .Select(segment => Uri.EscapeDataString(segment))
+                //                                   );
+
+                //                                var fullUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                //                                Cust.PreviewUrl = fullUrl;
+                //                                Cust.AvatarPath = fullUrl;
+                //                            }
+                //                        }
+                //                    }
+                //                }
+                //                catch (JsonException)
+                //                {
+                //                    Cust.PreviewUrl = null;
+                //                    Cust.AvatarPath = null;
+                //                }
+                //            }
+                //        }
+                //    }
+                //}
+
+                ////policy
+                //if (data != null && typeof(T) == typeof(PolicyDto))
+                //{
+                //    var policies = data as List<PolicyDto>;
+                //    if (policies is not null)
+                //    {
+                //        foreach (var policy in policies)
+                //        {
+                //            if (!string.IsNullOrWhiteSpace(policy.Attachment_JSON))
+                //            {
+                //                try
+                //                {
+                //                    using var doc = JsonDocument.Parse(policy.Attachment_JSON);
+                //                    var root = doc.RootElement;
+
+                //                    if (root.ValueKind == JsonValueKind.Array)
+                //                    {
+                //                        var first = root.EnumerateArray().FirstOrDefault();
+
+                //                        if (first.ValueKind == JsonValueKind.Object)
+                //                        {
+                //                            string relativePath = null;
+                //                            if (first.TryGetProperty("RelativePath", out var prop) && prop.ValueKind == JsonValueKind.String)
+                //                                relativePath = prop.GetString();
+                //                            else if (first.TryGetProperty("relativepath", out prop) && prop.ValueKind == JsonValueKind.String)
+                //                                relativePath = prop.GetString();
+                //                            else if (first.TryGetProperty("fileUrl", out prop) && prop.ValueKind == JsonValueKind.String)
+                //                                relativePath = prop.GetString();
+                //                            if (!string.IsNullOrEmpty(relativePath))
+                //                            {
+                //                                var encodedRelativePath = string.Join("/", relativePath
+                //                                    .Replace("\\", "/")
+                //                                    .Split('/')
+                //                                    .Select(segment => Uri.EscapeDataString(segment))
+                //                                    );
+                //                                policy.PreviewUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                //                            }
+                //                        }
+                //                    }
+                //                }
+                //                catch (Exception ex)
+                //                {
+                //                    policy.PreviewUrl = null;
+                //                }
+                //            }
+                //        }
+                //    }
+                //}
+
+                if (processAttachments && !string.IsNullOrEmpty(attachmentPropertyName))
                 {
-                    var employees = data as List<GetEmployee>;
-                    if (employees is not null)
+                    if (data is IEnumerable<T> dataList)
                     {
-                        foreach (var emp in employees)
+                        var attachmentProp = typeof(T).GetProperty(attachmentPropertyName);
+                        var previewUrlProp = typeof(T).GetProperty("PreviewUrl");
+                        var avatarPathProp = typeof(T).GetProperty("AvatarPath");
+
+                        if (attachmentProp != null && previewUrlProp != null)
                         {
-                            if (!string.IsNullOrWhiteSpace(emp.Attachment_JSON))
+                            foreach(var entity in dataList)
                             {
-                                try
+                                var jsonString = attachmentProp.GetValue(entity) as string;
+                                if (!string.IsNullOrWhiteSpace(jsonString))
                                 {
-                                    using var doc = JsonDocument.Parse(emp.Attachment_JSON);
-                                    var root = doc.RootElement;
-
-                                    if (root.ValueKind == JsonValueKind.Array)
+                                    try
                                     {
-                                        var first = root.EnumerateArray().FirstOrDefault();
+                                        using var doc = JsonDocument.Parse(jsonString);
+                                        var root = doc.RootElement;
 
-                                        if (first.ValueKind == JsonValueKind.Object &&
-                                            first.TryGetProperty("relativepath", out var relPathEl) &&
-                                            relPathEl.ValueKind == JsonValueKind.String)
+                                        if (root.ValueKind == JsonValueKind.Array)
                                         {
-                                            var relativePath = relPathEl.GetString();
-
-                                            if (!string.IsNullOrEmpty(relativePath))
+                                            var first = root.EnumerateArray().FirstOrDefault();
+                                            if (first.ValueKind == JsonValueKind.Object)
                                             {
-                                                var encodedRelativePath = string.Join("/", relativePath
-                                                    .Replace("\\", "/")
-                                                    .Split('/')
-                                                    .Select(segment => Uri.EscapeDataString(segment))
-                                                );
+                                                string relativePath = null;
+                                                if (first.TryGetProperty("relativepath", out var prop) && prop.ValueKind == JsonValueKind.String)
+                                                    relativePath = prop.GetString();
+                                                else if (first.TryGetProperty("RelativePath", out prop) && prop.ValueKind == JsonValueKind.String)
+                                                    relativePath = prop.GetString();
+                                                else if (first.TryGetProperty("fileUrl", out prop) && prop.ValueKind == JsonValueKind.String)
+                                                    relativePath = prop.GetString();
 
-                                                emp.PreviewUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                                                if(!string.IsNullOrEmpty(relativePath))
+                                                {
+                                                    var encodedRelativePath = string.Join("/", relativePath
+                                                        .Replace("\\", "/")
+                                                        .Split('/')
+                                                        .Select(segment => Uri.EscapeDataString(segment))
+                                                    );
+
+                                                    var fullUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
+                                                    previewUrlProp.SetValue(entity, fullUrl);
+
+                                                    if (avatarPathProp != null)
+                                                    {
+                                                        avatarPathProp.SetValue(entity, fullUrl);
+                                                    }
+
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                catch (JsonException)
-                                {
-                                    emp.PreviewUrl = null;
+                                    catch (Exception)
+                                    {
+                                        previewUrlProp.SetValue(entity, null);
+                                        if (avatarPathProp != null) avatarPathProp.SetValue(entity, null);
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                else if (data != null && typeof(T) == typeof(GetRepoUserData))
-                {
-                    var customers = data as List<GetRepoUserData>;
-                    if (customers is not null)
-                    {
-                        foreach (var Cust in customers)
-                        {
-                            if (!string.IsNullOrWhiteSpace(Cust.Attachment_JSON))
-                            {
-                                try
-                                {
-                                    using var doc = JsonDocument.Parse(Cust.Attachment_JSON);
-                                    var root = doc.RootElement;
-
-                                    if (root.ValueKind == JsonValueKind.Array)
-                                    {
-                                        var first = root.EnumerateArray().FirstOrDefault();
-                                        if (first.ValueKind == JsonValueKind.Object &&
-                                            first.TryGetProperty("relativepath", out var relPathEl) &&
-                                            relPathEl.ValueKind == JsonValueKind.String)
-                                        {
-                                            var relativePath = relPathEl.GetString();
-                                            if (!string.IsNullOrEmpty(relativePath))
-                                            {
-                                                var encodedRelativePath = string.Join("/", relativePath
-                                                   .Replace("\\", "/")
-                                                   .Split('/')
-                                                   .Select(segment => Uri.EscapeDataString(segment))
-                                                   );
-
-                                                var fullUrl = _generateHelper.GeneratePreviewUrl(encodedRelativePath);
-                                                Cust.PreviewUrl = fullUrl;
-                                                Cust.AvatarPath = fullUrl;
-                                            }
-                                        }
-                                    }
-                                }
-                                catch (JsonException)
-                                {
-                                    Cust.PreviewUrl = null;
-                                    Cust.AvatarPath = null;
-                                }
-                            }
-                        }
-                    }
-                }
 
                 return new RawSyncResult
                 {

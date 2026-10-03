@@ -102,6 +102,7 @@ namespace APIGateWay.ModalLayer.PostData
         public List<BulkIssueLogItemDto>? IssueLogs { get; set; }
       
         public List<BulkIssueLogUpdateItemDto>? IssueLogUpdates { get; set; }
+        public string? ThreadFor { get; set; }
     }
     public class CoContributorItemDto
     {

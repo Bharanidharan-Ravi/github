@@ -2,6 +2,7 @@
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.MasterData;
+using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,7 +123,10 @@ namespace APIGateWay.BusinessLayer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "UserID",
-                DeltaEnabled = true
+                DeltaEnabled = true,
+
+                ProcessAttachments = true,
+                AttachmentPropertyName = "Attachment_JSON"
             },
 
             ["LabelMaster"] = new SyncRepositoryConfig
@@ -262,7 +266,10 @@ namespace APIGateWay.BusinessLayer.Helper
                 Type = "array",
                 Strategy = "merge",
                 IdKey = "repoId",
-                DeltaEnabled = true
+                DeltaEnabled = true,
+
+                ProcessAttachments = true,
+                AttachmentPropertyName = "Attachment_JSON"
             }
             ,
             ["MeetingData"] = new SyncRepositoryConfig
@@ -429,7 +436,44 @@ namespace APIGateWay.BusinessLayer.Helper
                     ["UserId"] = IdentityField.UserId,
                     ["IsAdmin"] = IdentityField.IsAdmin
                 }
+            }
+            ,
+            ["ThreadWorkType"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetThreadWorkType",
+                EntityType = typeof(GetThreadWorkType),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "TypeId",
+                DeltaEnabled = false
             },
+            ["CompanyPolicy"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetLatestPolicy",
+                EntityType = typeof(PolicyDto),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey = "Id",
+                DeltaEnabled = false,
+
+                ProcessAttachments = true,
+                AttachmentPropertyName = "Attachment_JSON"
+            },
+            ["HolidayList"] = new SyncRepositoryConfig
+            {
+                SourceType = SyncSourceType.Local,
+                StoredProcedure = "GetHolidays",
+                EntityType = typeof(GetHoliday),
+                SourceName = "SyncExecutionService",
+                Type = "array",
+                Strategy = "merge",
+                IdKey= "Id",
+                DeltaEnabled = false,
+            }
         };
     }
 }

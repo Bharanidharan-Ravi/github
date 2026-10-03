@@ -173,6 +173,7 @@ namespace APIGateWay.ModalLayer.GETData
         public bool? toClient { get; set; }
         public string? AdminFeedback { get; set; }
         public int? AdminRating { get; set; }
+        public string? ThreadFor { get; set; }
     }
 
     public class IssueRepositoryInfo

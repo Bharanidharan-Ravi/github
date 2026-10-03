@@ -61,55 +61,23 @@ namespace APIGateWay.Business_Layer.Helper.Events.EventFactory
             };
         }
 
-        public static EventRequest MeetingCompleted(Guid issueId, string summary, bool notifyRepo, bool notifyUsers)
+        public static EventRequest MeetingCreated(Guid meetingId, string title, bool notifyUsers) =>
+             MeetingEvent("MEETING_CREATED", meetingId, $"Meeting scheduled: {title}", notifyUsers);
+
+        public static EventRequest MeetingUpdated(Guid meetingId, string title, bool notifyUsers) =>
+            MeetingEvent("MEETING_UPDATED", meetingId, $"Meeting updated: {title}", notifyUsers);
+
+        public static EventRequest MeetingCancelled(Guid meetingId, string title, bool notifyUsers) =>
+            MeetingEvent("MEETING_CANCELLED", meetingId, $"Meeting cancelled: {title}", notifyUsers);
+
+        public static EventRequest MeetingCompleted(Guid meetingId, string title, bool notifyUsers) =>
+            MeetingEvent("MEETING_COMPLETED", meetingId, $"Meeting completed: {title}", notifyUsers);
+
+        private static EventRequest MeetingEvent(string eventType, Guid meetingId, string message, bool notifyUsers)
         {
             return new EventRequest
             {
-                EventType = "MEETING_COMPLETED",
-
-                EntityType = "THREAD",
-
-                ConfigKey = "ThreadList",
-
-                EntityId = issueId.ToString(),
-
-                KeyField = "IssueId",
-
-                MatchField = "Issue_Id",
-
-                AudienceField = "RepoId",
-
-                AssigneeField = "Assignee_Id",
-
-                ResourceIdsField = "All_Assignees",
-
-                TitleField = "Title",
-
-                CodeField = "Issue_Code",
-
-                NotifyRepo = notifyRepo,
-
-                NotifyUsers = notifyUsers,
-
-                MessageTemplate = $"Meeting completed : {summary}",
-
-                ResponseType = typeof(ThreadList),
-
-                ContextMappings =
-                {
-                    { "Role","Role" }
-                }
-            };
-        }
-
-        public static EventRequest MeetingCreated(
-      Guid meetingId,
-         string title,
-        bool notifyUsers)
-        {
-            return new EventRequest
-            {
-                EventType = "MEETING_CREATED",
+                EventType = eventType,
 
                 EntityType = "MEETING",
 
@@ -120,23 +88,22 @@ namespace APIGateWay.Business_Layer.Helper.Events.EventFactory
                 KeyField = "MeetingId",
 
                 MatchField = "Meeting_Id",
+
                 AssigneeField = "Host_Id",
 
                 ResourceIdsField = "InternalParticipants,ClientParticipants",
-          
+
                 TitleField = "Title",
+
                 NotifyUsers = notifyUsers,
 
-                MessageTemplate = $"Meeting scheduled: {title}",
+                MessageTemplate = message,
 
                 ResponseType = typeof(GetMeetingDto),
-
-        //        ContextMappings =
-        //{
-        //    { "Role", "Role" }
-        //}
             };
         }
+
+        
 
         public static EventRequest ThreadCreated(Guid issueId, long threadId)
         {

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static APIGateWay.ModalLayer.Helper.PostHelper;
 using APIGateWay.ModalLayer.PostData;
+using APIGateWay.ModalLayer.GETData;
 
 namespace APIGateWay.ModalLayer.MasterData
 {
@@ -129,7 +130,9 @@ namespace APIGateWay.ModalLayer.MasterData
         public object? BroadcastPayload { get; set; }
         // Tells the UI the block was cleared (dev can now mark DevCompleted)
         public bool DeveloperUnblocked { get; set; }
-      
+        public ThreadList? Thread { get; set; }
+        public List<GetIssueLogList>? IssueLogs { get; set; }
+
     }
 }
 

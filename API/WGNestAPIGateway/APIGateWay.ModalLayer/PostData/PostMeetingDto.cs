@@ -96,6 +96,12 @@ namespace APIGateWay.ModalLayer.PostData
         public string Start_Time { get; set; }
         public string End_Time { get; set; }
         public string? Days_Of_Week { get; set; }
+        [MaxLength(50)]
+        public string? Meet_Method { get; set; }
+        [Url, MaxLength(500)]
+        public string? Meet_Link { get; set; }
+        [MaxLength(100)]
+        public string? Meet_Password { get; set; }
         public List<SelectionItem> InternalParticipants { get; set; } = new List<SelectionItem>();
         public List<SelectionItem> ClientParticipants { get; set; } = new List<SelectionItem>();
     }

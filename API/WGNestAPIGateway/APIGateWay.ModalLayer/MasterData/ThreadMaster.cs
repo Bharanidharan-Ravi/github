@@ -52,5 +52,6 @@ namespace APIGateWay.ModalLayer.MasterData
 
         [ForeignKey("FailedHandoffId")]
         public virtual WorkStreamHandoff FailedHandoff { get; set; }
+        public string? ThreadFor { get; set; }
     }
 }

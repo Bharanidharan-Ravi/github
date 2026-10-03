@@ -1,4 +1,5 @@
-﻿using APIGateWay.DomainLayer.CommonSevice;
+﻿
+using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
@@ -626,6 +627,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     Hours = dto.Hours,
                     Ref_Id = dto.Ref_Id,
                     ThreadType = dto.ThreadType ?? "Comment",
+                    ThreadFor=dto.ThreadFor,
                     MeetingId = dto.MeetingId,
 
                 };
@@ -2119,6 +2121,82 @@ namespace APIGateWay.BusinessLayer.Repository
             await UpdateMeetingThreadCoreAsync(meeting.ThreadId.Value, postDto);
         }
 
+        // Ends a DAILY / WEEKLY series on its main thread. Each logged day already
+        // has its own thread with that day's times and hours, so this one keeps none.
+        public async Task CloseMeetingSeriesThreadAsync(
+            MeetingMaster meeting,
+            DateTime lastDay,
+            Guid completedBy)
+        {
+            if (!meeting.ticket_id.HasValue || !meeting.ThreadId.HasValue)
+                return;
+
+            var attendance = await _domainService
+                .Query<MeetingAttendance>()
+                .Where(x => x.meeting_id == meeting.meeting_id)
+                .ToListAsync();
+
+            var postDto = BuildMeetingPostDto(
+                meeting,
+                completedBy,
+                BuildMeetingSeriesEndedComment(meeting, lastDay),
+                null,
+                null,
+                null,
+                BuildCoContributors(attendance, meeting.created_by));
+
+            await UpdateMeetingThreadCoreAsync(meeting.ThreadId.Value, postDto);
+        }
+
+        // A day comment on a DAILY / WEEKLY meeting becomes a new "Meeting" thread on
+        // the ticket, holding that sitting's times, summary and attendance. A day can
+        // have several (the meeting can be held more than once), so earlier comments
+        // for the same day are never overwritten.
+        public async Task<long> PostMeetingOccurrenceThreadAsync(
+            MeetingMaster meeting,
+            MeetingCompletionDto dto,
+            Guid completedBy)
+        {
+            if (!meeting.ticket_id.HasValue)
+                throw new InvalidOperationException("Meeting is not linked to a ticket.");
+
+            // The form sends times on today's date; move them onto the meeting day.
+            var day = dto.OccurrenceDate!.Value.Date;
+            var start = day + dto.ActualStartTime.TimeOfDay;
+            var end = day + dto.ActualEndTime.TimeOfDay;
+            var duration = end - start;
+
+            var presentIds = (dto.Attendance ?? new List<MeetingAttendanceUpdateDto>())
+                .Where(x => x.AttendanceStatus == "Present")
+                .Select(x => x.ParticipantId)
+                .ToList();
+
+            var invited = await _domainService
+                .Query<MeetingAttendance>()
+                .Where(x => x.meeting_id == meeting.meeting_id)
+                .ToListAsync();
+
+            var present = invited
+                .Where(x => presentIds.Contains(x.participant_id))
+                .ToList();
+
+            var postDto = BuildMeetingPostDto(
+                meeting,
+                completedBy,
+                BuildMeetingOccurrenceComment(meeting, dto.MeetingSummary, start, end, duration, present.Count, invited.Count),
+                start,
+                end,
+                $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}",
+                BuildCoContributors(present, null));
+
+            var response = await PostWorkStreamAsync(postDto);
+
+            if (response?.ThreadId == null)
+                throw new Exception($"The thread for {day:dd MMM yyyy} was not created.");
+
+            return response.ThreadId.Value;
+        }
+
         private PostWorkStreamDto BuildMeetingPostDto(
             MeetingMaster meeting,
             Guid resourceId,
@@ -2217,13 +2295,26 @@ namespace APIGateWay.BusinessLayer.Repository
 
         private static string BuildMeetingScheduledComment(MeetingMaster meeting)
         {
-            return $@"Meeting Scheduled
+            // DAILY / WEEKLY meetings have no meeting_date, only a date range.
+            var date = meeting.recurrence_type?.ToUpperInvariant() switch
+            {
+                "DAILY" => $"Every day, {meeting.valid_from_date:yyyy-MM-dd} to {meeting.valid_to_date:yyyy-MM-dd}",
+                "WEEKLY" => $"Every {WeekdayNames(meeting.days_of_week)}, {meeting.valid_from_date:yyyy-MM-dd} to {meeting.valid_to_date:yyyy-MM-dd}",
+                _ => $"{meeting.meeting_date:yyyy-MM-dd}",
+            };
 
-Meeting : {meeting.title}
-Date : {meeting.meeting_date:yyyy-MM-dd}
-Time : {meeting.start_time} - {meeting.end_time}
-Duration : {meeting.slot_duration}
-Summary : {meeting.meeting_summary}";
+            // The password is left out on purpose: ticket threads can have a wider audience.
+            var joinLine = string.IsNullOrWhiteSpace(meeting.meet_link)
+                ? ""
+                : MeetingLineHtml("Join", meeting.meet_link);
+
+            return MeetingHeadingHtml("Meeting Scheduled")
+                + MeetingLineHtml("Meeting", meeting.title)
+                + MeetingLineHtml("Date", date)
+                + MeetingLineHtml("Time", $"{meeting.start_time} - {meeting.end_time}")
+                + MeetingLineHtml("Duration", $"{meeting.slot_duration}")
+                + joinLine
+                + MeetingSummaryHtml(meeting.meeting_summary);
         }
 
         private static string BuildMeetingCompletionComment(
@@ -2231,16 +2322,70 @@ Summary : {meeting.meeting_summary}";
             MeetingCompletionDto dto,
             TimeSpan duration)
         {
-            return $@"Meeting Completed
-
-Meeting : {meeting.title}
-Start : {dto.ActualStartTime:yyyy-MM-dd HH:mm}
-End : {dto.ActualEndTime:yyyy-MM-dd HH:mm}
-Duration : {(int)duration.TotalHours:D2}:{duration.Minutes:D2}
-
-Summary
-{dto.MeetingSummary}";
+            return MeetingHeadingHtml("Meeting Completed")
+                + MeetingLineHtml("Meeting", meeting.title)
+                + MeetingLineHtml("Start", $"{dto.ActualStartTime:yyyy-MM-dd HH:mm}")
+                + MeetingLineHtml("End", $"{dto.ActualEndTime:yyyy-MM-dd HH:mm}")
+                + MeetingLineHtml("Duration", $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}")
+                + MeetingSummaryHtml(dto.MeetingSummary);
         }
+
+        // Starts with "Meeting Completed" so the ticket thread card shows it as done.
+        private static string BuildMeetingOccurrenceComment(
+            MeetingMaster meeting,
+            string? summary,
+            DateTime start,
+            DateTime end,
+            TimeSpan duration,
+            int presentCount,
+            int invitedCount)
+        {
+            return MeetingHeadingHtml("Meeting Completed")
+                + MeetingLineHtml("Meeting", meeting.title)
+                + MeetingLineHtml("Day", $"{start:ddd, dd MMM yyyy}")
+                + MeetingLineHtml("Start", $"{start:yyyy-MM-dd HH:mm}")
+                + MeetingLineHtml("End", $"{end:yyyy-MM-dd HH:mm}")
+                + MeetingLineHtml("Duration", $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}")
+                + MeetingLineHtml("Attendance", $"{presentCount} of {invitedCount} present")
+                + MeetingSummaryHtml(summary);
+        }
+
+        // Starts with "Meeting Completed" so the ticket thread card shows it as done.
+        private static string BuildMeetingSeriesEndedComment(MeetingMaster meeting, DateTime lastDay)
+        {
+            return MeetingHeadingHtml("Meeting Completed")
+                + MeetingLineHtml("Meeting", meeting.title)
+                + MeetingLineHtml("Series ended", $"{lastDay:ddd, dd MMM yyyy}")
+                + "<p>Each day comment, with its times, attendance and summary, is its own thread.</p>";
+        }
+
+        // Meeting comments are HTML like every other thread. Each detail is its own
+        // "Label : value" paragraph, which the ticket thread card reads back.
+        private static string MeetingHeadingHtml(string heading) =>
+            $"<p><strong>{heading}</strong></p>";
+
+        private static string MeetingLineHtml(string label, string? value) =>
+            $"<p><strong>{label}</strong> : {WebUtility.HtmlEncode(value ?? "")}</p>";
+
+        private static readonly Regex HtmlTagRegex = new(@"<[a-z][^>]*>", RegexOptions.IgnoreCase);
+
+        // The summary goes in a data-meeting-summary block so the thread card can show
+        // it as HTML. The scheduler's editor sends HTML; the ticket thread's form sends
+        // plain text, which is encoded with its line breaks kept.
+        private static string MeetingSummaryHtml(string? summary)
+        {
+            if (string.IsNullOrWhiteSpace(summary))
+                return "";
+
+            var body = HtmlTagRegex.IsMatch(summary) ? summary : ToHtmlText(summary);
+            return $"<p><strong>Summary</strong></p><div data-meeting-summary=\"\">{body}</div>";
+        }
+
+        // days_of_week is a 7-char bitmask, index 0 = Sunday: "0101000" -> "Mon, Wed"
+        private static string WeekdayNames(string? daysOfWeek) =>
+            string.Join(", ", Enumerable.Range(0, 7)
+                .Where(i => daysOfWeek?.ElementAtOrDefault(i) == '1')
+                .Select(i => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)i)));
 
 
 

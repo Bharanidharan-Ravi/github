@@ -150,7 +150,9 @@ namespace APIGateWay.BusinessLayer.Repository
                 config.StoredProcedure,
                 lastSync,
                 param,
-                config.SourceName
+                config.SourceName,
+                config.ProcessAttachments,
+                config.AttachmentPropertyName
                 });
         }
     }

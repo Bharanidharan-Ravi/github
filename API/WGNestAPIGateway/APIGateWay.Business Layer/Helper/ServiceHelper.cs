@@ -33,7 +33,9 @@ namespace APIGateWay.Business_Layer.Helper
                     storedProcedure: cfg.StoredProcedure,
                     lastSync: lastSync,
                     parameters: syncParams,
-                    source: "RichDataRefetchExtension"
+                    source: "RichDataRefetchExtension",
+                    processAttachments: cfg.ProcessAttachments,
+                    attachmentPropertyName: cfg.AttachmentPropertyName
                 );
 
                 if (syncResponse.Ok && syncResponse.Data != null)

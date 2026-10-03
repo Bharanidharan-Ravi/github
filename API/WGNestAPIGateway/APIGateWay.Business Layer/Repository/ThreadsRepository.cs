@@ -1,6 +1,7 @@
 ﻿using APIGateWay.Business_Layer.Helper;
 using APIGateWay.Business_Layer.Interface;
 using APIGateWay.BusinessLayer.Auth;
+using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -192,13 +193,16 @@ namespace APIGateWay.BusinessLayer.Repository
             // ── Fetch rich data via SP (after transaction commits) ────────────
             ThreadList freshThreadData = null;
             var syncParams = new Dictionary<string, string> { { "IssuesId", threadDto.Issue_Id.ToString() } };
-
+            var cfg = SyncRepositoryConfigStore.Configs["ThreadsList"];
             var syncResponse = await _syncExecutionService.ExecuteLocalAsync<ThreadList>(
                 databaseName: "",
                 storedProcedure: "GETTHREADLIST",
                 lastSync: null,
                 parameters: syncParams,
-                source: "CreateThreadService");
+                source: "CreateThreadService",
+                processAttachments: cfg.ProcessAttachments,
+                attachmentPropertyName: cfg.AttachmentPropertyName
+                );
 
             if (syncResponse.Ok && syncResponse.Data != null)
             {
@@ -358,6 +362,11 @@ namespace APIGateWay.BusinessLayer.Repository
                                     if (dto.CompletionPct.HasValue) entity.CompletionPct = dto.CompletionPct.Value;
                                     if (dto.toClient.HasValue) entity.toClient = dto.toClient.Value;
                                     if (!string.IsNullOrEmpty(dto.Hours)) entity.Hours = dto.Hours;
+                                    if (!string.IsNullOrEmpty(dto.ThreadFor))
+                                    {
+                                        entity.ThreadFor = dto.ThreadFor;
+                                    }
+
                                 },
                                 attachmentResult?.Attachments);
 
@@ -497,12 +506,17 @@ namespace APIGateWay.BusinessLayer.Repository
             var syncParams = new Dictionary<string, string>
                 { { "IssuesId", finalThreadData.Issue_Id.ToString() } };
 
+            var cfg = SyncRepositoryConfigStore.Configs["ThreadsList"];
+
             var syncResponse = await _syncExecutionService.ExecuteLocalAsync<ThreadList>(
                 databaseName: "",
                 storedProcedure: "GETTHREADLIST",
                 lastSync: null,
                 parameters: syncParams,
-                source: "UpdateThreadService");
+                source: "UpdateThreadService",
+                processAttachments: cfg.ProcessAttachments,
+                attachmentPropertyName: cfg.AttachmentPropertyName
+                );
 
             if (syncResponse.Ok && syncResponse.Data != null)
             {

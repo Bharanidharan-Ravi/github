@@ -27,6 +27,8 @@ namespace APIGateWay.DomainLayer.Interface
         Task<long> PostMeetingScheduledAsync(MeetingMaster meeting, List<MeetingAttendance> attendance, Guid createdBy);
         Task UpdateMeetingThreadAsync(MeetingMaster meeting, List<MeetingAttendance> attendance, Guid updatedBy);
         Task UpdateMeetingCompletionThreadAsync(MeetingMaster meeting, MeetingCompletionDto dto, Guid completedBy);
+        Task CloseMeetingSeriesThreadAsync(MeetingMaster meeting, DateTime lastDay, Guid completedBy);
+        Task<long> PostMeetingOccurrenceThreadAsync(MeetingMaster meeting, MeetingCompletionDto dto, Guid completedBy);
     }
 }
 

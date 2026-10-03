@@ -50,5 +50,6 @@ namespace APIGateWay.ModalLayer.PostData
         public TempReturn? temp { get; set; }
         public List<CoContributorItemDto>? CoContributors { get; set; }
         public List<CoContributorItemDto>? Move_to { get; set; }
+        public string? ThreadFor { get; set; }
     }
 }

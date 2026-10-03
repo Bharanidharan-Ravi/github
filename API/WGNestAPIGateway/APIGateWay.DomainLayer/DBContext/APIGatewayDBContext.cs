@@ -112,6 +112,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<NotificationUserState> NotificationUserState { get; set; }
         public DbSet<MeetingAttendance> meeting_attendance { get; set; }
         public DbSet<MeetingMaster> MeetingMaster { get; set; }
+        public DbSet<MeetingCompletion> MeetingCompletion { get; set; }
         public DbSet<IssueMoveTo> IssueMoveTo { get; set; }
         public DbSet<GetUpcomingMeeting> upcomingMeetings { get; set; }
         public DbSet<GetMeetingDto> getMeetings { get; set; }
@@ -141,7 +142,11 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<LeaveRequestMaster> LeaveRequestMaster { get; set; }
         public DbSet<GetPermissionRequest> GetPermissionRequests { get; set; }
         public DbSet<PermissionRequestMaster> PermissionRequestMaster { get; set; }
+        public DbSet<HolidayMaster> HolidayMaster { get; set; }
+        public DbSet<GetHoliday> GetHolidays { get; set; }
+        public DbSet<PolicyDto> PolicyDto { get; set; }
         public DbSet<AllHour> AllHour { get; set; }
+        public DbSet<GetThreadWorkType> GetThreadWorkType { get; set; }
 
         #region SaveChanges Override (Audit)
 
@@ -279,6 +284,8 @@ namespace APIGateWay.DomainLayer.DBContext
 
             modelBuilder.Entity<GetEmployee>().HasNoKey();
             modelBuilder.Entity<GetLeaveRequest>().HasNoKey();
+            modelBuilder.Entity<GetHoliday>().HasNoKey();
+            modelBuilder.Entity<PolicyDto>().HasNoKey();
             modelBuilder.Entity<GetPermissionRequest>().HasNoKey();
             modelBuilder.Entity<ClientMaster>()
                 .Property(c => c.Created_On).HasColumnType("datetime");
