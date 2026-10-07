@@ -68,14 +68,17 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                 await _sessionTracking.UpdateConnectionAsync(sessionId.Value, Context.ConnectionId);
             }
 
+            // ?env=Test connections join "test:"-scoped groups so Live and Test never share events.
+            var request = Context.GetHttpContext()?.Request;
+
             // 🔥 NEW: Add every user to their own personal targeted group!
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.For(request, $"user-{userId}"));
 
             switch (role)
             {
                 case "1":
                 case "2":
-                    await Groups.AddToGroupAsync(Context.ConnectionId, "global-admin");
+                    await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.For(request, "global-admin"));
                     _logger.LogInformation("[RealtimeHub] Admin connected. UserId={UserId}", userId);
                     if (sessionId.HasValue)
                     {
@@ -89,7 +92,7 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                     {
                         await _sessionTracking.SignalRConnectedAsync(sessionId.Value, userId, Context.ConnectionId, repoIds.Count());
                     }
-                    var joinTasks = repoIds.Select(id => Groups.AddToGroupAsync(Context.ConnectionId, $"repo-{id.RepoId}"));
+                    var joinTasks = repoIds.Select(id => Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.For(request, $"repo-{id.RepoId}")));
                     await Task.WhenAll(joinTasks);
 
                     _logger.LogInformation("[RealtimeHub] User connected. UserId={UserId} Repos={Count}", userId, repoIds.Count());

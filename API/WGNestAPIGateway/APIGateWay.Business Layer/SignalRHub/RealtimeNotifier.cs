@@ -1,4 +1,5 @@
-﻿using APIGateWay.ModalLayer.Hub;
+﻿using APIGateWay.DomainLayer.Utilities;
+using APIGateWay.ModalLayer.Hub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System;
@@ -12,24 +13,30 @@ namespace APIGateWay.BusinessLayer.SignalRHub
         private readonly IHubContext<RealtimeHub> _hub;
         private readonly ILogger<RealtimeNotifier> _logger;
 
+        // Captured while the request is alive: RealtimeBroadcastMiddleware broadcasts from a
+        // Task.Run after the response completes, when HttpContext may already be gone.
+        private readonly bool _isTest;
+
         public RealtimeNotifier(
             IHubContext<RealtimeHub> hub,
-            ILogger<RealtimeNotifier> logger)
+            ILogger<RealtimeNotifier> logger,
+            IEnvironmentRoutingService environmentRouting)
         {
             _hub = hub;
             _logger = logger;
+            _isTest = environmentRouting.IsTestEnvironment;
         }
 
         public async Task BroadcastAsync(RealtimeMessage message)
         {
             var tasks = new List<Task>();
 
-            // 1. Admins receive data updates (Tickets) to keep UI fresh, 
+            // 1. Admins receive data updates (Tickets) to keep UI fresh,
             // BUT they DO NOT receive personal Bell Notifications meant for others.
             if (message.Entity != "Notification")
             {
                 tasks.Add(_hub.Clients
-                    .Group("global-admin")
+                    .Group(RealtimeGroups.For(_isTest, "global-admin"))
                     .SendAsync("EntityChanged", message));
             }
 
@@ -40,7 +47,7 @@ namespace APIGateWay.BusinessLayer.SignalRHub
                 var groupName = message.RepoKey.StartsWith("repo-") ? message.RepoKey : $"repo-{message.RepoKey}";
 
                 tasks.Add(_hub.Clients
-                    .Group(groupName)
+                    .Group(RealtimeGroups.For(_isTest, groupName))
                     .SendAsync("EntityChanged", message));
             }
 
@@ -49,7 +56,7 @@ namespace APIGateWay.BusinessLayer.SignalRHub
             {
                 // Target the exact user group registered in RealtimeHub.cs
                 tasks.Add(_hub.Clients
-                    .Group($"user-{message.TargetUserId.Value}")
+                    .Group(RealtimeGroups.For(_isTest, $"user-{message.TargetUserId.Value}"))
                     .SendAsync("EntityChanged", message));
             }
 

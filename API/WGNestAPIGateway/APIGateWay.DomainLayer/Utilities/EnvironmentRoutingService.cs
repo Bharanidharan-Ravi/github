@@ -37,21 +37,19 @@ namespace APIGateWay.DomainLayer.Utilities
             _configuration = configuration;
         }
 
-        public bool IsTestEnvironment
+        public bool IsTestEnvironment => IsTestRequest(_httpContextAccessor.HttpContext?.Request);
+
+        /// <summary>Static form for callers that hold the request directly (e.g. a SignalR hub's Context.GetHttpContext()).</summary>
+        public static bool IsTestRequest(HttpRequest? request)
         {
-            get
+            string env = request?.Headers["X-Environment"].ToString();
+
+            if (string.IsNullOrEmpty(env))
             {
-                var request = _httpContextAccessor.HttpContext?.Request;
-
-                string env = request?.Headers["X-Environment"].ToString();
-
-                if (string.IsNullOrEmpty(env))
-                {
-                    env = request?.Query["env"].ToString();
-                }
-
-                return string.Equals(env, TEST, StringComparison.OrdinalIgnoreCase);
+                env = request?.Query["env"].ToString();
             }
+
+            return string.Equals(env, TEST, StringComparison.OrdinalIgnoreCase);
         }
 
         public string GetBaseConnectionString()

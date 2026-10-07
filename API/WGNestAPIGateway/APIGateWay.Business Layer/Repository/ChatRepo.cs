@@ -85,6 +85,10 @@ namespace APIGateWay.BusinessLayer.Repository
             _httpContextAccessor = httpContextAccessor;
         }
 
+        // Environment-scoped personal group, matching what RealtimeHub joined on connect.
+        private IClientProxy UserGroup(Guid userId) =>
+            _hub.Clients.Group(RealtimeGroups.For(_httpContextAccessor.HttpContext?.Request, $"user-{userId}"));
+
         private string MediaStorageRoot => _configuration["ChatMedia:StorageFolder"]
             ?? throw new InvalidOperationException("Configuration \"ChatMedia:StorageFolder\" is required.");
 
@@ -816,12 +820,12 @@ namespace APIGateWay.BusinessLayer.Repository
             // Other tabs / devices of this user clear their unread badge
             try
             {
-                await _hub.Clients.Group($"user-{me}").SendAsync(ReadEvent, result);
+                await UserGroup(me).SendAsync(ReadEvent, result);
                 var otherMemberIds = await 
                     GetConversationMemberIdsAsync(conversationId, excludeUserId: me);
                 foreach (var memberId in otherMemberIds)
                 {
-                    await _hub.Clients.Group($"user-{memberId}")
+                    await UserGroup(memberId)
                         .SendAsync(ReadEvent, result);
                 }
             }
@@ -908,7 +912,7 @@ namespace APIGateWay.BusinessLayer.Repository
             try
             {
                 await Task.WhenAll(keys.Select(k =>
-                    _hub.Clients.Group($"user-{k.RecipientUserId}")
+                    UserGroup(k.RecipientUserId)
                         .SendAsync(MessageEvent, ToDto(message, k.WrappedMessageKey, media: media))));
             }
             catch (Exception ex)
@@ -947,7 +951,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     var forThisTarget = tags.First(t =>
                         (t.Entity.EntityType == ChatTagEntityType.User && Guid.TryParse(t.Entity.EntityId, out var uid) && uid == id)
                         || t.NotifyUserId == id);
-                    return _hub.Clients.Group($"user-{id}").SendAsync(MentionEvent, new ChatMentionEventDto
+                    return UserGroup(id).SendAsync(MentionEvent, new ChatMentionEventDto
                     {
                         ConversationId = evt.ConversationId,
                         MessageId = evt.MessageId,
@@ -975,7 +979,7 @@ namespace APIGateWay.BusinessLayer.Repository
                     .ToListAsync();
 
                 await Task.WhenAll(memberIds.Select(id =>
-                    _hub.Clients.Group($"user-{id}").SendAsync(ReactionEvent, evt)));
+                    UserGroup(id).SendAsync(ReactionEvent, evt)));
             }
             catch (Exception ex)
             {
