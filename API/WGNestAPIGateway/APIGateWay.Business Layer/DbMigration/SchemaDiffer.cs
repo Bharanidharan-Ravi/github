@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using APIGateWay.ModalLayer.DTOs;
-using static APIGateWay.Business_Layer.DbMigration.SqlSchemaReader;
+using static APIGateWay.BusinessLayer.DbMigration.SqlSchemaReader;
 
-namespace APIGateWay.Business_Layer.DbMigration
+namespace APIGateWay.BusinessLayer.DbMigration
 {
     /// <summary>One applied (or planned) DDL statement and what undoes it. Persisted in the rollback file.</summary>
     public class MigrationStep

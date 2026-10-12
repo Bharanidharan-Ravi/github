@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Helper.Events.Eventhelper
+namespace APIGateWay.BusinessLayer.Helper.Events.Eventhelper
 {
     public static class ReflectionHelper
     {

@@ -1,6 +1,6 @@
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
 
-namespace APIGateWay.Business_Layer.Interface
+namespace APIGateWay.BusinessLayer.Interface
 {
     public interface IChatKeyRepo
     {

@@ -141,6 +141,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetLeaveRequest> GetLeaveRequests { get; set; }
         public DbSet<LeaveType> LeaveType { get; set; }
         public DbSet<LeaveRequestMaster> LeaveRequestMaster { get; set; }
+        public DbSet<LeaveRequestDayMaster> LeaveRequestDayMaster { get; set; }
         public DbSet<GetPermissionRequest> GetPermissionRequests { get; set; }
         public DbSet<PermissionRequestMaster> PermissionRequestMaster { get; set; }
         public DbSet<HolidayMaster> HolidayMaster { get; set; }

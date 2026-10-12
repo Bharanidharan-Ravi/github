@@ -1,6 +1,7 @@
-﻿using APIGateWay.Business_Layer.Helper.Events.Eventhelper;
-using APIGateWay.Business_Layer.Helper.Events.Interface;
-using APIGateWay.Business_Layer.Session;
+﻿using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.Interface;
@@ -9,10 +10,10 @@ using APIGateWay.ModalLayer.Helper;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using System.Text.Json;
-using static APIGateWay.Business_Layer.SignalRHub.RealtimeEntities;
+using static APIGateWay.BusinessLayer.SignalRHub.RealtimeEntities;
 // Ensure you have the using statement for wherever CreateNotificationRequest is defined
 
-namespace APIGateWay.Business_Layer.Helper.Events.Services
+namespace APIGateWay.BusinessLayer.Helper.Events.Services
 {
     public class EventCenter : IEventCenter
     {
@@ -20,13 +21,15 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
         private readonly ISyncExecutionService _syncExecutionService;
         private readonly INotificationRepository _notificationRepository;
         private readonly IRealtimeNotifier _realtimeNotifier;
+        private readonly IClientMailNotifier _clientMail;
 
-        public EventCenter(IEventContextProvider contextProvider, ISyncExecutionService syncExecutionService, INotificationRepository notification, IRealtimeNotifier realtimeNotifier)
+        public EventCenter(IEventContextProvider contextProvider, ISyncExecutionService syncExecutionService, INotificationRepository notification, IRealtimeNotifier realtimeNotifier,IClientMailNotifier clientMail)
         {
             _contextProvider = contextProvider;
             _syncExecutionService = syncExecutionService;
             _notificationRepository = notification;
             _realtimeNotifier = realtimeNotifier;
+            _clientMail = clientMail;
         }
 
         private Dictionary<string, string> GetContextValues()
@@ -49,7 +52,7 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
             }
             return syncParams;
         }
-
+        
         //    public async Task<T?> PublishAsync<T>(EventRequest request, bool notify = true, bool signalR = true)
         //    {
         //        try
@@ -444,6 +447,18 @@ namespace APIGateWay.Business_Layer.Helper.Events.Services
                                     Timestamp = DateTime.UtcNow
                                 });
                             }
+                        }
+
+                        // 7. EMAIL the client's users when a thread is committed to the client
+                        if (request.ConfigKey == "ThreadsList")
+                        {
+                            var toClient = ReflectionHelper.GetPropertyValue<bool?>(richData, "toClient");
+                            var threadIssueId = ReflectionHelper.GetPropertyValue<Guid?>(richData, "Issue_Id");
+                            var threadHtml = ReflectionHelper.GetPropertyValue<string>(richData, "HtmlDesc");
+
+                            if (toClient == true && threadIssueId.HasValue && !string.IsNullOrEmpty(threadHtml))
+                                await _clientMail.NotifyThreadToClientAsync(
+                                    threadIssueId.Value, threadHtml, actorName, request.EventType == "Update");
                         }
                     }
                 }

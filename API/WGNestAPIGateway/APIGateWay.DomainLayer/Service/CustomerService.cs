@@ -28,8 +28,9 @@ namespace APIGateWay.DomainLayer.Service
         private readonly IHelperGetData _helperGet;
         private readonly IAttachmentService _attachmentService;
         private readonly GenerateHelper _generateHelper;
+        private readonly IRepoAccessService _repoAccess;
 
-        public CustomerService(APIGatewayDBContext dBContext, ILoginContextService contextService, ILoginService login, APIGateWayCommonService commonService, IHelperGetData helperGet, IAttachmentService attachmentService, GenerateHelper generateHelper)
+        public CustomerService(APIGatewayDBContext dBContext, ILoginContextService contextService, ILoginService login, APIGateWayCommonService commonService, IHelperGetData helperGet, IAttachmentService attachmentService, GenerateHelper generateHelper, IRepoAccessService repoAccess)
         {
             _context = dBContext;
             _loginContext = contextService;
@@ -38,6 +39,7 @@ namespace APIGateWay.DomainLayer.Service
             _helperGet = helperGet;
             _attachmentService = attachmentService;
             _generateHelper = generateHelper;
+            _repoAccess = repoAccess;
 
         }
         private async Task ValidateCustomerFields(
@@ -169,6 +171,7 @@ namespace APIGateWay.DomainLayer.Service
                 }
 
                 await transaction.CommitAsync();
+                _repoAccess.Forget(new[] { newUser.UserID });
 
                 string? previewUrl = null;
                 var savedAvatar = attachmentResult?.Attachments?.FirstOrDefault();

@@ -1,6 +1,6 @@
 using APIGateWay.ModalLayer.DTOs;
 
-namespace APIGateWay.Business_Layer.Interface
+namespace APIGateWay.BusinessLayer.Interface
 {
     public interface IDbMigrationService
     {

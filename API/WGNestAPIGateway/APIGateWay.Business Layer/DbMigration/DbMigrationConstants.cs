@@ -1,4 +1,4 @@
-namespace APIGateWay.Business_Layer.DbMigration
+namespace APIGateWay.BusinessLayer.DbMigration
 {
     /// <summary>
     /// Constants for the DB snapshot / schema-migration APIs (DbMigrationService). Tracking table,
@@ -12,7 +12,7 @@ namespace APIGateWay.Business_Layer.DbMigration
         public const string SP_SNAPSHOT_SET_STATUS = "dbo.SP_SYS_DBSNAPSHOT_SET_STATUS";
 
         // Embedded copy of DbSnapshot.sql (LogicalName in APIGateWay.BusinessLayer.csproj).
-        public const string BOOTSTRAP_RESOURCE = "APIGateWay.Business_Layer.DbSnapshotBootstrap.sql";
+        public const string BOOTSTRAP_RESOURCE = "APIGateWay.BusinessLayer.DbSnapshotBootstrap.sql";
 
         // SNAPSHOTTYPE
         public const string TYPE_MANUAL = "MANUAL";

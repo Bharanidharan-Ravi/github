@@ -1,6 +1,6 @@
-﻿using APIGateWay.Business_Layer.Helper.Events.EventFactory;
-using APIGateWay.Business_Layer.Helper.Events.Interface;
-using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Helper.Events.EventFactory;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
@@ -18,7 +18,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class MeetingSchedulerRepo : IMeetingSchedulerRepo
     {

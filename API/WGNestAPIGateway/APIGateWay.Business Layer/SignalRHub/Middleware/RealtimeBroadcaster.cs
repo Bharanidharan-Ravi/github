@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Helper;
+﻿using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.Hub;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.SignalRHub.Middleware
+namespace APIGateWay.BusinessLayer.SignalRHub.Middleware
 {
     public class RealtimeBroadcaster : IRealtimeBroadcaster
     {

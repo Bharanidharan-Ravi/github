@@ -1,5 +1,5 @@
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Repository;

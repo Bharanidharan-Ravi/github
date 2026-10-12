@@ -15,6 +15,12 @@ namespace APIGateWay.DomainLayer.Interface
         /// SyncRequestEnricher reads it without a second DB call.
         /// </summary>
         Task<List<UserRepoAccess>> GetUserRepoGuidsAsync(Guid userId);
+
+        /// <summary>
+        /// Drops the cached repo list of these users — call after adding or
+        /// removing them from a repo. Results are cached for 2 minutes.
+        /// </summary>
+        void Forget(IEnumerable<Guid> userIds);
     }
 
     /// <summary>Both identifiers of a repo the user is assigned to.</summary>

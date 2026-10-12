@@ -39,10 +39,10 @@ namespace APIGateWay.DomainLayer.Utilities
 
         public bool IsTestEnvironment => IsTestRequest(_httpContextAccessor.HttpContext?.Request);
 
-        /// <summary>Static form for callers that hold the request directly (e.g. a SignalR hub's Context.GetHttpContext()).</summary>
+        /// <summary>True when the request carries X-Environment: Test (or ?env=Test, used by SignalR).</summary>
         public static bool IsTestRequest(HttpRequest? request)
         {
-            string env = request?.Headers["X-Environment"].ToString();
+            string? env = request?.Headers["X-Environment"].ToString();
 
             if (string.IsNullOrEmpty(env))
             {

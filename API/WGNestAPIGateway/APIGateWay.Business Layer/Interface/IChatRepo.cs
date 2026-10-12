@@ -1,7 +1,7 @@
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
 using Microsoft.AspNetCore.Http;
 
-namespace APIGateWay.Business_Layer.Interface
+namespace APIGateWay.BusinessLayer.Interface
 {
     public interface IChatRepo
     {

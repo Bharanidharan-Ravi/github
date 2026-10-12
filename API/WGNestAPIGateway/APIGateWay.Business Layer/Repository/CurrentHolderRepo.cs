@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class CurrentHolderRepo : ICurrentHolderRepo
     {

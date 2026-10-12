@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer;

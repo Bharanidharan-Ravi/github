@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Helper
+namespace APIGateWay.BusinessLayer.Helper
 {
     // 🔥 1. MUST BE 'public static' for extension methods to work!
     public static class ServiceHelper

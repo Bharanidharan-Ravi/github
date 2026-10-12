@@ -18,7 +18,7 @@
 //   We set them manually from ILoginContextService.userName.
 // ─────────────────────────────────────────────────────────────────────────────
 
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.GETData;
@@ -178,7 +178,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
 
 #region Before Log 
-//using APIGateWay.Business_Layer.Interface;
+//using APIGateWay.BusinessLayer.Interface;
 //using APIGateWay.DomainLayer.DBContext;
 //using APIGateWay.DomainLayer.Interface;
 //using APIGateWay.ModalLayer.GETData;

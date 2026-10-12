@@ -1,9 +1,9 @@
-﻿using APIGateWay.Business_Layer.Helper;
-using APIGateWay.Business_Layer.Helper.Events.EventFactory;
-using APIGateWay.Business_Layer.Helper.Events.Eventhelper;
-using APIGateWay.Business_Layer.Helper.Events.Interface;
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.SignalRHub;
+﻿using APIGateWay.BusinessLayer.Helper;
+using APIGateWay.BusinessLayer.Helper.Events.EventFactory;
+using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
@@ -41,6 +41,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IApiLoggerService _apiLogger;
         private readonly IEventCenter _eventCenter;
         private readonly ILoginContextService _loginContext;
+        private readonly IClientMailNotifier _clientMail;
 
         // Update your constructor to include IApiLoggerService
         public WorkStreamRepo(
@@ -55,7 +56,8 @@ namespace APIGateWay.BusinessLayer.Repository
             ITicketHistoryRepository historyRepository,
             IApiLoggerService apiLogger,
             IEventCenter eventCenter,
-            ILoginContextService loginContextService) // <--- ADDED HERE
+            ILoginContextService loginContextService,
+            IClientMailNotifier clientMail) // <--- ADDED HERE
         {
             _domainService = domainService;
             _loginContextService = loginContext;
@@ -69,6 +71,7 @@ namespace APIGateWay.BusinessLayer.Repository
             _apiLogger = apiLogger;
             _eventCenter = eventCenter;
             _loginContextService = loginContext;
+            _clientMail = clientMail;
         }
 
 
@@ -1070,6 +1073,10 @@ namespace APIGateWay.BusinessLayer.Repository
                 Console.WriteLine(
                     $"[WorkStreamRepo] ThreadsList broadcast failed: {ex.Message}");
             }
+            if (notifyClient && !string.IsNullOrEmpty(freshThread.HtmlDesc))
+                await _clientMail.NotifyThreadToClientAsync(
+                    issueId, freshThread.HtmlDesc, _loginContextService.userName,
+                    string.Equals(action, "Update", StringComparison.OrdinalIgnoreCase));
         }
 
         // =====================================================================

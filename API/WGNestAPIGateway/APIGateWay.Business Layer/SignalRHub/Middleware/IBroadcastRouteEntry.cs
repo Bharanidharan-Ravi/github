@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.SignalRHub.Middleware
+namespace APIGateWay.BusinessLayer.SignalRHub.Middleware
 {
     public interface IBroadcastRouteEntry
     {

@@ -10,5 +10,12 @@ namespace APIGateWay.ModelLayer
     {
         public int ErrorCode { get; set; }
         public string ErrorMessage { get; set; }
+
+        // Development only — full inner-exception chain and stack trace. Omitted from the JSON otherwise.
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? InnerExceptions { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public string? StackTrace { get; set; }
     }
 }

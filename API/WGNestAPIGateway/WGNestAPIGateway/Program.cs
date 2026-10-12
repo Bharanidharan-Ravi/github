@@ -3,12 +3,12 @@ using APIGateway.Infrastructure;
 using APIGateway.Middleware;
 using APIGateway.Proxy;
 using APIGateway.Swagger;
-using APIGateWay.Business_Layer.Helper;
-using APIGateWay.Business_Layer.Helper.Events.Interface;
-using APIGateWay.Business_Layer.Helper.Events.Services;
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Repository;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Helper;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using APIGateWay.BusinessLayer.Helper.Events.Services;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Repository;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.Auth;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.BusinessLayer.Helpers.ilog;
@@ -30,6 +30,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Yarp.ReverseProxy.Transforms;
 using static APIGateWay.ModalLayer.Helper.HelperModal;
+using APIGateWay.BusinessLayer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,6 +106,7 @@ builder.Services.AddScoped<ILoginContextService, LoginContextService>();
 builder.Services.AddScoped<ISyncExecutionService, SyncExecutionService>();
 builder.Services.AddScoped<IRepoAccessService, RepoAccessService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IClientMailNotifier, ClientMailNotifier>();
 builder.Services.AddScoped<IDomainService, DomainService>();
 builder.Services.AddScoped<IHelperGetData, HelperGetData>();
 builder.Services.AddScoped<IDashBoardDataService, DashBoardDataService>();
@@ -119,6 +121,7 @@ builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 // Infrastructure
 // ─────────────────────────────────────────────────────────────
 builder.Services.AddDistributedMemoryCache();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<APIGateWayCommonService>();
 builder.Services.AddScoped<GenerateHelper>();
 builder.Services.AddScoped<DecodeHelpers>();

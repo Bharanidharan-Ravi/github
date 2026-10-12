@@ -1,5 +1,5 @@
-﻿using APIGateWay.Business_Layer.SignalRHub;
-using APIGateWay.Business_Layer.SignalRHub.Middleware;
+﻿using APIGateWay.BusinessLayer.SignalRHub;
+using APIGateWay.BusinessLayer.SignalRHub.Middleware;
 using APIGateWay.ModalLayer.GETData;
 using System;
 using System.Collections.Generic;

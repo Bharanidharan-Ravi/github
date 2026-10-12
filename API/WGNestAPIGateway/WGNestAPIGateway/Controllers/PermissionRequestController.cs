@@ -1,4 +1,4 @@
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Mvc;
@@ -57,6 +57,14 @@ namespace APIGateway.Controllers
 
             var response = await _repo.UpdateActualDurationAsync(id, dto);
             return Ok(ApiResponseHelper.Success(response, "Actual duration recorded."));
+        }
+
+        // PATCH /api/PermissionRequest/{id}/cancel — the requester only, only while still REQUESTED.
+        [HttpPatch("{id:guid}/cancel")]
+        public async Task<IActionResult> Cancel(Guid id)
+        {
+            var response = await _repo.CancelAsync(id);
+            return Ok(ApiResponseHelper.Success(response, "Permission request cancelled."));
         }
     }
 }

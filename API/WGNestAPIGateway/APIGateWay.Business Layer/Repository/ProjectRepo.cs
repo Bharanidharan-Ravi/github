@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Helper;
+﻿using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
@@ -390,7 +390,7 @@ namespace APIGateWay.BusinessLayer.Repository
 
 
 #region Before logs
-//using APIGateWay.Business_Layer.Helper;
+//using APIGateWay.BusinessLayer.Helper;
 //using APIGateWay.BusinessLayer.Interface;
 //using APIGateWay.BusinessLayer.SignalRHub;
 //using APIGateWay.DomainLayer.CommonSevice;

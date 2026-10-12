@@ -10,7 +10,7 @@ using System.Text.Json;
 using APIGateWay.DomainLayer.CommonSevice;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.DomainLayer.Utilities;
 
 namespace APIGateWay.BusinessLayer.Repository

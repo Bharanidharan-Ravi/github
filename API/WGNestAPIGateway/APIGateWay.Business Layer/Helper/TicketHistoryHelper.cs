@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Helper.Events.Eventhelper;
+﻿using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.PostData;
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Helper
+namespace APIGateWay.BusinessLayer.Helper
 {
     public class HistoryLabelDto
     {

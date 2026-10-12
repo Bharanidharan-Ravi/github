@@ -1,5 +1,5 @@
 ﻿// ─────────────────────────────────────────────────────────────────────────────
-// Namespace : APIGateWay.Business_Layer.Auth
+// Namespace : APIGateWay.BusinessLayer.Auth
 // File      : SyncKeyPolicy.cs
 // Purpose   : Per-key RBAC rules consumed by SyncRequestEnricher.
 //             Adding a new sync key = adding ONE entry to Rules below.

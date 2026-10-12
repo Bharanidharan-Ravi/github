@@ -1,5 +1,5 @@
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class PermissionRequestRepo : IPermissionRequestRepo
     {
@@ -53,6 +53,14 @@ namespace APIGateWay.Business_Layer.Repository
         {
             if (!AppRoles.LeaveRequestCreate.Contains(_loginContext.role))
                 throw new Exceptionlist.UnauthorizedException("Only employees and admins can submit permission requests.");
+
+            var permissionDay = dto.PermissionDate.Date;
+            var holiday = await _dBContext.Set<HolidayMaster>()
+                .Where(h => h.HolidayDate >= permissionDay && h.HolidayDate < permissionDay.AddDays(1))
+                .FirstOrDefaultAsync();
+            if (holiday != null)
+                throw new Exceptionlist.InvalidDataException(
+                    $"{holiday.HolidayDate:dd-MMM-yyyy} is a holiday ({holiday.HolidayName?.Trim()}) — permission cannot be requested on it.");
 
             GetPermissionRequest finalData = null;
             PermissionRequestMaster entity = null;
@@ -186,6 +194,42 @@ namespace APIGateWay.Business_Layer.Repository
 
             await NotifyActualDurationAsync(entity);
             await BroadcastPermissionRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
+
+            return _mapper.Map<GetPermissionRequest>(entity);
+        }
+
+        // The employee withdraws their own request — only while it is still awaiting a decision.
+        public async Task<GetPermissionRequest> CancelAsync(Guid id)
+        {
+            var entity = await _dBContext.Set<PermissionRequestMaster>().FindAsync(id)
+                ?? throw new Exceptionlist.DataNotFoundException($"Permission request '{id}' not found.");
+
+            if (entity.EMPLOYEE_ID != _loginContext.userId)
+                throw new Exceptionlist.UnauthorizedException("You can only cancel your own permission requests.");
+            if (entity.STATUS != "REQUESTED")
+                throw new Exceptionlist.InvalidDataException("This permission request has already been decided and can no longer be cancelled.");
+
+            var timer = _stepContext.StartStep();
+            try
+            {
+                await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    entity.STATUS = "CANCELLED";
+                    await _dBContext.SaveChangesAsync();
+                    return true;
+                });
+
+                _stepContext.Success("PermissionRequest", "UPDATE", id.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("PermissionRequest", "UPDATE",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
+
+            // Refresh every admin's list and pending badge.
+            await BroadcastPermissionRequestChangeAsync(entity, "Updated", null);
 
             return _mapper.Map<GetPermissionRequest>(entity);
         }

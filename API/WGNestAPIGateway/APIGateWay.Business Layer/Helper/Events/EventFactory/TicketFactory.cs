@@ -2,7 +2,7 @@
 using APIGateWay.ModalLayer.Helper;
 using System;
 
-namespace APIGateWay.Business_Layer.Helper.Events.EventFactory
+namespace APIGateWay.BusinessLayer.Helper.Events.EventFactory
 {
     public static class TicketFactory
     {

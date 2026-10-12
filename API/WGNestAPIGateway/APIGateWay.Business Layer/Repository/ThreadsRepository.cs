@@ -1,14 +1,10 @@
-﻿using APIGateWay.Business_Layer.Helper;
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.BusinessLayer.Auth;
-using APIGateWay.BusinessLayer.Helper;
+﻿using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
-using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
@@ -32,6 +28,7 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IWorkStreamService _workStreamService;
         private readonly IRequestStepContext _stepContext;            // ← ADDED
         private readonly ITicketHistoryRepository _historyRepository;
+        private readonly IClientMailNotifier _clientMail;
 
         public ThreadsRepository(
             IDomainService domainService,
@@ -45,7 +42,8 @@ namespace APIGateWay.BusinessLayer.Repository
             ISyncExecutionService syncExecutionService,
             IWorkStreamService workStreamService,
             IRequestStepContext stepContext,
-            ITicketHistoryRepository historyRepository)                          // ← ADDED
+            ITicketHistoryRepository historyRepository,
+            IClientMailNotifier clientMail)                          // ← ADDED
         {
             _domainService = domainService;
             _commonService = service;
@@ -59,6 +57,8 @@ namespace APIGateWay.BusinessLayer.Repository
             _workStreamService = workStreamService;
             _stepContext = stepContext;                      // ← ADDED
             _historyRepository = historyRepository;
+            _clientMail = clientMail;                            // ← ADDED
+
         }
 
         private static readonly HashSet<string> _selfResourceStreams =
@@ -554,6 +554,10 @@ namespace APIGateWay.BusinessLayer.Repository
                     Console.WriteLine($"[ThreadsRepository] ThreadsList update broadcast failed: {ex.Message}");
                 }
             }
+            var mailThread = freshThreadData ?? finalThreadData;
+            if (mailThread?.toClient == true && !string.IsNullOrWhiteSpace(mailThread.HtmlDesc))
+                await _clientMail.NotifyThreadToClientAsync(
+                    mailThread.Issue_Id, mailThread.HtmlDesc, _loginContext.userName, true);
 
             return freshThreadData ?? finalThreadData;
         }

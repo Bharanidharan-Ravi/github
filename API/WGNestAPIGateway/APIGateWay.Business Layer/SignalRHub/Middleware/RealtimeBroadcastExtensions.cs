@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.SignalRHub.Middleware;
+﻿using APIGateWay.BusinessLayer.SignalRHub.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;

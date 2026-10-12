@@ -1,4 +1,4 @@
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.ChatsModal.DTOs;
 using APIGateWay.ModelLayer.ErrorException;

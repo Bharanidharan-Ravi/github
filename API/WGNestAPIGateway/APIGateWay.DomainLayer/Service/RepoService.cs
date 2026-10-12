@@ -21,7 +21,8 @@ namespace APIGateWay.DomainLayer.Service
         private readonly HttpClient _http;
         private readonly APIGateWayCommonService _commonService;
         private readonly IAttachmentService _attachmentService;
-        public RepoService(APIGatewayDBContext dBContext, ILoginContextService contextService, ILoginService login, HttpClient http, APIGateWayCommonService commonService, IAttachmentService attachmentService)
+        private readonly IRepoAccessService _repoAccess;
+        public RepoService(APIGatewayDBContext dBContext, ILoginContextService contextService, ILoginService login, HttpClient http, APIGateWayCommonService commonService, IAttachmentService attachmentService, IRepoAccessService repoAccess)
         {
             _context = dBContext;
             _loginContext = contextService;
@@ -29,6 +30,7 @@ namespace APIGateWay.DomainLayer.Service
             _http = http;
             _commonService = commonService;
             _attachmentService = attachmentService;
+            _repoAccess = repoAccess;
         }
 
         #region Create Repo user and trigger a repo master insert
@@ -96,6 +98,7 @@ namespace APIGateWay.DomainLayer.Service
                 #endregion
 
                 await transaction.CommitAsync();
+                _repoAccess.Forget(result.RepoUsers.Select(x => x.UserId).OfType<Guid>());
                 // 🔥 100% Success! Now we can safely delete the temporary files
                 if (repo.temp?.temps != null && repo.temp.temps.Any())
                 {

@@ -1,6 +1,8 @@
-﻿using APIGateWay.DomainLayer.DBContext;
+using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,32 +13,53 @@ namespace APIGateWay.DomainLayer.Service
 {
     public class RepoAccessService : IRepoAccessService
     {
-        private readonly APIGatewayDBContext _dbContext;
+        // RepoScopeHandler asks for this on every role-3 request (heartbeat
+        // included). Kept in memory per database + user; writes that change
+        // membership call Forget, and the expiry covers edits made in SQL.
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
 
-        public RepoAccessService(APIGatewayDBContext dBContext)
+        private readonly APIGatewayDBContext _dbContext;
+        private readonly IMemoryCache _cache;
+
+        public RepoAccessService(APIGatewayDBContext dBContext, IMemoryCache cache)
         {
             _dbContext = dBContext;
-        }
-        // ── Already exists — used by SignalR hub ──────────────────────────────
-        public async Task<List<string>> GetUserRepoIdsAsync(Guid userId)
-        {
-            return await _dbContext.RepoUsers
-                .Where(x => x.UserId == userId)
-                .Select(x => x.RepoKey)
-                .ToListAsync();
+            _cache = cache;
         }
 
-        // ── ADD THIS ──────────────────────────────────────────────────────────
-        // Returns both Repo_Id (GUID for SP @repoId param) and RepoKey.
-        //
-        // ⚠️  Check your RepoUserList entity property names:
-        //     x.RepoId  — change to x.Repo_Id if your entity uses that name
-        //
-        // This is called ONCE per request by SyncRequestEnricher.
-        // The result drives the fan-out: one SP call per repo for Role 3.
+        // RepoKey strings — used by the SignalR hub and RepoScopeValidator
+        public async Task<List<string>> GetUserRepoIdsAsync(Guid userId)
+        {
+            var repos = await GetCachedAsync(userId);
+            return repos.Select(x => x.RepoKey).ToList();
+        }
+
+        // Repo_Id (GUID for SP @repoId param) and RepoKey of every repo the user belongs to
         public async Task<List<UserRepoAccess>> GetUserRepoGuidsAsync(Guid userId)
         {
-            return await (
+            var repos = await GetCachedAsync(userId);
+            return repos.ToList();
+        }
+
+        public void Forget(IEnumerable<Guid> userIds)
+        {
+            foreach (var userId in userIds.Distinct())
+                _cache.Remove(CacheKey(userId));
+        }
+
+        // Callers get their own list; the cached array is never handed out
+        private async Task<UserRepoAccess[]> GetCachedAsync(Guid userId)
+        {
+            return await _cache.GetOrCreateAsync(CacheKey(userId), entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+                return LoadAsync(userId);
+            }) ?? Array.Empty<UserRepoAccess>();
+        }
+
+        private Task<UserRepoAccess[]> LoadAsync(Guid userId)
+        {
+            return (
                 from repo in _dbContext.RepositoryMasters
                 join repoUser in _dbContext.RepoUsers
                     on repo.RepoKey equals repoUser.RepoKey
@@ -46,7 +69,14 @@ namespace APIGateWay.DomainLayer.Service
                     RepoId = (Guid)repo.Repo_Id,   // PK from RepositoryMasters
                     RepoKey = repo.RepoKey   // short key
                 }
-            ).ToListAsync();
+            ).ToArrayAsync();
+        }
+
+        // Server + database the request is routed to (tenant DB, Live/Test)
+        private string CacheKey(Guid userId)
+        {
+            var conn = new SqlConnectionStringBuilder(_dbContext.Database.GetConnectionString());
+            return $"repo-access:{conn.DataSource}:{conn.InitialCatalog}:{userId}";
         }
     }
 }

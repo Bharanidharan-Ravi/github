@@ -3,13 +3,14 @@ using APIGateWay.ModalLayer.PostData;
 using System;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Interface
+namespace APIGateWay.BusinessLayer.Interface
 {
     public interface ILeaveRequestRepo
     {
         Task<GetLeaveRequest> CreateLeaveRequestAsync(PostLeaveRequestDto dto);
         Task<GetLeaveRequest> UpdateStatusAsync(Guid id, PostLeaveRequestStatusDto dto);
         Task<GetLeaveRequest> MarkNotTakenAsync(Guid id);
+        Task<GetLeaveRequest> CancelAsync(Guid id);
         Task<int> CountPendingAsync();
     }
 }

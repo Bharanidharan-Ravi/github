@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
@@ -10,16 +10,16 @@ using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using APIGateWay.Business_Layer.Helper;
+using APIGateWay.BusinessLayer.Helper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Session;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class TicketFeedbackRepo : ITicketFeedbackRepo
     {

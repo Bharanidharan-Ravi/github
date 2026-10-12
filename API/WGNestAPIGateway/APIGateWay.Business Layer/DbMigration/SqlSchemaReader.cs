@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Dapper;
 
-namespace APIGateWay.Business_Layer.DbMigration
+namespace APIGateWay.BusinessLayer.DbMigration
 {
     /// <summary>Structure of one schema in one database: every object's DDL, plus column metadata for tables.</summary>
     public class SchemaSnapshot

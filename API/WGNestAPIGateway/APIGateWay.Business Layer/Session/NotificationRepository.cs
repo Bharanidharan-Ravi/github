@@ -1,11 +1,11 @@
 ﻿using APIGateWay.DomainLayer.Interface;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.MasterData;
-using APIGateWay.Business_Layer.Interface; // Ensure this is the correct namespace for ILoginContextService
+using APIGateWay.BusinessLayer.Interface; // Ensure this is the correct namespace for ILoginContextService
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
-namespace APIGateWay.Business_Layer.Session
+namespace APIGateWay.BusinessLayer.Session
 {
     public class NotificationRepository : INotificationRepository
     {

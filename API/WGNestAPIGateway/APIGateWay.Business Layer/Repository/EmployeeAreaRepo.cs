@@ -1,5 +1,5 @@
-﻿using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Session;
+﻿using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
@@ -16,7 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class EmployeeAreaRepo : IEmployeeAreaRepo
     {

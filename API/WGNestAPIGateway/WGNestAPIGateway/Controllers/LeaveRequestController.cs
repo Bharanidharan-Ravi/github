@@ -1,4 +1,4 @@
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +55,14 @@ namespace APIGateway.Controllers
         {
             var response = await _repo.MarkNotTakenAsync(id);
             return Ok(ApiResponseHelper.Success(response, "Leave marked as not taken."));
+        }
+
+        // PATCH /api/LeaveRequest/{id}/cancel — the requester only, only while still REQUESTED.
+        [HttpPatch("{id:guid}/cancel")]
+        public async Task<IActionResult> Cancel(Guid id)
+        {
+            var response = await _repo.CancelAsync(id);
+            return Ok(ApiResponseHelper.Success(response, "Leave request cancelled."));
         }
     }
 }

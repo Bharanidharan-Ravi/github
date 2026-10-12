@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.SignalRHub.Middleware
+namespace APIGateWay.BusinessLayer.SignalRHub.Middleware
 {
     public class RealtimeBroadcastMiddleware
     {

@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
@@ -9,7 +9,7 @@ using APIGateWay.ModalLayer.PostData;
 using APIGateWay.ModelLayer.ErrorException;
 using Microsoft.EntityFrameworkCore;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class DailyPlanRepo : IDailyPlanRepo
     {
@@ -210,7 +210,7 @@ namespace APIGateWay.Business_Layer.Repository
 
 
 #region Before log dailyrepo
-//using APIGateWay.Business_Layer.Interface;
+//using APIGateWay.BusinessLayer.Interface;
 //using APIGateWay.DomainLayer.CommonSevice;
 //using APIGateWay.DomainLayer.DBContext;
 //using APIGateWay.DomainLayer.Helpers;
@@ -226,7 +226,7 @@ namespace APIGateWay.Business_Layer.Repository
 //using System.Text;
 //using System.Threading.Tasks;
 
-//namespace APIGateWay.Business_Layer.Repository
+//namespace APIGateWay.BusinessLayer.Repository
 //{
 //    public class DailyPlanRepo : IDailyPlanRepo
 //    {

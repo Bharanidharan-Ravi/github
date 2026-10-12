@@ -1,10 +1,10 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.MasterData;
 using System.Text.Json;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class TicketHistoryRepository : ITicketHistoryRepository
     {

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.SignalRHub.Middleware
+namespace APIGateWay.BusinessLayer.SignalRHub.Middleware
 {
     public static class RealtimeBroadcastRegistry
     {

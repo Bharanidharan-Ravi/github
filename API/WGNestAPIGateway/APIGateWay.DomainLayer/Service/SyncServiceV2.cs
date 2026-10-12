@@ -1,4 +1,4 @@
-﻿//using APIGateWay.Business_Layer.Configuration;
+﻿//using APIGateWay.BusinessLayer.Configuration;
 //using APIGateWay.DomainLayer.Interface;
 //using APIGateWay.ModalLayer.nugerModalV2;
 //using APIGateWay.ModalLayer.nugetmodal;

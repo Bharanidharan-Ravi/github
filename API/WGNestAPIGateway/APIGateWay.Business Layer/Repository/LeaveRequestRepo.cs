@@ -1,5 +1,5 @@
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Session;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Interface;
@@ -17,7 +17,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class LeaveRequestRepo : ILeaveRequestRepo
     {
@@ -57,6 +57,7 @@ namespace APIGateWay.Business_Layer.Repository
 
             var nowIst = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
             var days = BuildLeaveDays(dto.LeaveFrom, dto.LeaveTo, dto.Days, nowIst, allowPast: false);
+            await EnsureNoHolidayAsync(days);
             await EnsureNoOverlapAsync(_loginContext.userId, days);
 
             GetLeaveRequest finalData = null;
@@ -159,6 +160,38 @@ namespace APIGateWay.Business_Layer.Repository
             return days;
         }
 
+        // Holidays (HolidayMaster) are non-working days. A leave may span them (taken
+        // around a holiday), but can't be only holidays, and a holiday can't be split
+        // into halves.
+        private async Task EnsureNoHolidayAsync(List<LeaveRequestDayMaster> days)
+        {
+            var rangeStart = days.First().LEAVE_DATE;
+            var rangeEnd = days.Last().LEAVE_DATE.AddDays(1);
+
+            var holidays = await _dBContext.Set<HolidayMaster>()
+                .Where(h => h.HolidayDate >= rangeStart && h.HolidayDate < rangeEnd)
+                .Select(h => new { h.HolidayDate, h.HolidayName })
+                .ToListAsync();
+
+            if (holidays.Count == 0)
+                return;
+
+            var holidayDates = holidays.Select(h => h.HolidayDate.Date).ToHashSet();
+
+            if (days.All(d => holidayDates.Contains(d.LEAVE_DATE.Date)))
+                throw new Exceptionlist.InvalidDataException(
+                    "The selected dates are all holidays — leave cannot be requested only on holidays.");
+
+            var halfDayHoliday = days.FirstOrDefault(d =>
+                holidayDates.Contains(d.LEAVE_DATE.Date) && d.DAY_SESSION != LeaveDaySession.Full);
+            if (halfDayHoliday != null)
+            {
+                var name = holidays.First(h => h.HolidayDate.Date == halfDayHoliday.LEAVE_DATE.Date).HolidayName?.Trim();
+                throw new Exceptionlist.InvalidDataException(
+                    $"{halfDayHoliday.LEAVE_DATE:dd-MMM-yyyy} is a holiday ({name}) — it can't be taken as a half day.");
+            }
+        }
+
         // A day clashes when either side is FULL, or both are the same half.
         // excludeRequestId: the request being re-adjusted, so it doesn't clash with itself.
         private async Task EnsureNoOverlapAsync(Guid employeeId, List<LeaveRequestDayMaster> days, Guid? excludeRequestId = null)
@@ -198,6 +231,9 @@ namespace APIGateWay.Business_Layer.Repository
             var entity = await _dBContext.Set<LeaveRequestMaster>().FindAsync(id)
                 ?? throw new Exceptionlist.DataNotFoundException($"Leave request '{id}' not found.");
 
+            if (entity.STATUS == "CANCELLED")
+                throw new Exceptionlist.InvalidDataException("This leave request was cancelled by the employee.");
+
             // Admins may re-decide an already decided request (re-approve a "not taken"
             // or rejected leave, reject an approved one) and re-adjust its dates.
             var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone);
@@ -209,6 +245,7 @@ namespace APIGateWay.Business_Layer.Repository
             if (dto.LeaveFrom.HasValue && dto.LeaveTo.HasValue)
             {
                 newDays = BuildLeaveDays(dto.LeaveFrom.Value, dto.LeaveTo.Value, dto.Days, now, allowPast: true);
+                await EnsureNoHolidayAsync(newDays);
                 newDays.ForEach(d => d.LEAVE_REQUEST_ID = id);
             }
 
@@ -310,6 +347,42 @@ namespace APIGateWay.Business_Layer.Repository
 
             await NotifyNotTakenAsync(entity);
             await BroadcastLeaveRequestChangeAsync(entity, "Updated", entity.EMPLOYEE_ID);
+
+            return _mapper.Map<GetLeaveRequest>(entity);
+        }
+
+        // The employee withdraws their own request — only while it is still awaiting a decision.
+        public async Task<GetLeaveRequest> CancelAsync(Guid id)
+        {
+            var entity = await _dBContext.Set<LeaveRequestMaster>().FindAsync(id)
+                ?? throw new Exceptionlist.DataNotFoundException($"Leave request '{id}' not found.");
+
+            if (entity.EMPLOYEE_ID != _loginContext.userId)
+                throw new Exceptionlist.UnauthorizedException("You can only cancel your own leave requests.");
+            if (entity.STATUS != "REQUESTED")
+                throw new Exceptionlist.InvalidDataException("This leave request has already been decided and can no longer be cancelled.");
+
+            var timer = _stepContext.StartStep();
+            try
+            {
+                await _domainService.ExecuteInTransactionAsync(async () =>
+                {
+                    entity.STATUS = "CANCELLED";
+                    await _dBContext.SaveChangesAsync();
+                    return true;
+                });
+
+                _stepContext.Success("LeaveRequest", "UPDATE", id.ToString(), timer);
+            }
+            catch (Exception ex)
+            {
+                _stepContext.Failure("LeaveRequest", "UPDATE",
+                    ex.Message, ex.InnerException?.Message, timer);
+                throw;
+            }
+
+            // Refresh every admin's list and pending badge.
+            await BroadcastLeaveRequestChangeAsync(entity, "Updated", null);
 
             return _mapper.Map<GetLeaveRequest>(entity);
         }

@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.DBContext;
 using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
@@ -10,7 +10,7 @@ using APIGateWay.ModelLayer.ErrorException;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class EmployeeRepo : IEmployeeRepo
     {
@@ -256,7 +256,7 @@ namespace APIGateWay.Business_Layer.Repository
 
 
 #region Before log
-//using APIGateWay.Business_Layer.Interface;
+//using APIGateWay.BusinessLayer.Interface;
 //using APIGateWay.DomainLayer.DBContext;
 //using APIGateWay.DomainLayer.Helpers;
 //using APIGateWay.DomainLayer.Interface;
@@ -274,7 +274,7 @@ namespace APIGateWay.Business_Layer.Repository
 //using System.Text;
 //using System.Threading.Tasks;
 
-//namespace APIGateWay.Business_Layer.Repository
+//namespace APIGateWay.BusinessLayer.Repository
 //{
 //    public class EmployeeRepo : IEmployeeRepo
 //    {

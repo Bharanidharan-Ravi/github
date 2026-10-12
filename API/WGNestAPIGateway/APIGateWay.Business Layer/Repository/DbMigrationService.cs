@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using APIGateWay.Business_Layer.DbMigration;
-using APIGateWay.Business_Layer.Interface;
+using APIGateWay.BusinessLayer.DbMigration;
+using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Utilities;
 using APIGateWay.ModalLayer;
@@ -15,9 +15,9 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using static APIGateWay.Business_Layer.DbMigration.SqlSchemaReader;
+using static APIGateWay.BusinessLayer.DbMigration.SqlSchemaReader;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     /// <summary>
     /// Snapshots the SQL Server DB in the connection string (see OpenAsync) and applies

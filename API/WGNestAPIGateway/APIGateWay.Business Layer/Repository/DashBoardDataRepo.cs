@@ -1,4 +1,4 @@
-﻿using APIGateWay.Business_Layer.Interface;
+﻿using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.DomainLayer.Interface;
 using APIGateWay.DomainLayer.Service;
 using APIGateWay.ModalLayer.GETData;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Repository
+namespace APIGateWay.BusinessLayer.Repository
 {
     public class DashBoardDataRepo : IDashBoardDataRepo
     {

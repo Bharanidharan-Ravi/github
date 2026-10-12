@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Session
+namespace APIGateWay.BusinessLayer.Session
 {
     public class SessionTrackingService : ISessionTrackingService
     {

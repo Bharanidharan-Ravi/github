@@ -1,8 +1,8 @@
-﻿using APIGateWay.Business_Layer.Helper;
-using APIGateWay.Business_Layer.Helper.Events.EventFactory;
-using APIGateWay.Business_Layer.Helper.Events.Interface;
-using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Session;
+﻿using APIGateWay.BusinessLayer.Helper;
+using APIGateWay.BusinessLayer.Helper.Events.EventFactory;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Session;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;

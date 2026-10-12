@@ -1,5 +1,5 @@
-﻿using APIGateWay.Business_Layer.Interface;
-using APIGateWay.Business_Layer.Repository;
+﻿using APIGateWay.BusinessLayer.Interface;
+using APIGateWay.BusinessLayer.Repository;
 using APIGateWay.BusinessLayer.Helpers;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.PostData;

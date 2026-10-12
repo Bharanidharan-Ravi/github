@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APIGateWay.Business_Layer.Helper
+namespace APIGateWay.BusinessLayer.Helper
 {
     public class RequestLoggingMiddleware
     {
