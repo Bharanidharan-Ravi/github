@@ -31,7 +31,6 @@ namespace APIGateway.Controllers
         }
 
         [HttpPost("upload")]
-        [AllowAnonymous]
         [RequestSizeLimit(104857600)] // 100 MB
         [RequestFormLimits(MultipartBodyLengthLimit = 104857600)]      
         public async Task<IActionResult> Upload(IFormFile file)
@@ -43,7 +42,6 @@ namespace APIGateway.Controllers
             return Ok("File uploaded successfully!");
         }
         [HttpGet("download/{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> Download(int id)
         {
             var attachment = await _attachmentRepo.GetAttachmentAsync(id);

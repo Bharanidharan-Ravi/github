@@ -193,13 +193,22 @@ builder.Services.AddScoped<IAuthorizationHandler, RepoScopeHandler>();
 //              .AllowAnyMethod()
 //              .AllowCredentials());
 //});
+// Development (ASPNETCORE_ENVIRONMENT=Development): any origin, so any local dev port works.
+// Everywhere else only the real front-ends may call with credentials (config "Cors:AllowedOrigins").
+var allowAnyCorsOrigin = builder.Environment.IsDevelopment();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
-        policy.SetIsOriginAllowed(origin => true) // Evaluates origin at runtime
-              .AllowAnyHeader()
+    {
+        if (allowAnyCorsOrigin)
+            policy.SetIsOriginAllowed(_ => true);
+        else
+            policy.SetIsOriginAllowed(origin => CorsOrigins.IsAllowed(builder.Configuration, origin));
+
+        policy.AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials());
+              .AllowCredentials();
+    });
 });
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -274,7 +283,7 @@ app.MapGet("/api/direct-download/{id}", async (int id, APIGatewayDBContext _db, 
 
     // This returns the file purely, completely bypassing all Controller filters!
     return Results.File(attachment.FileData, attachment.ContentType ?? "application/octet-stream", attachment.FileName);
-});
+}).RequireAuthorization();
 
 // ─────────────────────────────────────────────────────────────
 builder.WebHost.UseUrls("https://*:8008");

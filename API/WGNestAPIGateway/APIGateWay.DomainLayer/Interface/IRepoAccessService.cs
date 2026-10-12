@@ -21,6 +21,9 @@ namespace APIGateWay.DomainLayer.Interface
         /// removing them from a repo. Results are cached for 2 minutes.
         /// </summary>
         void Forget(IEnumerable<Guid> userIds);
+
+        /// <summary>RepoKey of the ticket's repo, or null when the ticket doesn't exist.</summary>
+        Task<string?> GetTicketRepoKeyAsync(Guid ticketId);
     }
 
     /// <summary>Both identifiers of a repo the user is assigned to.</summary>

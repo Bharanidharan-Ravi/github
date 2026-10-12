@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace APIGateWay.ModalLayer.GETData
@@ -60,8 +61,9 @@ namespace APIGateWay.ModalLayer.GETData
     }
 
 
-    // Row of GetTicketList_V2 (config key "TicketListV2"): ids only, the UI maps
-    // names from its masters. *_Ids are comma-separated lower-case ids.
+    // Row of GetTicketList_V2 (config key "TicketListV2") and GetTicketDetail_V2
+    // ("TicketDetailV2"): ids only, the UI maps names from its masters.
+    // *_Ids are comma-separated lower-case ids.
     public class GetTicketListRow
     {
         [Key]
@@ -99,6 +101,38 @@ namespace APIGateWay.ModalLayer.GETData
         public string? Label_Ids { get; set; }
         public string? Assignee_Ids { get; set; }
         public string? Handler_Ids { get; set; }
+
+        // Only from GetTicketDetail_V2 (ticket screen / edit form); null in the
+        // list, and left out of the JSON so list pages stay slim.
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Description { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? HtmlDesc { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Web { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Functional { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Technical { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Client { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? CurrentStatusSummary { get; set; }
+        // Work streams + hand-offs, ids only (JSON array)
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Streams_JSON { get; set; }
+    }
+
+    // Row of GetTicketTags_V2 (config key "TicketTagsV2"): the "#" ticket
+    // pickers. Assignee_Id (owner, for tag notifications) is null for clients.
+    public class GetTicketTagRow
+    {
+        [Key]
+        public Guid Issue_Id { get; set; }
+        public string? Issue_Code { get; set; }
+        public string? Title { get; set; }
+        public Guid? Assignee_Id { get; set; }
+        public Guid? RepoId { get; set; }
     }
 
     // Row of GetTicketListCounts_V2 (config key "TicketListCountsV2").

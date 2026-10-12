@@ -64,6 +64,10 @@ namespace WGNestAPIGateway.Controllers
             await _loginRepository.UpdateHeartbeat(
                 request.SessionId);
 
+            // Clients (role 3) don't get staff presence
+            if (User.IsInRole(AppRoles.Viewer.ToString()))
+                return Ok();
+
             return this.SyncResult(await _syncRepo.RunAsync("GetUserOnlineStatus"));
         }
     }

@@ -47,6 +47,14 @@ namespace APIGateWay.DomainLayer.Service
                 _cache.Remove(CacheKey(userId));
         }
 
+        public Task<string?> GetTicketRepoKeyAsync(Guid ticketId)
+        {
+            return _dbContext.ISSUEMASTER
+                .Where(t => t.Issue_Id == ticketId)
+                .Select(t => t.RepoKey)
+                .FirstOrDefaultAsync();
+        }
+
         // Callers get their own list; the cached array is never handed out
         private async Task<UserRepoAccess[]> GetCachedAsync(Guid userId)
         {

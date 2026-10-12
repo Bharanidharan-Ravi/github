@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- CorsService for the CORS preflight tests -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\APIGateWay.Business Layer\APIGateWay.BusinessLayer.csproj" />
   </ItemGroup>
 

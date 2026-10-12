@@ -424,6 +424,24 @@ namespace APIGateWay.BusinessLayer.Repository
                     var existingTicket = await _db.ISSUEMASTER.FindAsync(ticketId)
                         ?? throw new Exception("Ticket not found");
 
+                    // Clients (Viewer) edit title, description, priority and labels
+                    // only. Internal fields keep their stored values whatever the
+                    // request sends — the client ticket screen never loads them, so
+                    // a client save must not clear them either.
+                    if (_loginContext.role == AppRoles.Viewer)
+                    {
+                        dto.Hours = existingTicket.Hours;
+                        dto.Web = existingTicket.Web;
+                        dto.Technical = existingTicket.Technical;
+                        dto.Functional = existingTicket.Functional;
+                        dto.Client = existingTicket.Client;
+                        dto.RaiseToClient = existingTicket.RaiseToClient;
+                        dto.IsPrivate = existingTicket.IsPrivate;
+                        dto.Assignee_Id = existingTicket.Assignee_Id;
+                        dto.Due_Date = null;     // null = unchanged
+                        dto.resourceIds = null;  // null = work streams not touched
+                    }
+
                     var oldLabels = await _db.ISSUE_LABELS
                         .Where(il => il.Issue_Id == ticketId)
                         .ToListAsync();

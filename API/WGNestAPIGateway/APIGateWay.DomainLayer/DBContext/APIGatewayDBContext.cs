@@ -75,6 +75,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<GetTickets> getTickets { get; set; }
         public DbSet<GetTicketListRow> getTicketListRows { get; set; }
         public DbSet<GetTicketListCount> getTicketListCounts { get; set; }
+        public DbSet<GetTicketTagRow> getTicketTagRows { get; set; }
         public DbSet<LabelMaster> labelMaster { get; set; }
         public DbSet<PostRepositoryModel> RepositoryMasters { get; set; }
         public DbSet<RepoUserList> RepoUsers { get; set; }
@@ -84,6 +85,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<IssueLabel> ISSUE_LABELS { get; set; }
         public DbSet<TicketMaster> ISSUEMASTER { get; set; }
         public DbSet<DashBoardTimeSheetData> dashBoardTimeSheets { get; set; }
+        public DbSet<GetTimesheetRow> getTimesheetRows { get; set; }
         public DbSet<ThreadMaster> ISSUETHREADS { get; set; }
         public DbSet<ThreadList> threadLists { get; set; }
         public DbSet<GetLabel> getLabels { get; set; }

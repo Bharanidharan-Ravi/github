@@ -55,4 +55,28 @@ namespace APIGateWay.ModalLayer.GETData
 
         public string? CreatedByName { get; set; }
     }
+
+    // Row of GetTimesheet_V2 (config key "TimesheetV2"): timesheet entries only,
+    // the UI loads the tickets from "TicketListV2" by Issue_Id.
+    //   EntryType: WORK | MEETING | STATUS (closed / reopened without a thread)
+    //   Action   : "C" closed / "R" reopened, NULL = plain entry
+    public class GetTimesheetRow
+    {
+        public string Id { get; set; } = string.Empty;
+        public string EntryType { get; set; } = string.Empty;
+        public string? Action { get; set; }
+        public Guid Issue_Id { get; set; }
+        public long? ThreadId { get; set; }
+        public Guid? MeetingId { get; set; }
+        public Guid? EmployeeId { get; set; }
+        public bool IsCoContributor { get; set; }
+        public DateTime WorkDate { get; set; }
+        public DateTime EventAt { get; set; }
+        public DateTime? From_Time { get; set; }
+        public DateTime? To_Time { get; set; }
+        public int? Minutes { get; set; }
+        public int? NewStatusId { get; set; }
+        public string? Comment { get; set; }
+        public string? CurrentStatusSummary { get; set; }
+    }
 }
