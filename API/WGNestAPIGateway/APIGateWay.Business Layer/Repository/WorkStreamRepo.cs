@@ -1,29 +1,18 @@
-﻿using APIGateWay.BusinessLayer.Helper;
+﻿
+using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.Helper.Events.EventFactory;
 using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
 using APIGateWay.BusinessLayer.Helper.Events.Interface;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.SignalRHub;
-using APIGateWay.BusinessLayer.Helper;
-using APIGateWay.BusinessLayer.Interface;
-using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.CommonSevice;
 using APIGateWay.DomainLayer.DBContext;
-using APIGateWay.DomainLayer.Helpers;
 using APIGateWay.DomainLayer.Interface;
-using APIGateWay.DomainLayer.Service;
-using APIGateWay.ModalLayer.DTOs;
 using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using APIGateWay.ModalLayer.PostData;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace APIGateWay.BusinessLayer.Repository
 {

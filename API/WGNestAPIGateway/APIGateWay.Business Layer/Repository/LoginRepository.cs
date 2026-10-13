@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using APIGateWay.BusinessLayer.Session;
 using APIGateWay.DomainLayer.Utilities;
+using APIGateWay.BusinessLayer.Helper.Events.Interface;
+using Microsoft.Extensions.Caching.Memory;
+using APIGateWay.BusinessLayer.Session;
 
 namespace APIGateWay.BusinessLayer.Repository
 {
@@ -25,6 +28,8 @@ namespace APIGateWay.BusinessLayer.Repository
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ISessionTrackingService _sessionTracking;
         private readonly INotificationRepository _notificationRepository;
+        private readonly IOtpService _otp;                 // NEW
+        private readonly IMemoryCache _cache;              // NEW
 
         public static readonly Dictionary<Guid, string> _activeJwtTokens = new Dictionary<Guid, string>();
  
@@ -32,8 +37,18 @@ namespace APIGateWay.BusinessLayer.Repository
         {
             public Guid SessionId { get; set; }
         }
-        public LoginRepository(ILoginService loginService, TokenGeneration tokenGeneration, DecodeHelpers decodeHelpers, APIGateWayCommonService service, IHttpContextAccessor httpContextAccessor, 
-            ISessionTrackingService sessionTracking, INotificationRepository notificationRepository, GenerateHelper helper)
+
+        public LoginRepository(
+            ILoginService loginService,
+            TokenGeneration tokenGeneration,
+        DecodeHelpers decodeHelpers,
+            APIGateWayCommonService service,
+            IHttpContextAccessor httpContextAccessor,
+            ISessionTrackingService sessionTracking,
+            INotificationRepository notificationRepository,
+            GenerateHelper helper,
+            IOtpService otp,                               // NEW
+            IMemoryCache cache)                            // NEW
         {
             _loginService = loginService;
             _tokenGeneration = tokenGeneration;
@@ -43,13 +58,22 @@ namespace APIGateWay.BusinessLayer.Repository
             _sessionTracking = sessionTracking;
             _notificationRepository = notificationRepository;
             _helper = helper;
+            _otp = otp;                                    // NEW
+            _cache = cache;                                // NEW
         }
+
         public async Task<GetUserList> RegisterUserAsync(RegisterRequestDto request)
         {
             return await _loginService.RegisterUserAsync(request);
         }
 
-        public async Task<string> GetUserinfo(string username, string password, string deviceInfo)
+        // =====================================================================
+        //  LOGIN, STEP A: username + password are correct -> send the OTP.
+        //  No session and no JWT are created here.                    // CHANGED
+        // =====================================================================
+        private static string PendingKey(Guid otpId) => $"pendinglogin:{otpId}";
+
+        public async Task<LoginOtpResponse> GetUserinfo(string username, string password, string deviceInfo)
         {
             var userList = await _loginService.GetUser(username, password, deviceInfo);
 
@@ -57,12 +81,55 @@ namespace APIGateWay.BusinessLayer.Repository
                 throw new Exception("Invalid username or password");
 
             var user = userList.First();
+
+            var ip = _httpContextAccessor.HttpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                     ?? _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+
+            var resp = await _otp.SendLoginOtpAsync(user.UserId, deviceInfo, ip);
+
+            // keep the checked user on the server only (never sent to the browser); drop the secrets first
+            user.PasswordHash = null!;
+            user.Salt = null!;
+            _cache.Set(PendingKey(resp.OtpId), user, TimeSpan.FromMinutes(20));
+
+            return resp;
+        }
+
+        // =====================================================================
+        //  LOGIN, STEP B: OTP is correct -> create session + JWT.     // NEW
+        // =====================================================================
+        public async Task<string> VerifyOtpAndLogin(OtpVerifyRequest request)
+        {
+            await _otp.VerifyAsync(request.OtpId, request.Otp);     // throws if wrong / expired
+
+            if (!_cache.TryGetValue(PendingKey(request.OtpId), out GetUserforValidate? user) || user == null)
+                throw new Exception("Login session expired. Please login again.");
+
+            _cache.Remove(PendingKey(request.OtpId));
+            return await CompleteLoginAsync(user, request.DeviceInfo);
+        }
+
+        // =====================================================================
+        //  RESEND                                                      // NEW
+        // =====================================================================
+        public Task<LoginOtpResponse> ResendOtp(Guid otpId)
+        {
+            if (!_cache.TryGetValue(PendingKey(otpId), out _))
+                throw new Exception("Login session expired. Please login again.");
+            return _otp.ResendAsync(otpId);
+        }
+
+        // =====================================================================
+        //  YOUR EXISTING session + JWT code (moved here, logic unchanged)
+        // =====================================================================
+        private async Task<string> CompleteLoginAsync(GetUserforValidate user, string? deviceInfo)
+        {
             var attachmentJSON = user.Attachment_JSON;
-            if(!string.IsNullOrEmpty(attachmentJSON))
+            if (!string.IsNullOrEmpty(attachmentJSON))
             {
-                using var doc=JsonDocument.Parse(attachmentJSON);
-                var root=doc.RootElement;
-                var first=root.EnumerateArray().FirstOrDefault();
+                using var doc = JsonDocument.Parse(attachmentJSON);
+                var root = doc.RootElement;
+                var first = root.EnumerateArray().FirstOrDefault();
                 if (first.ValueKind == JsonValueKind.Object &&
                     first.TryGetProperty("relativepath", out var relPathEl) &&
                     relPathEl.ValueKind == JsonValueKind.String)
@@ -85,7 +152,6 @@ namespace APIGateWay.BusinessLayer.Repository
                     DateTime.UtcNow,
                     indiaTimeZone
                 );
-
 
             var tokenIssuedAt = indiaTime;
             var tokenExpiresAt = tokenIssuedAt.AddDays(1);
@@ -142,10 +208,9 @@ namespace APIGateWay.BusinessLayer.Repository
                 effectiveRoles
             );
 
-           
-           
             return token;
         }
+
         public async Task LogoutSession(Guid sessionId)
         {
             await _service.ExecuteReturnAsync(

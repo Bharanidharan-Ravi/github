@@ -151,6 +151,7 @@ namespace APIGateWay.DomainLayer.DBContext
         public DbSet<PolicyDto> PolicyDto { get; set; }
         public DbSet<AllHour> AllHour { get; set; }
         public DbSet<GetThreadWorkType> GetThreadWorkType { get; set; }
+        public DbSet<UserOtp> UserOtp { get; set; }
 
         #region SaveChanges Override (Audit)
 

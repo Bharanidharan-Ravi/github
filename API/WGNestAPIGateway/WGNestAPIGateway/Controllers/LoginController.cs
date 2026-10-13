@@ -22,6 +22,7 @@ namespace WGNestAPIGateway.Controllers
         {
            _loginRepository = loginRepository;
            _syncRepo = syncRepo;
+            
         }
 
         #region User Creation 
@@ -34,13 +35,33 @@ namespace WGNestAPIGateway.Controllers
         }
         #endregion
 
-        #region User Login method 
+        #region User Login method  (step A: password -> OTP mail)         // CHANGED
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> GetUserinfo(userLogin user)
         {
             var response = await _loginRepository.GetUserinfo(user.UserName, user.Password, user.DeviceInfo);
-            return Ok(ApiResponseHelper.Success(response, "Login successfully."));
+            return Ok(ApiResponseHelper.Success(response, "OTP sent to your registered email."));
+        }
+        #endregion
+
+        #region Verify OTP  (step B: returns the JWT)                      // NEW
+        [AllowAnonymous]
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp(OtpVerifyRequest request)
+        {
+            var token = await _loginRepository.VerifyOtpAndLogin(request);
+            return Ok(ApiResponseHelper.Success(token, "Login successfully."));
+        }
+        #endregion
+
+        #region Resend OTP                                                 // NEW
+        [AllowAnonymous]
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp(OtpResendRequest request)
+        {
+            var response = await _loginRepository.ResendOtp(request.OtpId);
+            return Ok(ApiResponseHelper.Success(response, "OTP resent."));
         }
         #endregion
 

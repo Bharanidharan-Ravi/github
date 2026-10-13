@@ -1,16 +1,15 @@
-﻿using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
+﻿using APIGateWay.BusinessLayer.Helper;
+using APIGateWay.BusinessLayer.Helper.Events.Eventhelper;
 using APIGateWay.BusinessLayer.Helper.Events.Interface;
 using APIGateWay.BusinessLayer.Interface;
 using APIGateWay.BusinessLayer.Session;
-using APIGateWay.BusinessLayer.Helper;
 using APIGateWay.BusinessLayer.SignalRHub;
 using APIGateWay.DomainLayer.Interface;
-using APIGateWay.ModalLayer.GETData;
 using APIGateWay.ModalLayer.Helper;
 using APIGateWay.ModalLayer.Hub;
 using APIGateWay.ModalLayer.MasterData;
 using System.Text.Json;
-using static APIGateWay.BusinessLayer.SignalRHub.RealtimeEntities;
+
 // Ensure you have the using statement for wherever CreateNotificationRequest is defined
 
 namespace APIGateWay.BusinessLayer.Helper.Events.Services
